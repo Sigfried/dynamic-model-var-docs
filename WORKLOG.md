@@ -42,6 +42,32 @@ new classes, so the hand-curated `entityCategories` / `containmentGraph`
 override sets were not touched this time — but that is a fact about this diff,
 not a general reprieve; they still need checking whenever a sync adds classes.
 
+**`Quantity` is now a SECOND ROOT, and that is real — not the `any_of` bug.**
+The one structural change in the sync is `Quantity`'s parent going
+`Entity → None`; I diffed every class's parent across the two commits and
+nothing else moved. So the model went from exactly one root (`Entity`) to two.
+Siggie's tell was the missing `id` — `Quantity` never declared one, it
+inherited it from `Entity`, and the processed JSON confirms exactly one slot
+lost, `id-Quantity`.
+
+Write this down because the *next* person to notice two roots will reach for
+the known false-root explanation (`any_of` unhandled, which is why `Assay`
+looks like a root) and be wrong. This one is upstream and deliberate.
+
+**It does NOT get `ENTITY_ROOT` treatment** (Siggie, asked and answered
+2026-09-16: *"no, of course Quantity doesn't get that treatment"*).
+`ENTITY_ROOT` exists so [containmentGraph.ts](src/models/containmentGraph.ts)
+can suppress `has-a` edges pointing at the catch-all range, and so
+`SKIP_SUBCLASS_EXPANSION` can keep 34 edges of is-a noise off the canvas.
+`Quantity` is a value type with 16 real ownership edges across 13 classes —
+none of that applies. Checked the rendered graph; it looks fine.
+
+Worth noting the curated config did **not** rot here, for once: `Quantity` was
+already hand-placed in `valueTypes` (Siggie, 2026-09-04, on the grounds that it
+is "a generic value type, not an observation concept"). Upstream detaching it
+from `Entity` agrees with that call. The override sets were confirmed, not
+broken — but that is a fact about this diff, not a general reprieve.
+
 **Node 16 is the default in this shell and the build dies under it** —
 `vite` throws `SyntaxError: ... does not provide an export named 'constants'`
 from `node:fs/promises` before reaching any project code. That is
