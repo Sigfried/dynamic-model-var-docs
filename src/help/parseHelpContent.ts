@@ -63,7 +63,7 @@ export interface TourBeat {
   /** Overrides the step's anchor while this beat is showing. */
   anchor?: HelpAnchor;
   /** Overrides the step's `Spotlight:` while this beat is showing. */
-  spotlight?: HelpAnchor;
+  spotlight?: HelpAnchor[];
   /** What the tour DID on entering this beat; rendered in its own band. */
   action?: string;
   /** What this beat ADDS to the app state, as a URL query. See `HelpEntry.change`. */
@@ -185,8 +185,16 @@ export interface HelpEntry {
    * affected_body_site row while staying anchored on Condition"). Same
    * grammar as `Anchor:`; `Highlight:` still says how hard to draw it, so
    * `Highlight: none` draws nothing here either.
+   *
+   * **A list rings several elements at once**, comma- or `~`-separated, the
+   * separators `sel=` and `cat=` already take. That needs `Highlight: ring`:
+   * the default spotlight dims the page with a `0 0 0 9999px` shadow, and N of
+   * those stack into N layers of dimming, each ring's hole darkened by the
+   * others. One scrim with several holes wants `clip-path`, which is a bigger
+   * change than this was (2026-09-16); `helpContent.test.ts` fails a
+   * multi-target spotlight that does not ask for the ring.
    */
-  spotlight?: HelpAnchor;
+  spotlight?: HelpAnchor[];
   /**
    * How wide the popover is for this step, in CSS pixels. `Width: 480`.
    *
@@ -339,8 +347,8 @@ export interface TourPosition {
   beatCount: number;
   /** The beat itself, if this step has any. */
   beat?: TourBeat;
-  /** Element to ring INSTEAD of the anchor; a beat's wins over its step's. */
-  spotlight?: HelpAnchor;
+  /** Elements to ring INSTEAD of the anchor; a beat's wins over its step's. */
+  spotlight?: HelpAnchor[];
   /** Emphasis for this position; a beat's wins over its step's. */
   highlight?: Highlight;
   /** Popover width for this position; a beat's wins over its step's. */
@@ -508,6 +516,25 @@ export function parseAnchor(raw: string | undefined, fallbackId: string): HelpAn
   // A bare id with no colon is shorthand for `help-id:<id>`.
   if (colon === -1) return { kind: 'help-id', arg: value };
   return { kind: value.slice(0, colon).trim(), arg: value.slice(colon + 1).trim() };
+}
+
+/**
+ * Parse a `Spotlight:` value: one anchor, or several separated by `,` or `~`.
+ *
+ * An HTML comment is stripped first — authors leave notes beside the field
+ * (`Spotlight: node-box:Visit <!-- and QuestionnaireItem -->`) and the comment
+ * would otherwise become part of the last anchor's `arg`.
+ *
+ * Returns undefined for an absent or empty field, so "no spotlight" stays
+ * distinct from "a spotlight that resolved to nothing".
+ */
+export function parseSpotlight(
+  raw: string | undefined, fallbackId: string,
+): HelpAnchor[] | undefined {
+  const value = raw?.replace(/<!--[\s\S]*?-->/g, '').trim();
+  if (!value) return undefined;
+  const parts = value.split(/[,~]/).map(s => s.trim()).filter(Boolean);
+  return parts.length ? parts.map(p => parseAnchor(p, fallbackId)) : undefined;
 }
 
 /**
@@ -831,7 +858,7 @@ function extractBeats(lines: string[], entryId: string, problems: string[]): Tou
         continue;
       }
       if (key === 'anchor') current.anchor = parseAnchor(value, entryId);
-      else if (key === 'spotlight') current.spotlight = parseAnchor(value, entryId);
+      else if (key === 'spotlight') current.spotlight = parseSpotlight(value, entryId);
       else if (key === 'action') current.action = value.trim();
       else if (key === 'change') current.change = value.trim();
       // `Only:` is `Change:` with the replace flag set. Both write the same
@@ -875,8 +902,7 @@ function parseEntry(block: string, order: number, problems: string[]): HelpEntry
   const shortcut = extractField(lines, 'Shortcut');
   const context = extractField(lines, 'Context');
   const anchor = parseAnchor(extractField(lines, 'Anchor'), id);
-  const spotlightRaw = extractField(lines, 'Spotlight');
-  const spotlight = spotlightRaw === undefined ? undefined : parseAnchor(spotlightRaw, id);
+  const spotlight = parseSpotlight(extractField(lines, 'Spotlight'), id);
   const action = extractField(lines, 'Action');
   const once = extractField(lines, 'Once');
   /*

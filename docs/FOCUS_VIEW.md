@@ -105,7 +105,7 @@ reimplementation. It reuses `LayoutManager`'s primitives (`ItemsPanel`,
 - `REFERRED_TO_ENTITIES` and `NAMED_BACK_POINTERS` (in
   [`models/ownershipRules.ts`](../src/models/ownershipRules.ts)) are hand-curated
   and go stale on a schema sync — see
-  `TASKS.md` §"hand-curated config rot" for the full list. A de-fragility refactor (LinkML `annotations: { containment_direction:
+  [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md). A de-fragility refactor (LinkML `annotations: { containment_direction:
   contains | contained_by | ? }` per slot, auto-generated then human-reviewed) is
   PARKED until the demo proves value. `owns`/`owned_by` was floated as broader
   vocabulary for the `performed_by` family.

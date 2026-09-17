@@ -90,8 +90,16 @@ const ONCE_PREFIX = 'help-once-';
  * generality buys nothing. (Hint dots DO need many at once; see `HINT_NAME`.)
  */
 const ANCHOR_ATTR = 'data-help-anchor';
-/** Written on the `Spotlight:` element; `help.css` names it `--help-spotlight`. */
+/**
+ * Written on each `Spotlight:` element, carrying the anchor name `help.css`
+ * gives it (`data-help-spotlight="--help-spotlight-0"`). Indexed because a
+ * step may ring several elements at once, which are all on screen together and
+ * so cannot share one name -- the hint dots' problem and the hint dots' fix.
+ */
 const SPOTLIGHT_ATTR = 'data-help-spotlight';
+const SPOTLIGHT_NAME = '--help-spotlight';
+/** Length of the `--help-spotlight-N` run in `help.css`; the two must agree. */
+const SPOTLIGHT_MAX = 8;
 
 /**
  * Hint dots need the OTHER shape: a name per element, because every dot is on
@@ -286,8 +294,12 @@ export default function HelpLayer() {
    * pointing. A boolean, not a rect, because nothing here needs the numbers.
    */
   const [anchored, setAnchored] = useState(false);
-  /** The `Spotlight:` element resolved, so the ring goes there, not on the anchor. */
-  const [spotlit, setSpotlit] = useState(false);
+  /**
+   * How many `Spotlight:` elements resolved. 0 means none did, and the single
+   * ring falls back to the anchor; N means N rings, one per resolved element.
+   */
+  const [spotlitCount, setSpotlitCount] = useState(0);
+  const spotlit = spotlitCount > 0;
   /** Preferred side for an anchored popover: `'below'` in an LR diagram, where
    *  the graph grows rightwards. Published by the tagging effect. */
   const [anchorSide, setAnchorSide] = useState<'below' | undefined>(undefined);
@@ -466,15 +478,26 @@ export default function HelpLayer() {
    * or the element is not there.
    */
   useLayoutEffect(() => {
-    if (!activeId || !spotlight) { setSpotlit(false); return; }
-    let tagged: Element | null = null;
+    if (!activeId || !spotlight?.length) { setSpotlitCount(0); return; }
+    let tagged: Element[] = [];
     const sync = () => {
-      const el = elementFor(spotlight);
-      if (el === tagged) return;
-      tagged?.removeAttribute(SPOTLIGHT_ATTR);
-      tagged = el;
-      setSpotlit(!!el);
-      el?.setAttribute(SPOTLIGHT_ATTR, '');
+      /*
+       * Elements that resolved, in authoring order. The attribute VALUE is the
+       * anchor name (`--help-spotlight-2`), read back by a fixed run of rules
+       * in `help.css` -- the hint dots' shape, for the hint dots' reason:
+       * `anchor-name` is a CSS value and `attr()` cannot supply it. Ringing
+       * more than `SPOTLIGHT_MAX` silently drops the rest, which is the same
+       * bargain `HINT_MAX` makes.
+       */
+      const els = spotlight
+        .map(s => elementFor(s))
+        .filter((el): el is Element => !!el)
+        .slice(0, SPOTLIGHT_MAX);
+      if (els.length === tagged.length && els.every((el, i) => el === tagged[i])) return;
+      for (const el of tagged) el.removeAttribute(SPOTLIGHT_ATTR);
+      tagged = els;
+      els.forEach((el, i) => el.setAttribute(SPOTLIGHT_ATTR, `${SPOTLIGHT_NAME}-${i}`));
+      setSpotlitCount(els.length);
     };
     sync();
     const obs = new MutationObserver(sync);
@@ -484,8 +507,8 @@ export default function HelpLayer() {
     });
     return () => {
       obs.disconnect();
-      tagged?.removeAttribute(SPOTLIGHT_ATTR);
-      setSpotlit(false);
+      for (const el of tagged) el.removeAttribute(SPOTLIGHT_ATTR);
+      setSpotlitCount(0);
     };
   }, [activeId, spotlight, elementFor]);
 
@@ -662,11 +685,24 @@ export default function HelpLayer() {
         box, so it follows for free.
       */}
       {(spotlit || anchored) && activeId && highlight !== 'none' && (
-        <div
-          className={`help-spotlight${highlight === 'ring' ? ' help-spotlight-ring' : ''}`}
-          /* On the `Spotlight:` element when one resolved; else on the anchor. */
-          data-on-spotlight={spotlit ? '' : undefined}
-        />
+        /*
+         * One ring per resolved `Spotlight:` element, or a single ring on the
+         * anchor when none resolved. Each carries the index whose `help.css`
+         * rule points it at that element's anchor name.
+         */
+        spotlit
+          ? Array.from({ length: spotlitCount }, (_, i) => (
+            <div
+              key={i}
+              className={`help-spotlight${highlight === 'ring' ? ' help-spotlight-ring' : ''}`}
+              data-on-spotlight={i}
+            />
+          ))
+          : (
+            <div
+              className={`help-spotlight${highlight === 'ring' ? ' help-spotlight-ring' : ''}`}
+            />
+          )
       )}
 
       {/* Hints: one dot per tagged element, so help mode SHOWS what is

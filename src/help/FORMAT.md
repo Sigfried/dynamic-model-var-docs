@@ -133,7 +133,7 @@ does not get swallowed into that entry's `Description:`.
 | `Only:` | the same query, but it REPLACES the selection instead of adding — see [Change](#change) |
 | | *(both take the same params — see [the params you can set](#the-params-you-can-set))* |
 | `Highlight:` | how hard to point at the anchor: `ring`, `dim`, `none` — see [Highlight](#highlight) |
-| `Spotlight:` | ring a DIFFERENT element than the anchor, same grammar as `Anchor:` — see [Highlight](#highlight) |
+| `Spotlight:` | ring a DIFFERENT element than the anchor, or several separated by `,`/`~`, same grammar as `Anchor:` — see [Spotlight](#spotlight) |
 | `Width:` | popover width in pixels; defaults to a width picked from the text (320–800); STICKY across beats — see [Placement](#placement) |
 | `Position:` | force the popover to a side: `left`, `right`, `top`, `bottom` — see [Placement](#placement) |
 | `OffsetX:` | nudge it horizontally — see [Placement](#placement) |
@@ -699,6 +699,28 @@ with `Highlight: none` draws no ring anywhere, so a beat that adds a
 
 Use `ring` when the anchor is one control among several the reader is meant to
 compare — dimming the rest hides the context the step is talking about.
+
+**Several elements at once**, separated by a comma or `~`:
+
+```
+  1. SdohObservations
+     - Highlight: ring
+     - Spotlight: child-header:SdohObservation, node-box:Participant
+```
+
+Two rules, both enforced by `helpContent.test.ts`:
+
+- **It needs `Highlight: ring`.** The default spotlight dims the page with a
+  `0 0 0 9999px` shadow; N of those stack into N layers of dimming, each ring's
+  hole darkened by the others. One scrim with several holes wants `clip-path`,
+  which is a bigger change than this was.
+- **Every entry carries its own `kind:`.** A bare name is shorthand for
+  `help-id:<name>`, so `node-box:Visit, QuestionnaireItem` silently rings only
+  Visit — the second resolves to a `help-id` that nothing wears. Write
+  `node-box:Visit, node-box:QuestionnaireItem`.
+
+At most eight resolve (`SPOTLIGHT_MAX` in `HelpLayer.tsx`, matched by a run of
+rules in `help.css`); the rest are dropped.
 
 **`none` still resolves the anchor**, so the anchor keeps positioning the
 popover. That is the point of it: a step can aim the popover at something

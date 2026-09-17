@@ -8,7 +8,145 @@ Newest first.
 
 
 ---
-## 2026-09-16 (latest) — `make sync-manual` never synced anything
+## 2026-09-16 (latest) — the blank first visit, and cutting the config-rot section
+
+Siggie loaded the deployed site in incognito with empty localStorage and got an
+empty canvas. I had just told them `DEFAULT_PINS` seeds the first visit, having
+traced `DEFAULT_PINS → usePinState → EntityExplorer → App.tsx` and stopped
+there. **That trace never checked which entry point the build serves.**
+`vite.config.ts` has two: `index.html → src/explore/main.tsx` (the default app,
+Explore) and `previous.html → src/main.tsx` (`App.tsx`, the Nested Tabular /
+Kitchen Sink / Focus views). `src/explore/` contains no reference to
+`usePinState` at all, so the constant could not possibly have affected what
+Siggie saw. Renamed to `NESTED_TABULAR_DEFAULT_PINS` so the next reader cannot
+make the same mistake, and its doc comment now names both entry points.
+
+**Lesson for a "is X used?" question: find the ENTRY POINT, not the import
+chain.** An import chain proves a symbol is reachable from some root; it says
+nothing about whether that root is the one being served.
+
+### The config-rot section is gone
+
+BACKLOG §"Hand-curated config rot" was deleted outright (~50 lines), with
+Siggie's reasoning: *"the whole config rot section is causing more trouble than
+it's worth."* It was causing trouble in a specific and instructive way — **its
+own corrections had gone stale**. The section warned that comment counts rot
+and nothing tests them, and it was right; it then stated two corrected figures
+that were themselves wrong. Probing the live schema:
+
+| claim | where | live |
+|---|---|---|
+| Quantity "16 slots across 13 classes" | `entityCategories.ts` comment | 11 across 9 |
+| TimePoint "15 slots, 9 classes" | same comment | 14 across 8 |
+| Survey "two outward references" | same comment | **zero** |
+| Survey "live: one" | BACKLOG's correction of the above | also wrong |
+| Entity "13 slots range on Entity" | `entityCategories.ts` comment | 5 |
+| Entity "37 classes directly, 53 in subtree" | same comment | 36 / 52 |
+
+Every count in prose was deleted rather than updated, per Siggie: *"delete the
+counts."* The arguments those numbers supported are kept without figures — the
+claim "Quantity is a generic value type, not an observation concept" survives on
+the named examples, which do not rot the same way.
+
+**`performed_by`, 11 sites** in `ownershipRules.ts` was deliberately LEFT. It is
+a statement about why slot-name keying was abandoned in the past, not a claim
+about today's schema (live: 3), and the live justification beside it — two
+back-pointers named `part_of` — is what makes the comment load-bearing.
+
+What the section said that was still true moved into
+`OWNERSHIP_CLASSIFICATION.md`: the memberships cannot be derived, verified
+exhaustively 2026-08-21, and classification is Siggie's call. Four docs pointed
+at the section as `TASKS.md §"hand-curated config rot"` — a section that lived
+in BACKLOG.md, not TASKS.md, as bare backticked text that no link checker could
+catch. Exactly what the links-not-backticks rule exists to prevent.
+
+### `Only:` with no selection silently inherits the previous canvas
+
+Siggie wanted the canvas cleared before `cat=survey` and changed
+`Only: cat=survey` to `Only: panels=0`. **`Only:` already clears** — it REPLACES
+the selection (FORMAT.md §`Only:`), so the original line was correct.
+`panels=0` only closes overlays and names no selection, so the step inherited
+the previous step's `Visit~SdohObservation` and eight anchors rang nothing. Fix
+is `Only: cat=survey&panels=0`; `parseTourChange` applies `panels=0` as a sweep
+BEFORE other keys, so the two compose.
+
+This is worth remembering because the failure is silent and the intuition is
+backwards: the author reaches for a "clear" directive when the thing they
+already had was the clear.
+
+### Both anchor tests pooled the whole step's canvas
+
+`helpContent.test.ts` checked every beat against the STEP's `cat=`, and
+`helpAnchors.test.tsx` checked every anchor against the union of everything the
+step ever draws. Both are wrong in the same way: **a beat carries its own
+`Change:`/`Only:`**, so the canvas differs per position. The pooled union also
+hid a real bug — a beat anchored on a box that a LATER beat adds passed, because
+the later `sel=` was already in the pool.
+
+Both now walk positions in order, applying each beat's own query (`Only:`
+replaces, `Change:` adds). That immediately caught
+`survey-questionnaire`'s `node-box:SdohObservation`, which rings nothing because
+SdohObservation MERGES into `Observation` — the anchor had to be
+`child-header:SdohObservation`. Found by probe, not by reading:
+`src/test/__probe_sdoh.test.ts` (deleted after) printed the actual tag set.
+
+Messages now carry `help-content.md:<line> (beat N "label")`. The parser does
+not retain line numbers and teaching it to would change production types for a
+test-only need, so `src/test/helpers/contentLines.ts` scans the raw markdown
+instead. It counts beats POSITIONALLY — the authored numbers are unreliable,
+and dmvd's content has three consecutive beats all labelled `1.`.
+
+### `Spotlight:` takes a list now
+
+Siggie wanted to ring more than one thing at a time, leaving two comments in
+the questionnaire beats. Built as option 1 of three offered: **lists work, and
+a multi-target spotlight must ask for `Highlight: ring`.**
+
+The constraint is the scrim, and it is why the full version was not built.
+`.help-spotlight` dims the page with `box-shadow: 0 0 0 9999px`, so N rings
+means N stacked scrims, each ring's hole darkened by the others. One scrim with
+several holes needs `clip-path` — a rewrite of the rule whose four `anchor()`
+calls already have a long comment about collapsing to a 4px box at the page
+origin. `Highlight: ring` is the variant WITHOUT the scrim, so N of those are
+just N independent overlay divs. `helpContent.test.ts` fails a multi-target
+spotlight that does not ask for the ring, rather than letting the stacked-scrim
+version ship looking merely "a bit dark".
+
+Implementation copies the hint dots exactly, for the same reason: `anchor-name`
+is a CSS value and `attr()` cannot feed it, so there is a fixed run of
+`--help-spotlight-0…7` rules in `help.css` and `SPOTLIGHT_MAX = 8` in
+HelpLayer. `helpAnchorScoping.test.ts` pins the two together — that file already
+exists because a deleted `position-anchor` shipped silently once.
+
+⚠️ **A bare name in a list is `help-id:<name>`, not `node-box:<name>`.** Caught
+by probe, not by reading: `child-header:SdohObservation~Participant` parsed the
+second entry as a `help-id` nothing wears, so it would have rung one element and
+looked like the feature was broken. `parseAnchor`'s no-colon shorthand is right
+for a single `Anchor:`; in a list it is a trap. Every entry needs its own
+`kind:`, and FORMAT.md says so.
+
+`parseSpotlight` also strips HTML comments before splitting — authors leave
+notes beside the field, and the comment would otherwise land in the last
+anchor's `arg`.
+
+### Not done, deliberately: the OWNERSHIP_CLASSIFICATION cut
+
+Siggie asked for it. I did not do it, because `OWNERSHIP_DOC_CUT.md` carries
+their own two process rules: **settle the Ownership tour first**, and **ask
+about each chunk you would KEEP, not each you would cut**. Doing a 961-line
+rewrite unattended violates both.
+
+What the survey DID find is worse than length: §§184–392 still teach `Rule 1` /
+`Rule 2` / `Exception 2a` / `2b` / `Rule 3`, a numbered scheme replaced
+2026-09-13. The classifier has five NAMED rules
+(`owns-target-forward-by-default`, `belongs-to-target-backward-by-entity`,
+`belongs-to-target-backward-by-attribute`, `child-following-parent`,
+`association`). A 🛑 banner now sits at the top of the file pointing at
+`ownershipRules.ts`, and TASKS §Now carries the same warning. **The doc is
+actively misleading until step 3 of that sequence lands.**
+
+---
+## 2026-09-16 — `make sync-manual` never synced anything
 
 Siggie ran `make sync-manual`, and the downloaded `bdchm.yaml` still did not
 match `../NHLBI-BDC-DMC-HM/src/bdchm/schema/bdchm.yaml`.

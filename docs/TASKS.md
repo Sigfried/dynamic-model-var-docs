@@ -23,7 +23,28 @@
 
 ## Now — finish the tours
 
-The active work. The plan is [TOURS_AND_CONTENT.md](TOURS_AND_CONTENT.md).
+The active work. All five tours are WRITTEN and the content tests are green;
+what is left is reading them and fixing what reads badly.
+
+**The order to do it in.** Each step is one sitting, and the next one does not
+need the previous one's outcome except where it says so.
+
+| | do this | where |
+|---|---|---|
+| 1 | **Answer the three `[DECIDE]` questions** in the Getting oriented proposal. Only #2 (does *Reading the diagram* survive as its own tour?) has consequences; the other two are quick. Nothing in that file has been actioned. | [GETTING_ORIENTED_PROPOSAL.md](GETTING_ORIENTED_PROPOSAL.md) → `help-finish-authoring/oriented` |
+| 2 | **Read the five tours in the browser** and note what reads badly. This is the only thing the tests cannot do. | `read-tours` |
+| 3 | **Rewrite the Ownership tour** for the named-rule scheme. It still teaches three numbered rules that no longer exist. | `ownership-doc-rewrite` (a) |
+| 4 | **Then, and only then, cut the ownership doc.** Your own rule: settle the tour first. | [OWNERSHIP_DOC_CUT.md](OWNERSHIP_DOC_CUT.md) |
+
+⚠️ **The ownership doc is not merely long, it is wrong** (found 2026-09-16).
+[OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) §§184–392 still teach
+`Rule 1` / `Rule 2` / `Exception 2a` / `2b` / `Rule 3`. The classifier has five
+NAMED rules and no numbers: `owns-target-forward-by-default`,
+`belongs-to-target-backward-by-entity`,
+`belongs-to-target-backward-by-attribute`, `child-following-parent`,
+`association` ([ownershipRules.ts](../src/models/ownershipRules.ts)). Steps 3
+and 4 are the same correction in two places — do not read that doc for the
+rules in the meantime, read the classifier.
 
  | Tag               | Task                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Where                                                                          |
  |-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
@@ -45,6 +66,7 @@ The active work. The plan is [TOURS_AND_CONTENT.md](TOURS_AND_CONTENT.md).
  | `markdown-everywhere` | **Make `OWNERSHIP_RULES` text AUTHORED**, in a markdown file parsed the way [FORMAT.md §Prose inside a field](../src/help/FORMAT.md#prose-inside-a-field) parses help prose, so it gets `:s[…]{color=own-fwd}`, `{{edge:own-fwd}}` and the rest. **Wants a design note first**: it means the rule table stops being the single declaration [ownershipRules.ts](../src/models/ownershipRules.ts) was built to be, which is the thing to argue about before writing it. ⚠️ Do NOT make the legend and example-cases panels into help entries — Siggie's own first thought and immediately rejected as too complicated. **The seam already exists**: [HelpMarkdown.tsx](../src/help/HelpMarkdown.tsx) renders any string the way a tour step's prose renders, and the legend already calls it on `ruleText`, so changing WHERE that string comes from is invisible to the legend. Parts (a) and (c) shipped 2026-09-15 ([archive](archive/tasks-2026-09-15.md)). | [ownershipRules.ts](../src/models/ownershipRules.ts), [HelpMarkdown.tsx](../src/help/HelpMarkdown.tsx) |
  | `subclass-arrowheads` | **Subclass-colored arrowheads do not match their edge color.** Visible wherever a merged box's children are targets: the edge is drawn in the sibling's color but the arrowhead is not, so a bundle of edges into one merged box reads as unrelated lines. Siggie 2026-09-12, on the ObservationSet → Observation family. | [edgeStyle.ts](../src/explore/edgeStyle.ts), [OwnershipGraphView.tsx](../src/explore/OwnershipGraphView.tsx) |
  | `merged-child-relations` | **Hard to see what a merged child is connected to.** [sg] weird that it's so hard to see what SpecimenQuality/SpecimenQuantityObservation are connected to. even when pulling up the `related` menu, you have to scroll to the bottom and there are no color indicators to help. Two problems: a merged child's own relations are buried at the end of the parent's list, and the list carries no sibling color to tie a row back to the band it belongs to — the colors are right there in the box header. | [RelationBar.tsx](../src/explore/RelationBar.tsx), [OwnershipGraphView.tsx](../src/explore/OwnershipGraphView.tsx) |
+
 
 ⚠️ **The menu is the ONLY way into a help-only entry.** The other route was help
 mode's `?` hints, and `HELP_MODE_ENABLED` is false — `HelpLayer` renders them
@@ -101,7 +123,7 @@ unmeasured. The standing rule is measure before proposing one.
   | `lint-baseline` | **The lint baseline is wrong, and one real bug hides in it.** [CLAUDE.md](CLAUDE.md) says 20 pre-existing errors; `npm run lint` reports 30, which makes the "compare against the baseline" instruction unusable. Two causes worth separating: **(a)** `.vite/deps/` build artifacts are being linted — add an ignore; **(b)** [`Section.tsx`](../src/components/Section.tsx) calls `useExpansionState` conditionally (`react-hooks/rules-of-hooks`), a genuine latent bug — hook order changes if `expansionKey` ever varies for a mounted Section. Fix (b), ignore (a), then re-record the real number. | [eslint.config.js](../eslint.config.js) |
   | `in-subset-categories` | **Move the category specs into LinkML `in_subset`.** ⚠️ **Blocked: needs an upstream PR approved first** — `in_subset` does not exist in the schema today. Then the categories arrive with the sync instead of rotting here. Membership migrates; `label`, order and `pins` (explanatory, not structural) cannot and stay ours. [sg] | [BACKLOG §in_subset](BACKLOG.md#move-the-category-specs-into-linkml-in_subset) |
   | `enum-detail` | **Enum badges in the Explore drawer are dead, and Nested Tabular's detail never came across.** Purple range badges render as inert `<span>`s by construction. Two options in the backlog: (a) make the badge open the values card, (b) decide what an enum's detail *is* in this drawer first. Scope is everything Nested Tabular exposes, not enums alone. [sg] | [BACKLOG §Enum detail](BACKLOG.md#enum-detail-in-the-explore-drawer) |
-  | `intros` | **Improve the intros to README and the first tour** — they might share text. README's *Model shape* does not actually describe the model's shape; it describes how the app adjusts it for comprehension. [sg]                                                | [README](../README.md) · [§1](TOURS_AND_CONTENT.md#1-the-biodata-catalyst-harmonized-model) |
+  | `intros` | **Improve the intros to README and the first tour** — they might share text. README's *Model shape* does not actually describe the model's shape; it describes how the app adjusts it for comprehension. [sg]                                                | [README](../README.md) · [help-content.md](../src/explore/help-content.md) |
   | `md-includes` | Consider using https://github.com/cmacmackin/markdown-include or https://github.com/zimbatm/mdsh to allow shared includes                                                                                                                                       |                                                                                                                             |
 
 ---

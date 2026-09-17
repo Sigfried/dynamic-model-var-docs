@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { DEFAULT_PINS } from '../config/entityCategories';
+import { NESTED_TABULAR_DEFAULT_PINS } from '../config/entityCategories';
 
 const STORAGE_KEY = 'bdchm-pinned-entities';
 
@@ -17,7 +17,7 @@ function loadPins(): Set<string> {
       }
     }
   } catch { /* ignore */ }
-  return new Set(DEFAULT_PINS);
+  return new Set(NESTED_TABULAR_DEFAULT_PINS);
 }
 
 function savePins(pins: Set<string>): void {

@@ -1,5 +1,14 @@
 # Ownership / containment / has-a relationships
 
+> 🛑 **The rule sections below are out of date — read
+> [`ownershipRules.ts`](../src/models/ownershipRules.ts) instead.**
+> §§`Rule 1`, `Rule 2`, `Exception 2a`, `Exception 2b` and `Rule 3` teach a
+> numbered three-rule scheme that was replaced on 2026-09-13. The classifier
+> has five NAMED rules and no numbering. Everything from §The color system
+> onward is still accurate. Scheduled for rewrite: TASKS
+> [`ownership-doc-rewrite`](TASKS.md), plan in
+> [OWNERSHIP_DOC_CUT.md](OWNERSHIP_DOC_CUT.md).
+
 How every class-ranged slot in the schema becomes an edge in the diagram, what
 each kind of edge means, and how the diagram colors what it draws.
 
@@ -918,15 +927,12 @@ classification, and stays in `containmentGraph.ts`):
 | `SINGLE_VALUE_OWNER_TARGETS` (15) | `Quantity`, `TimePoint`, `TimePeriod`, `BodySite`, `CauseOfDeath`, `Substance`, `BiologicProduct`, `Activity`, `SpecimenContainer`, `QuestionnaireResponseValue` + its 5 typed subclasses |
 | `SKIP_SUBCLASS_EXPANSION` (1) | `Entity` — inheritance only, **not** ranges |
 
-**Still keyed by slot name, not `(class, slot)` pair.** Every member of the
-override sets happens to occur at exactly one class — **luck, not design.** It
-is exactly how `performed_by` (11 sites) did damage when it sat in the old
-override list. A sync check should assert each still has one site; collecting
-the sets into one module gives that check one place to look instead of five,
-which is all the declaration claims to do about the problem.
-
-These sets are hand-curated and **go stale silently on every schema sync**. See
-`docs/TASKS.md`, "hand-curated config rot".
+These sets are hand-curated and **go stale silently on every schema sync**:
+whether an entity newly added by a sync belongs in `REFERRED_TO_ENTITIES` is a
+judgement nothing can derive — verified exhaustively 2026-08-21, every
+candidate discriminator failed. That is a reading, and **ownership
+classification is Siggie's call, not a mechanical one.** Re-read this file
+after a sync; do not re-derive by query.
 
 ### Where it lives
 
@@ -957,7 +963,7 @@ the rules above.
 ## See also
 
 - `WORKLOG.md` — decision history: what was tried, rejected, and why.
-- `docs/TASKS.md` — open work; hand-curated config rot.
+- [TASKS.md](TASKS.md) — open work.
 - `src/explore/help-content.md` — the user-facing wording and the guided tour.
 - [ARCHITECTURE.md](ARCHITECTURE.md) §"Why the diagram looks like it does" —
   the visual-design reasoning, including item 1's owner-side/member-side

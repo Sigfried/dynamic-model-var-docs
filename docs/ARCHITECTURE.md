@@ -69,8 +69,7 @@ owns the entity it points at (`own-fwd`), except for two named sets:
 `Class.slot`. Cardinality decides nothing — it used to be the rule, and
 dropping it changed no edge on this schema (2026-09-13). Neither exception set
 can be derived from the schema, so expect to re-check both after every upstream
-schema sync — see [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md)
-and `TASKS.md` §"hand-curated config rot", which lists all of them.
+schema sync — see [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md).
 
 **`DataService.getOwnershipSubgraph(selected, options)`**
 ([`src/models/ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts)) is

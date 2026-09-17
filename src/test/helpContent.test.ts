@@ -11,6 +11,7 @@ import { loadModelData } from '../utils/dataLoader';
 import { DataService } from '../services/DataService';
 import { ENTITY_CATEGORIES } from '../config/entityCategories';
 import { ANCHOR_KINDS } from '../explore/helpAnchors';
+import { where } from './helpers/contentLines';
 
 /**
  * The help content is authored as markdown and parsed into typed data, so a
@@ -374,7 +375,7 @@ describe('help content', () => {
      - Description: overrides
 `).entries.get('e')!;
     expect(e.anchor).toEqual({ kind: 'node-box', arg: 'Condition' });
-    expect(e.spotlight).toEqual({ kind: 'slot-row', arg: 'Condition.affected_body_site' });
+    expect(e.spotlight).toEqual([{ kind: 'slot-row', arg: 'Condition.affected_body_site' }]);
     const pos = tourPositions(parseHelpContent(`
 ## S
 
@@ -392,7 +393,7 @@ describe('help content', () => {
      - Spotlight: slot-row:Condition.associated_visit
      - Description: overrides
 `), 'Demo');
-    expect(pos.map(p => p.spotlight?.arg)).toEqual([
+    expect(pos.map(p => p.spotlight?.map(sp => 'arg' in sp ? sp.arg : 'none').join(','))).toEqual([
       'Condition.affected_body_site',   // the step's own position
       'Condition.affected_body_site',   // beat 1 inherits
       'Condition.associated_visit',     // beat 2 overrides
@@ -404,6 +405,54 @@ describe('help content', () => {
     expect(plain.spotlight).toBeUndefined();
   });
 
+  test('Spotlight: takes a list, separated by comma or ~', () => {
+    const e = parseHelpContent(`
+## S
+
+### e
+
+- Title: T
+- Description: D
+- Anchor: node-box:Condition
+- Spotlight: node-box:Visit, child-header:SdohObservation <!-- a note -->
+`).entries.get('e')!;
+    // The HTML comment is stripped rather than landing in the last arg.
+    expect(e.spotlight).toEqual([
+      { kind: 'node-box', arg: 'Visit' },
+      { kind: 'child-header', arg: 'SdohObservation' },
+    ]);
+    const tilde = parseHelpContent(
+      '## S\n\n### e\n\n- Title: T\n- Description: D\n- Spotlight: node-box:A~node-box:B\n',
+    ).entries.get('e')!;
+    expect(tilde.spotlight?.length).toBe(2);
+  });
+
+  /**
+   * Several rings need `Highlight: ring`, which is the variant WITHOUT the
+   * `0 0 0 9999px` scrim. N scrims stack into N layers of dimming, each ring's
+   * hole darkened by the others -- so a step that asks for several rings and
+   * does not ask for the ring style fails here rather than shipping that.
+   * Punching several holes in one scrim wants `clip-path` (2026-09-16).
+   */
+  test('a multi-target Spotlight: asks for Highlight: ring', () => {
+    const bad: string[] = [];
+    for (const e of content.entries.values()) {
+      if ((e.spotlight?.length ?? 0) > 1 && e.highlight !== 'ring') {
+        bad.push(`${where(markdown, e.id)} — ${e.spotlight!.length} spotlights, `
+          + `Highlight: ${e.highlight ?? '(default)'}`);
+      }
+      (e.beats ?? []).forEach((b, i) => {
+        const sp = b.spotlight ?? e.spotlight;
+        if ((sp?.length ?? 0) > 1 && (b.highlight ?? e.highlight) !== 'ring') {
+          bad.push(`${where(markdown, e.id, i + 1, b.text)} — ${sp!.length} spotlights, `
+            + `Highlight: ${b.highlight ?? e.highlight ?? '(default)'}`);
+        }
+      });
+    }
+    expect(bad, `Several rings need \`Highlight: ring\` — without it each ring `
+      + `carries its own page-dimming scrim:\n  ${bad.join('\n  ')}`).toEqual([]);
+  });
+
   test('every anchor names a known kind', () => {
     const bad: string[] = [];
     const check = (where: string, a: { kind: string } | undefined) => {
@@ -413,10 +462,10 @@ describe('help content', () => {
     };
     for (const e of content.entries.values()) {
       check(e.id, e.anchor);
-      check(`${e.id} spotlight`, e.spotlight);
+      for (const sp of e.spotlight ?? []) check(`${e.id} spotlight`, sp);
       for (const b of e.beats ?? []) {
         check(`${e.id} beat`, b.anchor);
-        check(`${e.id} beat spotlight`, b.spotlight);
+        for (const sp of b.spotlight ?? []) check(`${e.id} beat spotlight`, sp);
       }
     }
     expect(bad, bad.join('; ')).toEqual([]);
@@ -499,25 +548,51 @@ describe('help content', () => {
    * expected set is built from both. Only `node-box` is checked: `entity-row`
    * anchors point into the selection panel, which lists every class whatever
    * is drawn.
+   *
+   * **The canvas is tracked BEAT BY BEAT, not once for the step.** A beat
+   * carries its own `Change:`/`Only:` and so can legitimately anchor outside
+   * the step's category — `survey-questionnaire` adds `Visit` and
+   * `SdohObservation` at its last two beats to show what the category
+   * connects to. Checking every beat against the step's `cat=` failed those
+   * as errors (2026-09-16).
    */
   test('a cat= step anchors only at boxes that category actually draws', async () => {
     const ds = new DataService(await loadModelData());
     const bad: string[] = [];
+    const catMembers = (q: string) => ENTITY_CATEGORIES
+      .filter(c => new RegExp(`(?:^|&)cat=[^&]*\\b${c.id}\\b`).test(q))
+      .flatMap(c => [...c.classIds, ...c.pins]);
+    /** `sel=A~B` ids named directly by a query. */
+    const selIds = (q: string) =>
+      (new URLSearchParams(q).get('sel') ?? '').split('~').filter(Boolean);
+
     for (const e of content.entries.values()) {
-      const cat = ENTITY_CATEGORIES.find(
-        c => new RegExp(`(?:^|&)cat=${c.id}(?:&|$)`).test(e.change ?? ''),
-      );
-      if (!cat) continue;
-      const drawn = new Set(ds.getContainmentGraph(
-        [...new Set([...cat.classIds, ...cat.pins])],
-      ).nodes.map(n => n.id));
-      for (const a of [e.anchor, ...(e.beats ?? []).map(b => b.anchor)]) {
-        if (a?.kind === 'node-box' && !drawn.has(a.arg)) {
-          bad.push(`${e.id}: node-box:${a.arg} is not on the cat=${cat.id} canvas`);
+      if (!/(?:^|&)cat=/.test(e.change ?? '')) continue;
+
+      // The step's own canvas, then each beat's, in authoring order. A beat
+      // with `Only:` replaces it; a `Change:` adds to it.
+      let canvas = [...catMembers(e.change ?? ''), ...selIds(e.change ?? '')];
+      const at: { ids: string[]; anchor?: typeof e.anchor; n?: number; label?: string }[] =
+        [{ ids: canvas, anchor: e.anchor }];
+      (e.beats ?? []).forEach((b, i) => {
+        const q = b.change ?? '';
+        const own = [...catMembers(q), ...selIds(q)];
+        canvas = b.replace ? own : [...canvas, ...own];
+        at.push({ ids: canvas, anchor: b.anchor ?? e.anchor, n: i + 1, label: b.text });
+      });
+
+      for (const { ids, anchor, n, label } of at) {
+        if (anchor?.kind !== 'node-box') continue;
+        const drawn = new Set(
+          ds.getContainmentGraph([...new Set(ids)]).nodes.map(nd => nd.id),
+        );
+        if (!drawn.has(anchor.arg)) {
+          bad.push(`${where(markdown, e.id, n, label)} — node-box:${anchor.arg} `
+            + `is not on this position's canvas (${[...new Set(ids)].join('~') || 'empty'})`);
         }
       }
     }
-    expect(bad, `Anchors pointing off their own step's canvas: ${bad.join(', ')}`)
+    expect(bad, `Anchors pointing off their own step's canvas:\n  ${bad.join('\n  ')}`)
       .toEqual([]);
   });
 

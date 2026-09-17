@@ -36,11 +36,13 @@ import {
 } from '../explore/helpAnchors';
 import { parseHelpContent } from '../help/parseHelpContent';
 import { ENTITY_CATEGORIES } from '../config/entityCategories';
+import { where } from './helpers/contentLines';
 import { isMergedId, parentOfMergedId } from '../explore/siblingMerge';
 
-const content = parseHelpContent(
-  readFileSync(resolve(__dirname, '../explore/help-content.md'), 'utf8'),
+const markdown = readFileSync(
+  resolve(__dirname, '../explore/help-content.md'), 'utf8',
 );
+const content = parseHelpContent(markdown);
 
 let ds: DataService;
 beforeAll(async () => { ds = new DataService(await loadModelData()); });
@@ -252,42 +254,56 @@ describe('the diagram tags its boxes and rows with their whole anchor', () => {
  * them against. That is a real gap and it needs the browser, not a bigger test.
  */
 test('every diagram anchor in the content file matches a tag its step emits', () => {
+  const RINGABLE = ['node-box', 'child-header', 'slot-row'];
+  /** Ids a `Change:`/`Only:` query names, expanding `cat=` to members + pins. */
+  const idsOf = (q: string): string[] => {
+    const sel = /(?:^|&)sel=([^&]*)/.exec(q);
+    const cat = /(?:^|&)cat=([^&]*)/.exec(q);
+    if (sel) return decodeURIComponent(sel[1]).split('~').filter(Boolean);
+    if (cat) {
+      const group = ENTITY_CATEGORIES.find(c => c.id === cat[1]);
+      return group ? [...new Set([...group.classIds, ...group.pins])] : [];
+    }
+    return [];
+  };
+
   const bad: string[] = [];
   for (const e of content.entries.values()) {
-    // Spotlights are anchors too: same grammar, same tags, same failure mode.
-    const anchors = [
-      e.anchor, e.spotlight,
-      ...(e.beats ?? []).flatMap(b => [b.anchor, b.spotlight]),
-    ].filter(a => a && ['node-box', 'child-header', 'slot-row'].includes(a.kind));
-    if (!anchors.length) continue;
+    /*
+     * Each POSITION is checked against the canvas as it stands there, rather
+     * than pooling every anchor against the union of everything the step ever
+     * draws. The union hid a real failure mode: a beat anchored on a box that
+     * a LATER beat adds passed, because the later `sel=` was already in the
+     * pool. Walking in order also means a beat's `Only:` correctly replaces.
+     */
+    let canvas = idsOf(e.change ?? '');
+    const at: {
+      anchors: (typeof e.anchor)[]; ids: string[]; n?: number; label?: string;
+    }[] = [{ anchors: [e.anchor, e.spotlight], ids: canvas }];
+    (e.beats ?? []).forEach((b, i) => {
+      const own = idsOf(b.change ?? '');
+      canvas = b.replace ? own : [...canvas, ...own];
+      at.push({
+        anchors: [b.anchor ?? e.anchor, b.spotlight ?? e.spotlight],
+        ids: canvas, n: i + 1, label: b.text,
+      });
+    });
 
-    const change = e.change ?? '';
-    const sel = /(?:^|&)sel=([^&]*)/.exec(change);
-    const cat = /(?:^|&)cat=([^&]*)/.exec(change);
-    let selection: string[] = [];
-    if (sel) selection = decodeURIComponent(sel[1]).split('~').filter(Boolean);
-    else if (cat) {
-      const group = ENTITY_CATEGORIES.find(c => c.id === cat[1]);
-      // `cat=` draws the category's members PLUS its pins.
-      if (group) selection = [...new Set([...group.classIds, ...group.pins])];
-    }
-    // A beat's own `Change:` ADDS to the canvas (`Only:` on a beat replaces,
-    // but the anchors checked here are the step's whole set, so the union is
-    // the generous reading): a beat anchored on the box it just added is fine.
-    for (const b of e.beats ?? []) {
-      const bsel = /(?:^|&)sel=([^&]*)/.exec(b.change ?? '');
-      if (bsel) selection.push(...decodeURIComponent(bsel[1]).split('~').filter(Boolean));
-    }
-    if (!selection.length) continue;
-
-    const tags = diagramTags(selection);
-    for (const a of anchors) {
-      const tag = `${a!.kind}:${(a as { arg: string }).arg}`;
-      if (!tags.has(tag)) bad.push(`${e.id}: ${tag} (selection: ${selection.join('~')})`);
+    for (const { anchors, ids, n, label } of at) {
+      const ringable = anchors.filter(a => a && RINGABLE.includes(a.kind));
+      if (!ringable.length || !ids.length) continue;
+      const tags = diagramTags([...new Set(ids)]);
+      for (const a of ringable) {
+        const tag = `${a!.kind}:${(a as { arg: string }).arg}`;
+        if (!tags.has(tag)) {
+          bad.push(`${where(markdown, e.id, n, label)} — ${tag} is not on this `
+            + `position's canvas (${[...new Set(ids)].join('~')})`);
+        }
+      }
     }
   }
   expect(bad, `Anchors naming no element the step's own canvas tags — each `
-    + `degrades to an unringed popover: ${bad.join('; ')}`).toEqual([]);
+    + `degrades to an unringed popover:\n  ${bad.join('\n  ')}`).toEqual([]);
 });
 
 test('ANCHOR_KINDS and the builders name the same six kinds', () => {

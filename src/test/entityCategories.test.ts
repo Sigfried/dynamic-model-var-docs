@@ -3,7 +3,7 @@ import { loadModelData } from '../utils/dataLoader';
 import {
   ENTITY_CATEGORIES,
   SUBCLASS_OF,
-  DEFAULT_PINS,
+  NESTED_TABULAR_DEFAULT_PINS,
   UNCATEGORIZED_BY_DESIGN,
   findUncategorizedClasses,
 } from '../config/entityCategories';
@@ -150,7 +150,7 @@ describe('entityCategories config vs. live schema', () => {
   });
 
   /*
-   * `pins` (content-view context classes) is unrelated to `DEFAULT_PINS`
+   * `pins` (content-view context classes) is unrelated to `NESTED_TABULAR_DEFAULT_PINS`
    * (first-visit canvas selection) below, despite the shared word.
    *
    * A stale pin is INVISIBLE at runtime — it just draws one extra box, or
@@ -207,10 +207,10 @@ describe('entityCategories config vs. live schema', () => {
     ).toEqual([]);
   });
 
-  test('DEFAULT_PINS reference real, categorized classes', () => {
+  test('NESTED_TABULAR_DEFAULT_PINS reference real, categorized classes', () => {
     const known = new Set(classIds);
     const categorized = new Set(ENTITY_CATEGORIES.flatMap(cat => cat.classIds));
-    for (const id of DEFAULT_PINS) {
+    for (const id of NESTED_TABULAR_DEFAULT_PINS) {
       expect(known.has(id), `default pin ${id} is not in the schema`).toBe(true);
       expect(categorized.has(id), `default pin ${id} is not in any category`).toBe(true);
     }

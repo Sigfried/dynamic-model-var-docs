@@ -72,6 +72,26 @@ describe('the anchor machinery is scoped to an anchored step', () => {
     expect(m![1]).toMatch(/anchor\(left\)/);
   });
 
+  /*
+   * The `--help-spotlight-N` run and `SPOTLIGHT_MAX` must agree: HelpLayer caps
+   * the rings it renders at that constant, and a ring whose index has no CSS
+   * rule gets no `position-anchor` -- the 4px-box-at-the-origin failure the
+   * test above exists for, one index at a time.
+   */
+  test('the spotlight anchor-name run matches SPOTLIGHT_MAX', () => {
+    const layer = readFileSync(
+      resolve(__dirname, '../help/HelpLayer.tsx'), 'utf8',
+    );
+    const max = Number(/const SPOTLIGHT_MAX = (\d+)/.exec(layer)?.[1]);
+    expect(max, 'SPOTLIGHT_MAX not found in HelpLayer.tsx').toBeGreaterThan(0);
+    for (let i = 0; i < max; i++) {
+      expect(css, `[data-help-spotlight="--help-spotlight-${i}"] rule is missing`)
+        .toContain(`[data-help-spotlight="--help-spotlight-${i}"]`);
+      expect(css, `.help-spotlight[data-on-spotlight="${i}"] rule is missing`)
+        .toContain(`.help-spotlight[data-on-spotlight="${i}"]`);
+    }
+  });
+
   test('NO fallback abandons the anchor', () => {
     /*
      * The guarantee the whole placement scheme rests on. Siggie, 2026-09-09:

@@ -206,3 +206,6 @@ and that studies are harmonized into it by `dm-bip`. Three options:
 
 I lean (2). It is the only one that keeps the text without slowing either tour,
 and the Help menu is where a researcher who wants the weeds will look.
+
+### [sg] add a new tour for LinkML context, why to use the Explorer
+

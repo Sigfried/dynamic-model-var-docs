@@ -205,10 +205,9 @@ export interface RuleSpec {
 /*
  * The hand-curated memberships. These CANNOT be derived from the schema —
  * verified exhaustively 2026-08-21; every candidate discriminator failed. See
- * OWNERSHIP_CLASSIFICATION.md. They go stale silently on every schema sync
- * (BACKLOG "Hand-curated config rot"), and collecting them here gives that
- * sync check ONE place to look, which is all this module claims to do about
- * the problem.
+ * OWNERSHIP_CLASSIFICATION.md. They go stale silently on every schema sync,
+ * and collecting them here gives that sync check ONE place to look, which is
+ * all this module claims to do about the problem.
  *
  * **Two exception sets, keyed differently on purpose**, and the difference is
  * the whole reason there are two rules rather than one list of ten. A RANGE

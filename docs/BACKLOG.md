@@ -295,8 +295,7 @@ until then the field does not exist to read.
 LinkML has an `in_subset` field, declared against a `subsets:` block, that can
 tag classes, slots, enums or types. Our entity categories are exactly that kind
 of grouping, so they belong upstream in the model rather than hand-maintained
-here. This is the standing fix for
-[Hand-curated config rot](#hand-curated-config-rot): today a sync that adds a
+here. This is the standing fix for category rot: today a sync that adds a
 class silently drops it from the UI, and only the `findUncategorizedClasses`
 guard catches it. If the schema carries its own grouping, the category list
 arrives with the sync.
@@ -616,56 +615,6 @@ and what it was asked for. The deferral version adds real state for a case that
 cannot currently happen, and the complaint is the silence, not the behaviour.
 (It was written and reverted the same day; never committed, so it would have to
 be written again.)
-
-### Hand-curated config rot
-
-Several config sets are curated by hand against the schema, and an upstream sync
-can invalidate any of them **silently**. It has happened: the 2026-08-12 sync
-added `Context` and `Activity`, which then appeared nowhere in the UI. The sync
-is automated now ([`.github/workflows/schema-sync.yml`](../.github/workflows/schema-sync.yml)), so this is a live risk on
-every run.
-
-| set | file | how a stale entry shows |
-|---|---|---|
-| `ENTITY_CATEGORIES[].classIds` | [`config/entityCategories.ts`](../src/config/entityCategories.ts) | class vanishes from the UI — **tested** |
-| `ENTITY_CATEGORIES[].pins` | [`config/entityCategories.ts`](../src/config/entityCategories.ts) | an extra box in a content view — **invisible**; partly tested |
-| `SUBCLASS_OF` | [`config/entityCategories.ts`](../src/config/entityCategories.ts) | wrong indentation — **tested** |
-| `DEFAULT_PINS` | [`config/entityCategories.ts`](../src/config/entityCategories.ts) | first-visit canvas is wrong — **tested** |
-| `REFERRED_TO_ENTITIES` (5), `NAMED_BACK_POINTERS` (5), `ASSOCIATION_SLOTS` (0), `SKIP_SUBCLASS_EXPANSION` (1) | [`models/ownershipRules.ts`](../src/models/ownershipRules.ts) | an edge points the wrong way — **invisible** |
-
-Those five are complete as of 2026-09-05. The classifier was rewritten once and
-the sets renamed with it, so **a set name in an older doc may not exist** — check
-the file before hunting for one. The TypeScript is now the only copy; the two
-Python prototypes that carried a divergent fork were deleted 2026-09-05.
-
-**This no longer has teeth, and that was the point of the change.** The override
-sets used to be keyed by SLOT NAME, not `(class, slot)`, so a member happening to
-occur at exactly one class was luck — exactly how `performed_by` (11 sites) did
-damage when it sat in the old override list. TASKS `ownership-rules` (2026-09-11)
-deleted both slot-keyed sets. `REFERRED_TO_ENTITIES` is keyed by RANGE, where
-there is no such hazard because the range IS the thing being classified;
-`NAMED_BACK_POINTERS` is keyed `Class.slot`, which is qualified and so carries
-the hazard no further than the one site it names. The `override-site-check` task
-dissolved with it, unbuilt and no longer needed.
-
-What still rots here is EDITORIAL: whether an entity newly added by a sync belongs
-in `REFERRED_TO_ENTITIES` is a judgement nothing can derive — verified
-exhaustively 2026-08-21, every candidate discriminator failed. That is a reading,
-and it is Siggie's call.
-
-⚠️ **The COMMENTS rot too, and nothing tests them.** Found 2026-09-08 while
-writing tour content off them: `entityCategories.ts` says Quantity has "16
-slots across 13 classes" (live: 11 across 9) and that Survey has "two outward
-references" (live: one). Both were true when written. Counts in those comments
-are prose, not assertions — **probe before quoting one into user-facing text**,
-which is exactly the mistake that nearly shipped in the `admin-study` beats.
-
-**What to do after a sync:** run the suite first (it catches the tested rows),
-then re-read [`src/config/entityCategories.ts`](../src/config/entityCategories.ts) for categories and pins, and
-[OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) for the override sets.
-The untested rows need a **reading**, not a query — the criteria are editorial,
-which is why they are hand-curated. **Ownership classification is Siggie's call,
-not a mechanical one.**
 
 ---
 

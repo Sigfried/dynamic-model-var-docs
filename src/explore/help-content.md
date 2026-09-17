@@ -434,25 +434,33 @@ introduced and then use one word.
 - **Title:** 5. Survey / Questionnaire
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
-  Ten entities, and almost no connection to the rest of the model. This is the
-  one category you can read entirely on its own — nothing outside it needs to
-  be borrowed in, and only a couple of attributes reach out. It is two mirrored
-  halves: the **questions** on the left, the **answers** on the right.
-  ### that's not true --
-  > **there are two (?) ways this section connects out to
-  > the rest
-  >   - **QuestionnaireResponse**.`associated_visit` *belongs to* a **Visit**,
-  >   - **QuestionnaireItem**s can be linked more deeply as
-  >     **SdohObservation**`.related_questionnaire`
+  This section contains the defining data for surveys
 - **Anchor:** category-row:survey
-- Only: cat=survey
+- Only: 
 <!-- - **Action:** Drew the whole Survey / Questionnaire category, the same as pressing its ⊞ button. -->
 - Beats:
+  1. Questionnaire
+     - Keep: true
+     - Only: cat=survey
+     - Description:
+       - **Questionnaire** — the title, description, etc.
+       - **QuestionnaireItem** — sections, subsections, question text
+     - Anchor: node-box:Questionnaire
+  1. Questionnaire
+     - Keep: true
+     - Description:
+       and the responses: 
+       - **QuestionnaireResponse** — a holder for answers and pointer to the visit
+         where the survey was administered
+       - **QuestionnaireResponseItem** — a pointer to the QuestionnaireItem definition
+       - **QuestionnairResponseValue** — the respondent's answers.
+     - Anchor: node-box:Questionnaire
   1. Questionnaire
      - Description:
        ##### Questionnaire
        *{{model-description:Questionnaire}}*
      - Anchor: node-box:Questionnaire
+     - Only: cat=survey
   2. QuestionnaireItem
      - Description:
        ##### QuestionnaireItem
@@ -465,36 +473,32 @@ introduced and then use one word.
      - Description:
        ##### QuestionnaireResponse
        *{{model-description:QuestionnaireResponse}}*
-
-       It is the mirror of Questionnaire — one filled-in form against one
-       blank one.
      - Anchor: node-box:QuestionnaireResponse
   4. QuestionnaireResponseItem
      - Description:
        ##### QuestionnaireResponseItem
        *{{model-description:QuestionnaireResponseItem}}*
-
-       And this mirrors QuestionnaireItem. `has_questionnaire_item` is the edge
-       joining the two halves: an answer knows which question it answers.
      - Anchor: node-box:QuestionnaireResponseItem
   5. the typed values
      - Description:
        ##### One answer, five types
-       QuestionnaireResponseValue is a *single-valued answer*, and it has five
-       subclasses — one each for a decimal, a boolean, an integer, a TimePoint
-       and a string. The diagram merges them into one box. A model can either
-       carry one loosely-typed value column or an entity per type; BDCHM chose
-       the second.
+       *{{model-description:QuestionnaireResponseValue}}*
      - Anchor: node-box:QuestionnaireResponseValue
-  6. self-contained
+  6. SdhohObservations
+     - Change: sel=SdohObservation
+     - Spotlight: child-header:SdohObservation, node-box:Participant, node-box:QuestionnaireResponse
+     - Highlight: ring
+     - Anchor: node-box:QuestionnaireItem
      - Description:
-       ##### A subtree of its own
-       Look at how few edges leave this picture. Almost the only thing Survey
-       reaches outward for is the TimePoint a timed answer holds, and the Visit
-       a response was collected at. Everywhere else in BDCHM, drawing a
-       category means borrowing Participant and Visit to make it legible; here
-       it does not.
-     - Anchor: none
+       Social Determinants of Health observations can be tied
+       to QuestionnaireItems
+  6. Visit connection
+     - Change: sel=Visit~Participant
+     - Anchor: node-box:QuestionnaireResponse
+     - Spotlight: node-box:Visit, node-box:QuestionnaireItem
+     - Highlight: ring
+     - Description:
+       Responses must be attached to Participants through **Visits**
   7. what the category is for
      - Description:
        ##### What this category is for

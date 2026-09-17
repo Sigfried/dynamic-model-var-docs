@@ -38,7 +38,7 @@ export interface EntityCategory {
    * category's content view (the `⊞` control on the category header).
    * (`▶` was the drafted glyph; it collided — see `SelectionTable.tsx`.)
    *
-   * **Not `DEFAULT_PINS`.** That constant, below, is the unrelated
+   * **Not `NESTED_TABULAR_DEFAULT_PINS`.** That constant, below, is the unrelated
    * first-visit canvas selection. Same word, different feature.
    *
    * **The test for a pin is explanatory, not structural** (Siggie,
@@ -96,8 +96,14 @@ export const SUBCLASS_OF: Record<string, string> = {
   ImagingFile: 'File',
 };
 
-/** Default pinned entities shown on first visit */
-export const DEFAULT_PINS = ['Demography', 'Condition', 'MeasurementObservation'];
+/**
+ * Entities pinned on a first visit to the **Nested Tabular** view
+ * (`previous.html` → `App.tsx`), when localStorage carries no saved pins.
+ * Read only by [`usePinState`](../hooks/usePinState.ts); the default app —
+ * Explore, `index.html` → `src/explore/` — has its own selection state and
+ * opens on an empty canvas.
+ */
+export const NESTED_TABULAR_DEFAULT_PINS = ['Demography', 'Condition', 'MeasurementObservation'];
 
 /**
  * Classes deliberately kept out of every category, with the reason.
@@ -268,9 +274,9 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       'QuestionnaireResponseValueTimePoint',
       'QuestionnaireResponseValueString',
     ],
-    // Ten classes, two outward references. Genuinely self-contained — a real
-    // content fact the tour gets to state, rather than something to paper
-    // over with pins.
+    // Genuinely self-contained — the classes here point almost entirely at
+    // each other. A real content fact the tour gets to state, rather than
+    // something to paper over with pins.
     pins: [],
     defaultExpanded: false,
   },
@@ -280,13 +286,14 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
     classIds: [
       /*
        * The universal root, listed first (Siggie, 2026-09-16) so it can be
-       * TALKED ABOUT without fishing for a class whose slot holds it. 13 slots
-       * range on Entity — every `focus`, plus Condition.associated_evidence
-       * and MeasurementObservation.associated_artifact — and before this the
+       * TALKED ABOUT without fishing for a class whose slot holds it. A
+       * handful of slots range on Entity — every `focus`, plus
+       * Condition.associated_evidence and
+       * MeasurementObservation.associated_artifact — and before this the
        * only way onto the canvas was clicking one of those rows.
        *
        * **Nothing nests under it, deliberately.** *Everything* nests under
-       * Entity — 37 classes directly, 53 in subtree — so drawing that would
+       * Entity — nearly every class in the model — so drawing that would
        * complicate the graph without adding any clarity. What Entity does add
        * is its role as the schema's CATCH-ALL: a slot ranged on Entity accepts
        * any class in the model, which is what `focus` uses it for.
@@ -303,11 +310,11 @@ export const ENTITY_CATEGORIES: EntityCategory[] = [
       'TimePoint',
       'TimePeriod',
       // Moved here from `observation` (2026-09-04, Siggie). Quantity is a
-      // generic value type, not an observation concept: 16 slots across 13
-      // classes in four categories, including Substance.substance_quantity,
+      // generic value type, not an observation concept: it is held across
+      // several categories, including Substance.substance_quantity,
       // Assay.lower_limit_of_detection and SpecimenProcessingActivity.duration,
-      // none of which are observations. It belongs beside TimePoint (15 slots,
-      // 9 classes), which is the same kind of thing and already lives here.
+      // none of which are observations. It belongs beside TimePoint, which is
+      // the same kind of thing and already lives here.
       'Quantity',
     ],
     // Files are associated with a participant. BodySite and ImagingStudy are
