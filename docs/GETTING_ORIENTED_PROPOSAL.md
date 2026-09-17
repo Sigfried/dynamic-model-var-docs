@@ -58,10 +58,13 @@ the Help menu, which is the only route into one).
 - **#2 opens on Person, #3 opens on Participant.** Pick one. Person is right:
   the whole tour is the Person → Participant → Visit → Observation → Quantity
   spine, so starting anywhere else means a restart at #6.
+  - [sg] ok, Person
 - **`why-overlap` (TASKS) is the same question as #1.** Cutting
   `linkml-context` settles it: `why` keeps the "you may want to use BDCHM to…"
   argument at the end of tour 1, and Getting oriented opens on mechanics. The
   LinkML/pipeline paragraph is the only orphan — see "Open question" below.
+  - [sg] no one's going to go to the end of tour 1 to see the why. let's
+    put the researcher-oriented whys in this tour, and fold in reading the diagram
 
 ---
 
@@ -98,6 +101,7 @@ except the duplication.
 ---
 
 ## Should *Reading the diagram* be folded in? — **[DECIDE #2]**
+- [sg] yes
 
 **Partly — and it is already happening by accident.** Of its four steps, the
 first two are things Getting oriented already teaches:
@@ -191,6 +195,8 @@ from tree mode the opening beat shows an unringed popover.
 ---
 
 ## Open question for you — **[DECIDE #3]**
+- [sg] add a new tour for LinkML context, why to use the Explorer oriented
+  to LinkML people / modelers
 
 **The LinkML / ingestion-pipeline paragraph** (currently buried in
 `linkml-context`, the step I want to cut) is the only orphan. It is the
@@ -207,5 +213,4 @@ and that studies are harmonized into it by `dm-bip`. Three options:
 I lean (2). It is the only one that keeps the text without slowing either tour,
 and the Help menu is where a researcher who wants the weeds will look.
 
-### [sg] add a new tour for LinkML context, why to use the Explorer
 
