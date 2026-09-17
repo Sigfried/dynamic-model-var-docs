@@ -366,8 +366,12 @@ body.help-mode {
    `HelpLayer` only adds this class when `beatCount > 0 && beatIndex >= 0`.
 
    THE LINE MUST NOT WRAP, and it is allowed to widen the popover to avoid it.
-   "BDCHM Data Categories" + "Survey / Questionnaire" is the current worst case
-   and wants ~390px against the ~292px inside a floor-width (320px) popover.
+   The worst case today is "BDCHM Data Categories" + "Survey / Questionnaire",
+   which is wider than the ~292px inside a floor-width (320px) popover. (No
+   px figure is quoted for it on purpose: it moves with the font stack and the
+   host's `--help-font-size`, nothing here depends on knowing it, and jsdom
+   cannot measure it, so a number written down here could only ever be a
+   guess that later reads as fact.)
 
    How it widens WITHOUT measuring anything: `width: max-content` here makes
    the h4's own min-content contribution the full unwrapped line, and
@@ -384,6 +388,17 @@ body.help-mode {
   /* Never wider than the popover can be; past this the title wraps rather
      than pushing the box off the screen. */
   max-width: calc(100vw - 16px);
+  /* BODY SIZE, overriding `.help-popover-title`'s 1.15em, and the size both
+     halves of the line share (Siggie, 2026-09-17: *"still too big. too much of
+     a contrast between tour and step titles"*).
+
+     It has to be set HERE, on the h4, not on the title span: an `em` on the
+     child multiplies its parent, so `font-size: 1em` there resolved against
+     the 1.15em and changed nothing. Every size below is an em of this, so the
+     row scales with the popover like everything else. */
+  font-size: 1em;
+  font-weight: 600;
+  color: var(--help-muted, #6b7280);
 }
 
 /* Neither part wraps: the flex line is sized to hold both whole. */
@@ -392,30 +407,38 @@ body.help-mode {
   white-space: nowrap;
 }
 
-/* On the beat line the step title is only BOLD, not the stacked title's
-   1.15em (Siggie, 2026-09-17). The big size exists to stop a stacked title
-   reading as `**bold**` in the prose below it; on this line it sits beside a
-   label instead of above prose, and the size just made the row shout. */
-.help-popover-title-inline .help-popover-title-text {
-  font-size: 1em;
-}
+/* The tour label matches the step title beside it on SIZE, WEIGHT and COLOUR
+   -- all three now come from the row -- and keeps only its uppercase and
+   tracking, which are what still mark it as a label rather than a name
+   (Siggie, 2026-09-17: *"keep tour title uppercased"*). The stacked layout is
+   untouched: there the label is still the quieter half.
 
-/* The tour label sits inline here, and its bottom margin is the stacked
-   layout's gap -- on one line it would push the baselines apart. */
+   `margin-bottom` is the stacked layout's gap; on one line it would push the
+   baselines apart. */
 .help-popover-title-inline .help-popover-tour {
   display: inline;
   margin-bottom: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
 }
 
 /* A divider between the tour label and the step title, so the two read as two
-   things and not one long caption. Generated rather than authored: it belongs
-   to this layout only, and the stacked form must not get one. The gap either
-   side is the flex `gap` plus this margin. */
+   things and not one long caption. It carries more of that job now that the
+   two halves share a size and weight, so it is drawn LARGER than the text
+   either side rather than quieter than it (Siggie, 2026-09-17: *"make the dot
+   bigger"*) -- `line-height: 0` keeps the bigger glyph from growing the row.
+
+   Generated rather than authored: it belongs to this layout only, and the
+   stacked form must not get one. The gap either side is the flex `gap` plus
+   this margin. */
 .help-popover-title-inline .help-popover-tour::after {
   content: '·';
   margin-left: 0.5em;
-  opacity: 0.55;
-  font-weight: 400;
+  font-size: 1.7em;
+  line-height: 0;
+  vertical-align: middle;
+  opacity: 0.75;
 }
 
 /* Which tour the step belongs to, in front of its title (TASKS 1c). Quieter

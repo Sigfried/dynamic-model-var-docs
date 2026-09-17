@@ -511,10 +511,12 @@ replaces the full name there when the name is too long to sit over a title:
 - **Description:** Introduction to the model: what it contains and what it's for
 ```
 
-On a step's BEATS the tour name and the step title share one line, and the
-title drops to plain bold; the step's opening position keeps the title stacked
-and prominent. A step title repeats itself unchanged through a run of beats
-while the prose under it moves, so on the beats it steps out of the way.
+On a step's BEATS the tour name and the step title share one line, separated by
+a dot and set in the same size, weight and colour — the tour name keeps its
+uppercase, which is what still marks it as a label. The step's opening position
+keeps the title stacked and prominent instead. A step title repeats itself
+unchanged through a run of beats while the prose under it moves, so on the
+beats it steps out of the way.
 
 ### Linking into a tour
 
