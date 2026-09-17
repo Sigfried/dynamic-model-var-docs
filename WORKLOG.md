@@ -24,17 +24,28 @@ step rather than repeating.
 **The guard is `beatCount > 0 && beatIndex >= 0`, and the first half is
 load-bearing.** A beatless step parses to `beatIndex: 0, beatCount: 0`
 (`tourPositions`), so `beatIndex >= 0` alone is true for every ordinary step
-and would have flattened all of them. This is the same trap the tour map hit
-(`beatless beatIndex: 0`, TASKS `tour-map`) — worth expecting a third time.
+and would have flattened all of them. **This is the second time that shape has
+bitten** — see §The beatless-step bug, caught by a fixture (2026-09-08), where
+the map's row filter dropped every beatless step for the same reason. Expect a
+third: any code that asks "is this position a beat?" has to ask `beatCount`,
+not `beatIndex`.
 
 **Making the line not wrap without measuring anything.** `width: max-content`
 on the h4 makes its min-content contribution the whole unwrapped line, and
 `min-width: min-content` on `.help-popover` lets that beat the inline `width`
 the layer sets, because min-width resolves over width. So the popover grows to
 fit the line. No layout pass, no second render. The worst case
-("BDCHM Data Categories" + "Survey / Questionnaire") wants ~390px against the
-~292px inside a floor-width popover, so something had to give and this was the
-option that cost nothing else.
+("BDCHM Data Categories" + "Survey / Questionnaire") is wider than a
+floor-width popover, so something had to give and this was the option that cost
+nothing else. **Confirmed on screen** — Siggie, on the Survey step: *"the width
+seems fine"*.
+
+No px figure for that worst case is recorded anywhere, deliberately. An earlier
+draft of the CSS comment carried "~390px", which was my estimate of a
+configuration that then changed twice; the number moves with the font stack and
+the host's `--help-font-size`, nothing depends on knowing it, and **jsdom does
+no layout and this sandbox has no browser**, so any figure written down could
+only be a guess that later reads as a measurement.
 
 **Two corrections from Siggie, both worth keeping.**
 
@@ -52,9 +63,36 @@ Second, I built right-alignment and a separator together on the first pass.
 They conflict: with the title pushed right by `margin-left: auto`, a separator
 glued to the label strands itself mid-row on any popover the prose made wider
 than the line needs. Asked rather than picked; Siggie chose separator, no
-right-align. The title is also plain bold at body size on this line — the
-1.15em exists to stop a STACKED title reading as `**bold**` in the prose below
-it, and on a line beside a label there is no prose to be confused with.
+right-align.
+
+**Then the same line took two more rounds, both from screenshots.**
+
+*"still too big. too much of a contrast between tour and step titles."* The
+title was still rendering at 1.15em, because I had set `font-size: 1em` on the
+title SPAN — and an em on a child multiplies its PARENT, so it resolved against
+the h4's 1.15em and did precisely nothing. The screenshot was showing the
+original size and I had reported the change as done. **A size override belongs
+on the element that declares the size**; moved to the h4, and verified in the
+BUILT css rather than by reading the source, which is the check that would have
+caught it the first time.
+
+Siggie's fix for the contrast was to give both halves one style and enlarge the
+separator. They took body size, 600, muted — the tour label keeping only its
+uppercase and tracking, which is what still marks it as a label (*"keep tour
+title uppercased"*, correcting a first answer of "both at body size" that would
+have dropped the caps).
+
+*"now the dot is too low."* The separator was a `·` glyph at 1.7em. A `·` sits
+at about x-height INSIDE its em box, so scaling the box moves the mark down
+relative to the text beside it, and `line-height: 0` plus `vertical-align:
+middle` then fight the flex row's baseline alignment instead of correcting it.
+Replaced with a drawn circle — `content: ''` and a `border-radius: 50%` box in
+`currentcolor` — whose position comes from its own box rather than from font
+metrics. **That is the general move when something cannot be measured here:**
+prefer the construction whose result does not depend on the unmeasurable thing,
+rather than tuning a number against a screenshot. One font-dependent value is
+left, `vertical-align: 0.25em`, and it is the only thing to nudge if the mark
+is still off.
 
 ### Category numbers out of the BDCHM tour titles
 
@@ -106,14 +144,29 @@ Also folded the duplicate parse at the `writeExploreState` latch site into
 `readTourRequest`; it had been a second copy of the same param reading, which
 is how two readers of one param drift apart.
 
-### A note on the two questions asked
+### Process notes
 
-Both of the `AskUserQuestion` calls this session (what gives when the top line
-does not fit; separator vs. right-align) were genuine forks where the options
-led to materially different work, and both got answers that changed the build —
-the second reversed something already written. Worth the interruption. The
-third design fork (live URL vs. popover button vs. chooser) became TASKS
-`tour-position-link` rather than a question, because Siggie asked for a task.
+- **The three questions asked were all real forks**, and all three changed the
+  build: what gives when the top line does not fit; separator vs. right-align
+  (which reversed code already written); and which style the two halves share.
+  The third got a correction a beat later — *"whoops. no. keep tour title
+  uppercased"* — which is the failure mode of offering three whole styles as
+  one choice rather than separating "what size" from "keep the caps".
+- **A fourth design fork became a TASK, not a question**: live URL vs. popover
+  button vs. chooser, for copying a link to where you are. Siggie asked for it
+  written up, so `tour-position-link` records why those three conflict
+  (`ONE_SHOT_PARAMS` exists to stop the URL carrying tour state) rather than
+  picking one.
+- **Two verification lessons, both the same shape.** A CSS change reported as
+  done had not taken effect (the em-inheritance bug above); `npm run build`
+  plus a grep of the emitted stylesheet is what settles that, and reading the
+  source is not. And the estimates in this area — `CHAR_W`, `navMinWidth`,
+  my "~390px" — are all uncheckable here for the same reason: **no layout in
+  jsdom, no browser in the sandbox.** Treat a px figure in this file as a
+  guess unless it says how it was measured.
+- Siggie also declined a rule I had invented (see above). Worth stating
+  generally: **a rationale attached to one decision is not a policy**, and
+  writing it up as one puts words in their mouth that then get cited back.
 
 ---
 ## 2026-09-17 — hover engaged itself on every tour step
