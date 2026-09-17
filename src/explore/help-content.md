@@ -499,16 +499,6 @@ introduced and then use one word.
      - Highlight: ring
      - Description:
        Responses must be attached to Participants through **Visits**
-  7. what the category is for
-     - Description:
-       ##### What this category is for
-       Survey holds instruments and their responses: the form as designed, and
-       the form as filled in, kept deliberately apart so the same questionnaire
-       can be answered many times. Its shape is borrowed from
-       [FHIR](https://www.hl7.org/fhir/questionnaire.html), which is why it
-       reads differently from the rest of the model.
-     - Anchor: none
-
 
 ### other-files
 

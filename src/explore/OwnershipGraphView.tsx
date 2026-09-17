@@ -1960,7 +1960,28 @@ export default function OwnershipGraphView({
   const adjacencyRef = useRef(adjacency);
   adjacencyRef.current = adjacency;
 
+  /*
+   * Hover is SUPPRESSED from a redraw until the pointer actually moves.
+   *
+   * Stepping a tour relays out the canvas under a stationary cursor, and a box
+   * that lands beneath it gets a genuine `mouseenter` — so everything else
+   * dims, and it stays dimmed until you move OFF the box (Siggie, 2026-09-17:
+   * the browser really does think you are hovering, so a one-pixel nudge does
+   * not clear it). That reads as the tour having highlighted something, which
+   * is exactly the signal the spotlight is meant to own.
+   *
+   * Suppressing until a real `pointermove` is correct whichever way a browser
+   * resolves hover-on-insertion, which is why it is done this way rather than
+   * by inspecting the event: the flag is armed on every vm/layout change and
+   * cleared by the first move, so a cursor that never moves never dims.
+   * Moving the mouse afterwards dims normally — accepted (Siggie, same day).
+   */
+  const hoverSuppressedRef = useRef(false);
+
   const applyHover = useCallback((target: { kind: 'node' | 'edge'; id: string } | null) => {
+    // A clear (null) is always allowed through: suppression must never strand
+    // dimming that is already on screen.
+    if (hoverSuppressedRef.current && target) return;
     pendingHoverRef.current = target;
     if (hoverRafRef.current !== null) return;
     hoverRafRef.current = requestAnimationFrame(() => {
@@ -2024,8 +2045,24 @@ export default function OwnershipGraphView({
   // eslint-disable-next-line react-hooks/exhaustive-deps -- zp.wrapperRef is a stable ref
   }, []);
 
-  // Clear stale inline hover styles when the graph changes under the cursor.
-  useEffect(() => applyHover(null), [vm, layout, applyHover]);
+  /*
+   * Clear stale inline hover styles when the graph changes under the cursor,
+   * and arm the suppression above so the redraw cannot immediately re-dim via
+   * a box landing under a stationary pointer.
+   *
+   * The listener is on `window` and uses `pointermove` rather than sitting on
+   * the wrapper: the pointer may be over a box, the toolbar or outside the
+   * canvas entirely when the tour steps, and any of those moving means the
+   * viewer is driving again. `once` retires it, so there is no per-move cost
+   * after the first.
+   */
+  useEffect(() => {
+    hoverSuppressedRef.current = true;
+    applyHover(null);
+    const release = () => { hoverSuppressedRef.current = false; };
+    window.addEventListener('pointermove', release, { once: true, passive: true });
+    return () => window.removeEventListener('pointermove', release);
+  }, [vm, layout, applyHover]);
 
   const toggleExpanded = (id: string) =>
     setExpandedNodes(prev => {

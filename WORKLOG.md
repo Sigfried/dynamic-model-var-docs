@@ -8,7 +8,54 @@ Newest first.
 
 
 ---
-## 2026-09-16 (latest) — the blank first visit, and cutting the config-rot section
+## 2026-09-17 (latest) — hover engaged itself on every tour step
+
+Siggie: stepping a tour often left the canvas dimmed, because the redraw put a
+box under the stationary cursor and everything else greyed out until the mouse
+moved.
+
+**Not a stale-style bug.** `OwnershipGraphView` already cleared inline hover
+styles on every vm/layout change, and that effect was working — it handles the
+reverse case, where the cursor sits still and the boxes move away. This is the
+opposite order: the clear runs during the redraw, and the offending
+`mouseenter` arrives AFTER, when the new box lands under the pointer. It is a
+genuine event, not a stale style.
+
+**Measured before fixing, and the measurement failed.** A probe asking whether
+`mouseenter` fires on mere insertion could not answer: jsdom has no hit-testing
+and cannot place a cursor, so it cannot produce the event. Rather than reason
+around the gap, asked Siggie, who reported that **moving one pixel does not
+clear it — you have to leave the box.** That settles it: the browser really
+does believe the pointer is inside, so there is no stale hover to flush and no
+event to identify.
+
+So the fix is a suppression WINDOW, not event inspection: `hoverSuppressedRef`
+is armed on every vm/layout change and released by the first real
+`pointermove`. Correct whichever way a browser resolves hover-on-insertion,
+which is the point — it does not depend on the answer the probe could not get.
+
+Three details worth keeping:
+
+- **A clear (`null`) always passes the guard.** Suppressing a clear would
+  strand dimming already painted on screen.
+- **The listener is on `window`, not the wrapper.** When a tour steps, the
+  pointer may be over a box, the toolbar, or off the canvas entirely; any of
+  those moving means the viewer is driving again. `once: true` retires it, so
+  there is no per-move cost afterwards.
+- **Moving the mouse afterwards dims normally.** Siggie accepted that
+  explicitly ("i think i'll be ok with the annoyance") — it is hover behaving
+  as designed once the viewer is actually driving.
+
+`hoverAfterRedraw.test.ts` asserts over the SOURCE, the dragPins /
+layoutTransition pattern, because a render test would need both ELK and real
+hit-testing. Checked that it fails when the guard is deleted.
+
+⚠️ Still open, and Siggie's own note at the dim call: `// [sg] changed
+this...needs to live in config`. The amounts (0.25 nodes, 0.38 edges, 0.08
+arrowheads) are inline constants.
+
+---
+## 2026-09-16 — the blank first visit, and cutting the config-rot section
 
 Siggie loaded the deployed site in incognito with empty localStorage and got an
 empty canvas. I had just told them `DEFAULT_PINS` seeds the first visit, having
