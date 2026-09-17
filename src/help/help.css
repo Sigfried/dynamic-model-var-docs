@@ -157,11 +157,17 @@ body.help-mode {
 /* `Spotlight:` resolved: each ring surrounds its own element instead of the
    anchor. The popover stays on the anchor; only the emphasis moves.
 
-   ⚠️ Several rings want `Highlight: ring`. The default `.help-spotlight` dims
-   the page with a `0 0 0 9999px` shadow, and N of those stack into N layers of
-   dimming, each ring's hole darkened by the others. One scrim with several
-   holes needs `clip-path`; `helpContent.test.ts` fails a multi-target
-   spotlight that does not ask for the ring rather than letting that ship. */
+   Several rings WITHOUT `Highlight: ring` stack their scrims: the default
+   `.help-spotlight` dims the page with a `0 0 0 9999px` shadow, so N of them
+   give N layers of dimming and each ring's hole is darkened by the others.
+
+   That was treated as a bug until Siggie looked at it (2026-09-17, the
+   `rows-and-dots` "an entity" beat): *"the dimming with two spotlights is a
+   little weird, but i actually like it better than the legal behavior"*. So
+   it is a LOOK an author may choose, and `helpContent.test.ts` only warns.
+   One scrim with several holes -- `clip-path` on a single overlay -- is
+   BACKLOG `multi-hole-scrim`, and would make this a choice between two good
+   renderings instead. */
 .help-spotlight[data-on-spotlight="0"] { position-anchor: --help-spotlight-0; }
 .help-spotlight[data-on-spotlight="1"] { position-anchor: --help-spotlight-1; }
 .help-spotlight[data-on-spotlight="2"] { position-anchor: --help-spotlight-2; }

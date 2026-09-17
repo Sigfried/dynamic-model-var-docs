@@ -236,13 +236,32 @@ Also softening the `rows-and-dots` wording (the purple beat now says the
 Explorer does not yet display enumeration values, which is a fact about the app
 rather than about the row kind).
 
-**Their working copy is green** as of the session's end (802 passing). It
-briefly was not: the `an entity` beat spotlights TWO elements
-(`slot-row:Person.cause_of_death, entity-row:CauseOfDeath`), and several rings
-need `Highlight: ring` or each carries its own page-dimming scrim and they
-stack. Siggie added the `Highlight: ring` themselves while the session was
-still open. Noted because the same trap waits for the next multi-spotlight
-beat, and the test names it clearly when it fires.
+**The stacked-scrim rule was overruled, and the test relaxed to a warning.**
+
+The `an entity` beat spotlights TWO elements
+(`slot-row:Person.cause_of_death, entity-row:CauseOfDeath`), which used to FAIL
+`helpContent.test.ts`: without `Highlight: ring` each ring carries its own
+`0 0 0 9999px` scrim, so two rings give two layers of dimming and each ring's
+hole is darkened by the other's shadow. The test existed to stop that shipping.
+
+Siggie looked at it and disagreed: *"the dimming with two spotlights is a
+little weird, but i actually like it better than the legal behavior"*. The
+uneven vignette reads as depth rather than breakage and both targets stay
+legible. So the stacking is a LOOK an author may choose, not a defect — the
+test now `console.warn`s and the beat keeps the default.
+
+⚠️ **I nearly got this backwards.** Siggie had temporarily added
+`Highlight: ring` in order to take the screenshots, so the images showed the
+scrimLESS rendering while the praise was for the stacked one. Asking which
+state they were looking at was worth the round trip; reading "I like the
+dimming" off a screenshot with no dimming in it would have produced the wrong
+change. `ring` means NO page scrim, which is the opposite of what the name
+suggests.
+
+Filed BACKLOG `multi-hole-scrim`: one overlay with a `clip-path` hole per
+spotlight, giving even dimming with clean holes. Explicitly a THIRD rendering,
+not a correctness fix — if it lands, `Highlight:` gains a value rather than
+losing the stacked look.
 
 **Their removal of `entity-box`'s `Action:` is correct**, incidentally, and I
 checked rather than assuming: the "a replacing step needs an `Action:`" rule

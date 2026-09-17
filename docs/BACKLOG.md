@@ -381,6 +381,28 @@ Not the same as [`schema-comments`](TASKS.md), which stays its own task: that is
 LinkML's `comments` field on slots and classes, which are silently discarded.
 Enums already surface `comments` through `getExtendedDescription`.
 
+### `multi-hole-scrim` — one dimming layer with several holes
+
+**Low priority; there is a working answer today.** A `Spotlight:` naming
+several elements draws one `.help-spotlight` per target, and each carries its
+own `0 0 0 9999px` page-dimming shadow — so N rings give N layers of dimming,
+and each ring's hole is darkened by the others' shadows.
+
+`Highlight: ring` avoids it by dropping the scrim entirely, and **the stacked
+look is not a bug**: Siggie, 2026-09-17, on the `rows-and-dots` "an entity"
+beat — *"the dimming with two spotlights is a little weird, but i actually like
+it better than the legal behavior"*. The content test warns rather than fails.
+
+So this task is not a fix, it is a THIRD rendering: one overlay element with a
+`clip-path` punched once per spotlight, giving even dimming with several clean
+holes. Roughly: render a single `<div class="help-scrim">` when there is more
+than one spotlight, build `clip-path: polygon(...)` or a `path()` from the
+spotlight rects, and drop the per-ring `9999px` shadow in that case.
+
+⚠️ **Do not treat it as a correctness fix and quietly delete the stacked
+look.** It is the authored default and Siggie prefers it on at least one step;
+if this lands, `Highlight:` gains a third value rather than losing one.
+
 ### `variable-box-width` — let a box be as wide as its longest row
 
 **Low priority, and an exploration before an implementation.** `NODE_W` is a

@@ -790,16 +790,21 @@ compare — dimming the rest hides the context the step is talking about.
      - Spotlight: child-header:SdohObservation, node-box:Participant
 ```
 
-Two rules, both enforced by `helpContent.test.ts`:
+One rule, enforced by `helpContent.test.ts`, and one choice:
 
-- **It needs `Highlight: ring`.** The default spotlight dims the page with a
-  `0 0 0 9999px` shadow; N of those stack into N layers of dimming, each ring's
-  hole darkened by the others. One scrim with several holes wants `clip-path`,
-  which is a bigger change than this was.
 - **Every entry carries its own `kind:`.** A bare name is shorthand for
   `help-id:<name>`, so `node-box:Visit, QuestionnaireItem` silently rings only
   Visit — the second resolves to a `help-id` that nothing wears. Write
   `node-box:Visit, node-box:QuestionnaireItem`.
+- **`Highlight: ring` is a look, not a requirement.** Without it each ring
+  carries its own `0 0 0 9999px` scrim, so N rings give N layers of dimming and
+  each ring's hole is darkened by the others. That was treated as a bug until
+  Siggie looked at it (2026-09-17): *"the dimming with two spotlights is a
+  little weird, but i actually like it better than the legal behavior"*. The
+  uneven vignette reads as depth and both targets stay legible, so pick
+  whichever suits the step — `ring` for no dimming at all, the default for the
+  stacked look. The test only warns. A single scrim with several holes
+  (`clip-path`) is BACKLOG `multi-hole-scrim`.
 
 At most eight resolve (`SPOTLIGHT_MAX` in `HelpLayer.tsx`, matched by a run of
 rules in `help.css`); the rest are dropped.
