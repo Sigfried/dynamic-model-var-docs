@@ -316,7 +316,7 @@ which is what `DUAL_LISTED` already does by hand.
 - `pins` — outside classes drawn alongside a category's members. Explicitly
   **explanatory, not structural** (Siggie, 2026-09-04): a mechanically derived
   version was tried and rejected. The schema has no place for that judgment.
-- `SUBCLASS_OF`, `DEFAULT_PINS`, `UNCATEGORIZED_BY_DESIGN`. The last one is the
+- `SUBCLASS_OF`, `NESTED_TABULAR_DEFAULT_PINS`, `UNCATEGORIZED_BY_DESIGN`. The last one is the
   guard's recording mechanism and only gets more important — if the categories
   come from upstream, a class in no subset is the same silent-disappearance
   bug wearing a different hat.
