@@ -223,6 +223,32 @@ resolver uses the model, which is the right source for prose about what the app
 shows. Not chased down; recorded so the next person does not think one of them
 is a bug.
 
+### Where the session stopped
+
+Everything above is committed (`f74ce77`..`bc8c2b1`). Siggie then started
+editing `help-content.md` in the browser and the session ended mid-pass, so
+those edits are UNCOMMITTED and are theirs to finish — do not tidy them.
+
+What they are doing, from the diff: moving the popover off the thing it
+describes. `entity-box` and `relation-bar-step` now anchor `node-box:Person`
+and use `Spotlight:` for the specific row, instead of anchoring the row itself.
+Also softening the `rows-and-dots` wording (the purple beat now says the
+Explorer does not yet display enumeration values, which is a fact about the app
+rather than about the row kind).
+
+**Their working copy is green** as of the session's end (802 passing). It
+briefly was not: the `an entity` beat spotlights TWO elements
+(`slot-row:Person.cause_of_death, entity-row:CauseOfDeath`), and several rings
+need `Highlight: ring` or each carries its own page-dimming scrim and they
+stack. Siggie added the `Highlight: ring` themselves while the session was
+still open. Noted because the same trap waits for the next multi-spotlight
+beat, and the test names it clearly when it fires.
+
+**Their removal of `entity-box`'s `Action:` is correct**, incidentally, and I
+checked rather than assuming: the "a replacing step needs an `Action:`" rule
+only `console.warn`s, and it does not fire here because `Only: sel=Person`
+names what is already drawn, so the step changes nothing and owes no receipt.
+
 ### Round 4: the bespoke tour link was the wrong shape, and came back out
 
 Siggie, on the `tour:<slug>` link scheme built in round 3: *"you did an awful
