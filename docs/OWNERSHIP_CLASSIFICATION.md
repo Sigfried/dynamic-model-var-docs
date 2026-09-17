@@ -5,7 +5,7 @@
 > §§`Rule 1`, `Rule 2`, `Exception 2a`, `Exception 2b` and `Rule 3` teach a
 > numbered three-rule scheme that was replaced on 2026-09-13. The classifier
 > has five NAMED rules and no numbering. Everything from §The color system
-> onward is still accurate. Scheduled for rewrite: TASKS
+> onward is still accurate, and so is §PROPOSED (2026-09-17). Scheduled for rewrite: TASKS
 > [`ownership-doc-rewrite`](TASKS.md), plan in
 > [OWNERSHIP_DOC_CUT.md](OWNERSHIP_DOC_CUT.md).
 
@@ -52,6 +52,130 @@ exposure and procedure lands before the Participant it describes.
 
 Cardinality does not settle it either, which is why Rule 2 needs two exceptions
 of its own — see the rules below.
+
+## PROPOSED — let the schema say it: a `has_part` / `part_of` slot hierarchy
+
+> Status: **proposal, 2026-09-17, nothing implemented.** TASKS
+> [`ownership-slot-hierarchy`](TASKS.md). The findings below were checked
+> against linkml 1.11.1 on a patched copy of `bdchm.yaml`; the scratch
+> schema was not kept.
+
+Siggie's question: *is there a way in LinkML to indicate ownership direction
+between classes, so we would not need the classifier at all?*
+
+**Short answer: LinkML has no metaslot that means "this slot owns its
+target".** The schema can *carry* the assertions the classifier makes today,
+but nothing in it can *derive* them — someone still decides, per slot, which
+way ownership runs. What changes is where the decision lives and who can review
+it. The classifier does not disappear; it shrinks to a lookup plus the induced
+pass, which stays because it is derived from class `is_a` already.
+
+### What LinkML offers, closest first
+
+Every metaslot in the 1.11.1 metamodel that comes near the idea, and why each
+one falls short for BDCHM:
+
+| metaslot | what it means in LinkML | why it does not settle ownership here |
+|---|---|---|
+| `inlined` / `inlined_as_list` | The target is serialized **by value** inside the holder rather than **by identifier**. The nearest native notion of containment. | It is a statement about data shape, so asking upstream to set it on ~90 slots is a change to the JSON contract, not to documentation. It cannot say *belongs to*: a back-pointer and a plain reference are both simply not inlined. And BDCHM already uses it inconsistently — 9 of 149 edges, two of them against our reading (`Specimen.parent_specimen`, `SpecimenStorageActivity.container`, see §Exception 2a). |
+| **slot `is_a` / `mixins`** (a slot hierarchy) | A slot can inherit from another slot the way a class inherits from a class — LinkML's `rdfs:subPropertyOf`. The child keeps its own name, range and cardinality and becomes "a kind of" the parent. | **Nothing.** Pure semantics, no effect on serialization, expresses both directions and "neither", and every LinkML tool can read it back. This is the proposal. |
+| `subproperty_of` | Names an ontology property the slot specializes, as a CURIE. | The same idea without a local parent slot to hang a description on. Usable instead of, or in addition to, the hierarchy. |
+| `inverse` | Declares that `A.s = B` implies `B.s' = A`. | Pairs two slots; says nothing about which side owns. BDCHM declares none. |
+| `key` vs `identifier` | `key` is unique only **within a container** — LinkML's actual notion of a dependent object. | Every BDCHM class inherits a global `identifier` from `Entity`, so it discriminates nothing, and changing that is a modeling decision upstream will not make for a diagram. |
+| `annotations` | Free-form key/value. | No semantics; nothing but our own code would know what it meant. The earlier idea of `annotations: is_value_object` (§Exception 2a) is this option. |
+| `relational_role` | Which role (subject, object, predicate) a slot plays on a **reified relationship class**. | Wrong shape: it describes slots of an edge-class, not the direction of an edge. |
+
+### The proposal
+
+Two abstract slots, and every class-ranged slot declared `is_a` one of them:
+
+```yaml
+prefixes:
+  BFO: http://purl.obolibrary.org/obo/BFO_
+
+slots:
+  has_part:
+    abstract: true
+    slot_uri: BFO:0000051            # "has part"
+    description: The target is a part of the subject — the subject owns it.
+  part_of:
+    abstract: true
+    slot_uri: BFO:0000050            # "part of"
+    inverse: has_part
+    description: The subject is a part of the target — the target owns the subject.
+
+classes:
+  Specimen:
+    attributes:
+      processing_activity:
+        is_a: has_part               # own-fwd
+        range: SpecimenProcessingActivity
+        multivalued: true
+  Participant:
+    attributes:
+      member_of_research_study:
+        is_a: part_of                # own-bkwd
+        range: ResearchStudy
+```
+
+`has_part` maps onto `own-fwd` and `part_of` onto `own-bkwd` exactly. An
+`association` edge, should one return, is a class-ranged slot under neither.
+
+**Two homes, in order.** First an **overlay in this repo**: a sidecar YAML
+keyed `Class.slot → has_part | part_of`, applied by `transform_schema.py` at
+sync time (it already reads the schema through SchemaView, and
+`induced_class(c).attributes[a].is_a` is right there once the overlay is
+merged), so `processed.json` carries an ownership field per attribute and the
+app reads it. The two exception sets in `ownershipRules.ts` become the seed of
+that file. Then an **upstream PR** to
+[NHLBI-BDC-DMC-HM](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM), the
+same route `in-subset-categories` is waiting on — once merged, the overlay
+no-ops and the assertions arrive with the sync instead of rotting here.
+
+**What it changes in this codebase.** `OWNERSHIP_RULES` collapses to: read the
+slot's ancestry; `has_part` → forward, `part_of` → backward. The
+`REFERRED_TO_ENTITIES` and `NAMED_BACK_POINTERS` sets go — their content
+becomes schema content. `child-following-parent` is untouched. The audit
+script's job gets *easier* and *more important*: a class-ranged slot under
+neither parent is exactly the row it should flag after every sync.
+
+### Verified 2026-09-17 (linkml 1.11.1, patched copy of `bdchm.yaml`)
+
+- **SchemaView resolves it on BDCHM's inline `attributes:`**, not only on
+  top-level slots — this mattered, since BDCHM declares nearly everything as
+  attributes. `induced_slot('processing_activity', 'Specimen')` reports
+  `is_a: has_part` with its own range and `multivalued` intact; walking `is_a`
+  upward gives the verdict. An untouched attribute reads as unmarked.
+- **`linkml-lint` raises no error** for abstract, range-less parent slots. (The
+  only lint errors are two pre-existing ones — `year_range.comments` is a
+  string where the metamodel wants a list — and are unrelated.)
+- **`gen-doc` shows it on the slot page only.** `processing_activity.md` gets
+  an *Inheritance* tree with `has_part` above it, and `has_part.md` lists every
+  slot beneath it — a free index of all owning attributes. The **class page is
+  unchanged**: the mermaid diagram still draws every class-ranged slot as the
+  same `-->`, and the slot table has no new column; `is_a` appears only in the
+  YAML dump at the foot. `inlined` is not rendered anywhere by `gen-doc`; the
+  one LinkML generator that draws containment at all is PlantUML (`*--` for
+  inlined slots). So conveying direction in **upstream's generated docs** would
+  take a custom `gen-doc` template (`--template-directory`) that reads the
+  hierarchy and draws composition arrows. Until then this app is the only
+  renderer of BDCHM that shows ownership direction.
+
+### Decision needed before writing the overlay
+
+**What does an unmarked slot mean?** Two readings, and they decide how much
+upstream has to mark:
+
+1. *Unmarked = forward.* Matches today's default rule; upstream needs `part_of`
+   on the 59 backward slots and nothing else. But then "nobody looked at this"
+   and "forward" are indistinguishable, which is the silent-staleness failure
+   this whole file complains about.
+2. *Unmarked = unclassified.* All 149 class-ranged slots carry a parent; the
+   audit flags any that does not. More to write once; rot becomes visible.
+
+Recommendation: **(2) for the overlay and the upstream PR, with the app still
+falling back to forward** for an unmarked slot so a sync never blanks the
+diagram — the audit, not the renderer, is where "unmarked" should hurt.
 
 ---
 
@@ -270,8 +394,10 @@ candidate discriminator fails:
   40 classes including `Participant`, `Visit`, `Organization`.
 
 So it must be asserted. Best home, worst to best: a hand-typed TypeScript set
-(silent staleness) → a LinkML overlay (`annotations: is_value_object` —
-reviewable as a diff, schema-shaped) → upstream in the schema. **Add a sync
+(silent staleness) → a LinkML overlay (schema-shaped, reviewable as a diff;
+the `annotations: is_value_object` idea is superseded by the slot hierarchy in
+[§PROPOSED](#proposed--let-the-schema-say-it-a-has_part--part_of-slot-hierarchy))
+→ upstream in the schema. **Add a sync
 check** either way: flag any unlisted class that is a pure leaf, or any listed
 class that stops being one, so rot becomes a visible question.
 

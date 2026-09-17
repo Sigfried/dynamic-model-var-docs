@@ -47,6 +47,11 @@ decision — that goes to WORKLOG, per [CLAUDE.md](CLAUDE.md).
 - **That the memberships cannot be derived from the schema.** Verified
   exhaustively 2026-08-21; every candidate discriminator failed. Do not
   re-litigate.
+- **§PROPOSED — the `has_part` / `part_of` slot hierarchy** (2026-09-17), the
+  one route by which the schema could *carry* the memberships even though it
+  cannot derive them. It answers the question the previous bullet raises and
+  is the plan for TASKS `ownership-slot-hierarchy`; keep it whole until that
+  task closes.
 - **Why the two exception sets are keyed differently.** `REFERRED_TO_ENTITIES`
   by range, `NAMED_BACK_POINTERS` by `Class.slot` — and the second MUST be, because
   both of its ranges are genuinely owned by one other attribute each. This is
