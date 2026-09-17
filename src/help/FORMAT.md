@@ -242,6 +242,13 @@ kind:
 | `{{category-label:<id>}}` | a category's display label (`admin` → "Admin / Study") |
 | `{{edge:<kind>}}` | the arrow for `own-fwd`, `own-bkwd` or `association`, drawn inline exactly as the canvas and legend draw it — see [Inline widgets](#inline-widgets) |
 | `{{relation:<kind>:<Left>:<Right>}}` | a whole relation on one line, as the relation popover writes a row: `` `Left` `` arrow `` `Right` ``, never wrapped, slightly smaller — e.g. `{{relation:own-fwd:Condition.affected_body_site:BodySite}}` |
+| `{{ownership-count:<key>}}` | a live count of classified attributes: `declared`, `forward`, `backward`, or `<rule-id>.<owners\|attrs\|owned\|total>` |
+| `{{schema-count:<key>}}` | a live whole-schema total: `classes`, `concreteClasses`, `slots`, `enums`, `types`, `classRangedSlots` |
+
+⚠️ **Never hand-type a number a schema sync can move.** Both count kinds exist
+because hand-typed ones had already rotted — see the note under "An unresolved
+name stays visible" below, and the `SchemaCounts`/`getOwnershipCounts` doc
+comments for the specific numbers that were wrong and for how long.
 
 Like anchor kinds, these are **registered by the host, not known to the
 parser** — dmvd's live in `src/explore/helpTextResolvers.tsx` and are handed in
@@ -527,7 +534,7 @@ non-alphanumerics replaced by `-`:
 | tour | link |
 |---|---|
 | Ownership | `?tour=ownership` |
-| Reading the diagram | `?tour=reading-the-diagram` |
+| Using the Explorer | `?tour=using-the-explorer` |
 | The BioData Catalyst Harmonized Model | `?tour=the-biodata-catalyst-harmonized-model` |
 
 A valueless `?tour` opens whichever tour comes first in the file.
@@ -538,7 +545,7 @@ any beat is revealed, and is ignored without a `tour`.
 
 ```
 ?tour=ownership&step=4
-?tour=getting-oriented&sel=Person~Visit
+?tour=using-the-explorer&sel=Person~Visit
 ```
 
 Both params are **one-shot**: they are consumed at load and stripped from the

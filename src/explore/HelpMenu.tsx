@@ -60,10 +60,15 @@ export interface HelpMenuProps {
  * docs/tasks.md's caution about deleting menu items is pointing at.
  *
  * `node-dismiss` was in exactly that position — tagged in
- * `OwnershipGraphView` and reachable from nowhere — and is listed now.
+ * `OwnershipGraphView` and reachable from nowhere — and is listed now. So was
+ * `selection-tree-mechanics`, which became help-only when the *Reading the
+ * diagram* tour folded into *Using the Explorer* (2026-09-17): it documents
+ * the panel's TREE mode, where its own `entity-row:` anchors do not resolve,
+ * so it was a good entry and a broken tour step.
  */
 const HELP_ENTRIES: ReadonlyArray<{ id: string; label: string }> = [
-  { id: 'graph-canvas-reading', label: 'Reading the diagram' },
+  { id: 'graph-canvas-reading', label: 'The diagram' },
+  { id: 'selection-tree-mechanics', label: 'Choosing what to look at' },
   { id: 'relation-bar', label: 'The relation bar' },
   { id: 'merged-boxes', label: 'Inheritance and merged boxes' },
   { id: 'node-dismiss', label: 'Closing a box' },

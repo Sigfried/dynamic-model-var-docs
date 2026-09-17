@@ -381,6 +381,34 @@ Not the same as [`schema-comments`](TASKS.md), which stays its own task: that is
 LinkML's `comments` field on slots and classes, which are silently discarded.
 Enums already surface `comments` through `getExtendedDescription`.
 
+### `variable-box-width` — let a box be as wide as its longest row
+
+**Low priority, and an exploration before an implementation.** `NODE_W` is a
+fixed 240px ([OwnershipGraphView.tsx](../src/explore/OwnershipGraphView.tsx)),
+so a long range name has to truncate: 35 of the schema's 87 distinct range
+names are over 18 characters, up to `SpecimenProcessingActivityTypeEnum` at 34,
+and at 9px that is ~160px competing with the attribute name for a ~206px row.
+
+Siggie, 2026-09-17, on being told widening was not an option: *"it could be,
+but that's probably a pretty significant fix since the calculated width would
+need to be fed back to ELK. I don't have a sense of how much width variation
+there would be… don't explore it now."*
+
+**So the first deliverable is a measurement, not a patch:** per-class, the width
+the widest row would need, and therefore how much variation a variable-width
+canvas would actually show. If the spread is small the whole idea is moot; if
+it is large, the question is whether a few wide boxes are better or worse than
+uniform ones. `NODE_W` is read in ~10 places including every edge-port
+calculation, and the measured width would have to reach ELK before layout —
+which is the "significant fix" part.
+
+⚠️ **Do not confuse this with the truncation bug already fixed** (2026-09-17):
+range and cardinality shared one `max-w-[90px] truncate` span, so on those 35
+long-named rows the cardinality was clipped or pushed out entirely. They are
+separate flex children now — only the range name truncates, the cardinality
+always renders, and the row's `title` carries both in full. That fix does not
+need this task, and this task would not have fixed that.
+
 ---
 
 ## Code health
@@ -622,13 +650,25 @@ be written again.)
 
 ### The `why` argument — two audiences, one step
 
-**Resolved 2026-09-11: one audience, researchers.** Siggie is not going to
-think about different audiences any time soon. The detail stays, because a
-researcher (or anyone) who needs to get into the weeds, author their own
-schema or harmonize to this one needs the full explanations. The
-LinkML-community argument below is not being written for now. What is left —
-overlapping text between the `why` and `linkml-context` entries — is
-`TASKS help-finish-authoring/why-overlap`. The discussion is kept as it was.
+**Resolved, in two rounds — the second reverses part of the first.**
+
+**2026-09-11: one audience, researchers.** The detail stays, because a
+researcher (or anyone) who needs to get into the weeds, author their own schema
+or harmonize to this one needs the full explanations.
+
+**2026-09-17: the LinkML argument gets its own tour after all.** Siggie, on
+being asked where the orphaned LinkML paragraph should go: *"add a new tour for
+LinkML context, why to use the Explorer oriented to LinkML people / modelers"*
+— and, on where it sits, *"put the linkml tour before ownership. researchers
+can read if interested but it will attract the eye of linkml people."* So the
+two audiences are served by two tours rather than by one step trying to carry
+both, which is what made this unresolvable. That tour is **What BDCHM is built
+with**; the researcher-facing whys open **Using the Explorer**, because *"no
+one's going to go to the end of tour 1 to see the why."* The chooser
+deliberately does NOT say which tour is for whom.
+
+The discussion below is kept as it was, because the two-readers diagnosis is
+what the two-tour split is an answer to.
 
 Parked 2026-09-08, mid-discussion. The `why` entry closes tour 1 and is meant
 to answer *why use the Explorer*. It does not currently work, and the reason is

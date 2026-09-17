@@ -1,73 +1,13 @@
-# Tour content: what is left to decide
+# Tour content: the traps, and what is deliberately out
 
 All five tours are written into
 [`src/explore/help-content.md`](../src/explore/help-content.md) and pass the
-content tests. This file is what did NOT get settled by writing them, plus the
-recipe for building a category step.
-
-**Delete it when `help-finish-authoring/oriented` lands** — at that point
-everything here is either decided or in the content file.
+content tests. What remains here is the material that is NOT in the content
+file: the recipe for building a category step, and two standing
+out-of-scope decisions.
 
 The authoring format is [`src/help/FORMAT.md`](../src/help/FORMAT.md); the
 order of work is [TASKS.md §Now](TASKS.md).
-
----
-
-## Getting oriented — the one tour still unsettled
-
-12 steps where the plan wanted 8, four entries at the front introducing the
-same thing, and four un-integrated `> Salvaged…` notes. The proposal to prune
-it is [GETTING_ORIENTED_PROPOSAL.md](GETTING_ORIENTED_PROPOSAL.md) and its three
-`[DECIDE]` questions are Siggie's to answer. What follows is the material that
-proposal is pruning TOWARD, kept because it is not in the content file.
-
-*The app, minimally.*
-- Entity select panel
-- Entity selection with checkbox
-- Canvas
-- Add entities from attribute rows
-- Click entity for detail panel [weirdly you can click
-  anywhere except an entity attribute row for this. need
-  to make this make more sense]
-- Related bar
-  - Brief explanation and reference to Ownership tour
-  - Add entities from bar
-- Can drag boxes around but edges get messed up (for now)
-- Zoom and pan
-
-**The relation bar belongs here**, not in "Reading the diagram": it is how you
-*navigate*, not how you *read*.
-
-[sg] not sure about all that. you wrote it; i'm not sure what's in steps 2,3,5.
-     you also had the spine stuff as part of tour 1, but i think it belongs
-     here.
-
-Two halves. **The spine first**, grown one hop at a time — never more than five
-boxes on screen — then **a step per category**, using the ⊞ views, with beats
-for progressive reveal.
-
-Siggie named the spine: `Person → Participant → Visit → Observation →
-Quantity`. It is the path from "a person in a study" to "a number you would
-analyse", and four of six categories hang off it.
-
-The class descriptions in the schema are good enough to build on with light
-editing — checked, not assumed (`Person`, `Participant`, `Visit`,
-`Observation`, `Quantity`, `Specimen`, `Organization` all have real ones). In
-particular Person vs. Participant is self-explaining:
-
-> **Person** — "Administrative information about an individual or animal
-> receiving care or other health-related services."
-> **Participant** — "A Participant is the entity of interest in a research
-> study… Human research subjects are usually not traceable to a particular
-> person to protect the subject's privacy."
-
-That distinction — one human being, potentially several study participants — is
-the first genuinely modelling-flavoured idea a researcher meets, and it is worth
-a step of its own.
-
-Spine steps: `Person, Participant` → `+ Visit` → `+ Observation` (the merged box
-appears; note there are five kinds) → `+ Quantity` (a value and a unit, held
-right across the model).
 
 ---
 
@@ -117,6 +57,13 @@ until 2026-09-16.
 
 ⚠️ **Do not copy a count out of a source comment or an older doc.** Several
 were stale in both directions. Probe, or say it without a number.
+
+⚠️ **Only panel anchors resolve in jsdom.** `entity-row:`, `entity-checkbox:`
+and `category-row:` point into the selection panel, which renders in tests;
+every `node-box:` and `slot-row:` needs the ELK layout, which does not run
+there. A test that walks a tour looking for a ringed popover can only stop on
+a panel-anchored position — [`tourStack.integration.test.tsx`](../src/test/tourStack.integration.test.tsx)
+carries the worked case.
 
 ---
 

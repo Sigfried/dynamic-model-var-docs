@@ -1011,7 +1011,7 @@ export function tourNames(content: HelpContent): string[] {
 
 /**
  * A tour's name as it travels in a URL: lowercase, non-alphanumerics collapsed
- * to `-`. "Reading the diagram" -> `reading-the-diagram`.
+ * to `-`. "Using the Explorer" -> `using-the-explorer`.
  *
  * DERIVED rather than authored, so there is no third spelling of a tour name
  * to keep in agreement (the section heading and `TourMetadata:` are already
@@ -1256,7 +1256,8 @@ export function parseHelpContent(markdown: string): HelpContent {
    * still parsed and their tours still appeared (tours come from each entry's
    * `Tour:` field, not from sections), but the section's own `TourMetadata:`
    * description was silently dropped, so a tour lost its subtitle in the
-   * chooser. `Getting oriented` was in exactly that state (2026-09-08).
+   * chooser. The tour now called `Using the Explorer` was in exactly that
+   * state (2026-09-08).
    *
    * A separator is invisible in rendered markdown and easy to leave out, and
    * the failure was cosmetic enough to survive review. The heading cannot be

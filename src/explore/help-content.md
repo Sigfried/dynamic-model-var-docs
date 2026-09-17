@@ -564,236 +564,139 @@ introduced and then use one word.
        knowing the calendar date.
      - Anchor: node-box:TimePoint
 
-### why
-
-- **Title:** BDCHM Explorer
-- **Tour:** The BioData Catalyst Harmonized Model
-- **Description:** 
-  > Salvaged 2026-09-09 from the stash: this is your shortened `why`. The
-  > LinkML half moved to `linkml-context`, the first step of Getting
-  > oriented, and your comment there says the two still overlap. TASKS `why-argument`.
-
-  You may want to use BDCHM:
-  - to analyze data harmonized to it;
-  - to harmonize your own data to it;
-  - design new studies pre-harmonized to it; or
-  - use it for ideas or inspiration in designing your own data models.
-
-  Doing almost anything involving BDCHM requires a basic, overall
-  understanding of its structure. The **BDCHM Explorer** provides
-  a single-page, highly interactive interface allowing you to easily see
-  details of and relationships between specific entities or neighborhoods
-  around entities you select.
-- **Anchor:** none
-- **Change:**
-
 </details><!-- end of BDCHM tour -->
 </div>
 
 <div style="margin-left: 40px">
 <details open>
-<summary><b>Getting oriented</b></summary>
+<summary><b>Using the Explorer</b></summary>
 
-## Getting oriented
+## Using the Explorer
 - **TourMetadata:**
-- **Description:** How to use the BDCHM Explorer: the panel, the boxes, and how to grow a diagram
-
-
-
-<!--
-### linkml-context
-- ~~**Title:** BDCHM Explorer:~~
-- **Tour:** Getting oriented
-- **Description:** <!-- redundant with `why` above. fix: figure out what goes where-- >
-  > Salvaged 2026-09-09 from the stash, where you had made this the first
-  > step of Getting oriented. It repeats most of `why` at the end of tour 1.
-  > Decide what goes where (TASKS `why-argument`), then delete this note.
-
-  BDCHM and the ingestion pipeline are built using [LinkML](https://linkml.io/).
-  Neither the raw LinkML [YAML file](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml)
-  nor the LinkML [generated documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
-  are easy to grasp given that BDCHM's over 4,000-line schema includes around
-  225 total attributes, 56 distinct entities, 50 permissible value sets,
-  7 primitive data types, and 80 relationships between entities. 
-
-  Yet doing almost anything involving BDCHM would require a basic, overall
-  understanding of its structure. You may want to use BDCHM:
-  - to analyze data harmonized to it (using [BDC's tools](https://biodatacatalyst.nhlbi.nih.gov/use-bdc/analyze-data/)
-    or otherwise);
-  - to harmonize your own data to it;
-  - design new studies pre-harmonized to it; or
-  - use it for ideas or inspiration in designing your own data models.
-
-  The **BDCHM Explorer** provides a single-page, highly interactive interface
-  allowing you to easily see details of and relationships between specific
-  entities or neighborhoods around entities you select.
-  > taken from Tour 1. needs editing:
-
-  Studies arrive with
-  their own terminologies, units, and file structures, which are
-  transformed by the Data Model-Based Ingestion Pipeline
-  ([dm-bip](https://linkml.io/dm-bip/)) into a common, harmonized
-  [LinkML schema](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/).
-  <!-- 
-  should BDC and LinkML and pipeline details be put elsewhere so we can get
-  to model content quicker and provide a bit deeper treatment of the context
-  on request?
-
-  used to have this in the BDC context part of Walkthrough:
-  (using [BDC's tools](https://biodatacatalyst.nhlbi.nih.gov/use-bdc/analyze-data/) or otherwise);
-  -- >
-- **Anchor:** none
-- **Change:**
-- **Width:** 700
-- **Beats:**
-  1. contents
-     - Keep: true
-     - Description:
-       > redundant with above
-       ##### Contents
-       The model includes 56 entities (LinkML calls them classes; the left panel lists them) with ~340 total attributes
-       falling into one of three attribute types:
-       - primitive data values (e.g., strings, integers)
-       - 52 permissible value sets (e.g., visit categories, units of
-         measure, condition codes)
-       - about 80 links to other entities indicating ownership or
-         containment relationships (e.g., multiple Participant entities
-         can "belong" to a single Person entity)
--->
+- **TourAbbr:** The Explorer
+- **Description:** What the Explorer is for, and how to use it: the panel, what a box shows, how to read a row, and how to grow a diagram one hop at a time
 
 ### bdchm-entities
 
-- **Title:** Using the BDCHM Explorer
-- **Tour:** Getting oriented
+- **Title:** What this is for
+- **Tour:** Using the Explorer
 - Only: panels=0
 - **Anchor:** none
-- **Highlight:** selection-tree
-- **Width:** 800
+- **Highlight:** none
+- **Width:** 700
 - **Description:**
-  This tour is about the app rather than the model: how to put entities on
-  the canvas, what a box shows, and how to move from one entity to the ones
-  it is connected to. It grows one small diagram a step at a time, from a
-  person in a study to a number you would analyse.
+  The **BioData Catalyst Harmonized Model (BDCHM)** is the common data model
+  that nine TOPMed cohorts and the INCLUDE Data Hub are harmonized into. This
+  app draws it, and this tour is about the app rather than the model: how to
+  put entities on the canvas, what a box shows, and how to move from one
+  entity to the ones it is connected to. It grows one small diagram a step at
+  a time, from a person in a study to a number you would analyse.
+
+  You may want to use BDCHM to analyze data harmonized to it — with
+  [BDC's analysis tools](https://biodatacatalyst.nhlbi.nih.gov/use-bdc/analyze-data/)
+  or otherwise — to harmonize your own data to it, to design new studies
+  pre-harmonized to it, or for ideas in designing your own data models. Any of
+  those needs a basic, overall understanding of the model's structure, which
+  is what the Explorer is for.
+
+  For the model's own content rather than the app, take
+  [The BioData Catalyst Harmonized Model](tour:the-biodata-catalyst-harmonized-model).
 - **Beats:**
-  1. selection
+  1. the panel
      - Description:
-       The left panel lists every entity in the model, grouped into the six
-       categories the first tour walked through. The grouping is the
-       Explorer's, not the schema's.
+       ##### Every entity is in the panel
+       The left panel lists every entity in the model, grouped into six
+       categories. The grouping is the Explorer's, not the schema's — it is
+       there to make {{schema-count:panelEntities}} entities browsable.
      - Anchor: entity-row:Person
+     - Highlight: ring
      - Width: 420
   2. display
-     - Keep: true
      - Description: Ticking one draws it. Person is now on the canvas.
      - Change: sel=Person
      - Action: Ticked Person for you.
      - Anchor: node-box:Person
-  <!-- maybe next step should replace this one? -->
-
-
-### selection-tree
-
-- **Title:** Entities
-- **Tour:** Getting oriented
-- **Anchor:** selection-tree
-- **Description:**
-  > Salvaged 2026-09-09 from the stash: your step, kept whole. It overlaps
-  > the step before it (tick a checkbox, a box appears) and the step after
-  > (what a box shows). Yours starts on Participant; the spine below starts
-  > on Person. Integrate, then delete this note.
-
-  A LinkML schema defines classes representing a data model's
-  entities. The left panel lists them, grouped into categories for convenience,
-  though these categories are not actually part of the schema.
-- **Beats:** <!-- these are just copied from below, need to get beats working
-              right before authoring -->
-  1. tick a checkbox
-     - Description: In order to select an entity for display, click its checkbox
-     - Anchor: entity-row:Participant
-  2. the box that appears
-     - Description:
-       The Participant box shows the entity name, a dismiss (x) icon, a menu
-       for displaying boxes for related entities, and a list of this entity's
-       attributes.
-     - Anchor: node-box:Participant
-     - Change: sel=Participant
-     - Action: I clicked the Participant checkbox and the Participant entity appeared in the viewing panel.
-  3. the related counts
-     - Description:
-       Hover over the `← 3` or `22 →` counts to list the entities related to this
-       one, and click any of them to display it.
-     - Anchor: node-box:Participant
-     - Highlight: none
-
-
-### selection-tree-mechanics
-
-- **Title:** Choosing what to look at
-- **Tour:** Getting oriented
-- **Description:**
-  > Salvaged 2026-09-09 from the stash, where you had made this help-only
-  > entry a tour step. It describes the panel's TREE mode (arrows, nesting by
-  > ownership); the default is list mode, and `entity-row` anchors only
-  > resolve there. Integrate with `selection-tree` above, then delete this
-  > note.
-
-  Entities are arranged by **ownership**: an entity is nested under
-  whatever owns it. Tick a checkbox to put an entity on the diagram. The
-  checkbox is the only thing that selects — clicking the row or the arrow
-  just opens and closes the tree.
-- **Interactions:**
-  - Checkbox — add or remove that entity from the diagram.
-  - Arrow — expand or collapse, without changing the selection.
-  - Name — open the details panel without changing the selection.
-- **Context:** An entity can sit in more than one place in the tree, because things can be owned by more than one kind of thing. The widget marks the duplicates for you.
-- **Anchor:** selection-tree
 
 
 ### entity-box
 
 - **Title:** What a box shows
-- **Tour:** Getting oriented
+- **Tour:** Using the Explorer
 - **Only:** sel=Person
 - **Action:** Drew just Person, so there is one box to read.
 - **Anchor:** node-box:Person
 - **Description:**
   A box is one entity. Its header carries the entity name and, at the far
   right, a ✕ that takes it off the canvas again. Below the header there is
-  one row per attribute.
+  one row per attribute: its name on the left, and on the right what it holds
+  and how many.
 - **Beats:**
-  1. a row
+  1. how many
      - Description:
-       ##### Attributes
-       Each row is an attribute: its name on the left, and on the right what
-       it holds and how many — `0..1` for optional and single, `0..*` for a
-       list. Most rows hold a plain value or a code from a value set.
+       ##### How many
+       The small grey figure after the type is the cardinality: `1..1`
+       exactly one, `0..1` at most one, `0..*` any number, `1..*` at least
+       one. The left digit says whether the attribute is required, the right
+       whether it is a list.
      - Anchor: slot-row:Person.year_of_birth
-  2. an entity row
+
+
+### rows-and-dots
+
+- **Title:** Three kinds of row
+- **Tour:** Using the Explorer
+- **Only:** sel=Person
+- **Anchor:** node-box:Person
+- **Description:**
+  The dot at a row's left and the label at its right share a colour, and the
+  colour says what KIND of thing the attribute holds. There are three, and the
+  difference that matters is whether what it holds is another **entity** — one
+  of the things the panel lists, which can therefore get a box of its own.
+- **Beats:**
+  1. a data type
      - Description:
-       ##### Rows that name other entities
-       `cause_of_death` holds another entity rather than a value. Rows like
-       this are where the lines come from: when CauseOfDeath is on the
-       canvas, a line runs from this row to it. Clicking the row puts it
-       there. The dot is hollow because CauseOfDeath is not drawn yet; the
-       next tour, *Reading the diagram*, is about the dots and colours.
+       ##### Green: a data value
+       `year_of_birth` is an integer. Green rows hold plain data — strings,
+       numbers, dates. Nothing to draw: a number is not an entity.
+     - Anchor: slot-row:Person.year_of_birth
+  2. a value set
+     - Description:
+       ##### Purple: a value set
+       `vital_status` holds one code from a fixed list of permitted values, an
+       enumeration. Still not an entity, so still nothing to draw.
+     - Anchor: slot-row:Person.vital_status
+  3. an entity
+     - Description:
+       ##### Blue: another entity
+       `cause_of_death` holds a **CauseOfDeath**, which IS an entity — it is
+       in the panel, and it can be drawn. Its dot is hollow because it is not
+       on the canvas yet. A hollow dot is an invitation: click the row and the
+       entity appears, joined to this row. Blue rows are the only ones that
+       ever connect two boxes.
      - Anchor: slot-row:Person.cause_of_death
-  3. the relation bar
-     - Description:
-       ##### The relation bar
-       The two counts in the header are the relation bar. **← N** is how many
-       entities this one belongs to, which the layout draws to its left;
-       **M →** how many it owns, drawn to its right. Hover either count for
-       the list. This is how you reach an entity that has no row here:
-       Participant is connected to Person, but the attribute connecting them
-       is declared on Participant, so it shows up in Person's bar and not in
-       Person's rows.
-     - Anchor: relation-bar
+
+
+### relation-bar-step
+
+- **Title:** The relation bar
+- **Tour:** Using the Explorer
+- **Only:** sel=Person
+- **Anchor:** relation-bar
+- **Description:**
+  The two counts in the header are the relation bar. **← N** is how many
+  entities this one belongs to, which the layout draws to its left; **M →**
+  how many it owns, drawn to its right. Hover either count for the list, and
+  click a row in that list to draw it.
+
+  This is how you reach an entity that has no row here: Participant is
+  connected to Person, but the attribute connecting them is declared on
+  Participant, so it shows up in Person's bar and not in Person's rows.
 
 
 ### grow-participant
 
 - **Title:** Adding a related entity
-- **Tour:** Getting oriented
+- **Tour:** Using the Explorer
 - **Only:** sel=Person~Participant
 - **Action:** Added Participant, the same as clicking it in Person's → list.
 - **Anchor:** node-box:Participant
@@ -807,13 +710,22 @@ introduced and then use one word.
 - **Beats:**
   1. the row that made the line
      - Description:
-       ##### The row that made the line
-       The line comes from Participant's `associated_person` row. Every line
-       on the canvas leaves an attribute row on one box and lands on the
-       entity that row names, so you can always see WHICH attribute connects
-       two entities.
+       ##### A line leaves the row that made it
+       The line comes from Participant's `associated_person` row. This is the
+       one idea the whole diagram rests on: **a line leaves the attribute row
+       that creates it**, not the box, so you can always see WHICH attribute
+       connects two entities. The arrowhead lands on the entity the row names.
      - Anchor: slot-row:Participant.associated_person
-  2. the second way
+  2. the far end
+     - Description:
+       ##### The far end
+       At the other end the line points at Person as a whole, not at one of
+       its rows: the attribute is Participant's, and Person is only what it
+       holds. Note the direction — Participant declares the attribute, and
+       Person is drawn to its LEFT. Which side a target lands on is decided by
+       ownership, which the *Ownership* tour is about.
+     - Anchor: node-box:Person
+  3. the second way
      - Description:
        ##### Two ways to grow a diagram
        Participant's own rows name entities that are not on the canvas yet —
@@ -826,8 +738,8 @@ introduced and then use one word.
 
 ### grow-visit
 
-- **Title:** A visit
-- **Tour:** Getting oriented
+- **Title:** Three more hops
+- **Tour:** Using the Explorer
 - **Only:** sel=Person~Participant~Visit
 - **Action:** Added Visit from Participant's → list.
 - **Anchor:** node-box:Visit
@@ -837,51 +749,44 @@ introduced and then use one word.
   Participant the same way Participant belongs to a Person: through an
   `associated_participant` attribute declared on Visit, drawn as one more
   hop to the right.
-
-
-### grow-observation
-
-- **Title:** An observation
-- **Tour:** Getting oriented
-- **Only:** sel=Person~Participant~Visit~Observation
-- **Action:** Added Observation from Visit's → list.
-- **Anchor:** node-box:Observation
-- **Description:**
-  *{{model-description:Observation}}*
-
-  Two lines arrive here, because an Observation names both the Participant
-  it is about and the Visit it was made at. It has five subclasses, which
-  the *Inheritance* tour draws; on its own it is just this box.
 - **Beats:**
-  1. the value
+  1. an observation
+     - Description:
+       ##### An observation
+       *{{model-description:Observation}}*
+
+       Two lines arrive here, because an Observation names both the
+       Participant it is about and the Visit it was made at. It has five
+       subclasses, which the *Inheritance* tour draws; on its own it is just
+       this box.
+     - Change: sel=Observation
+     - Action: Added Observation from Visit's → list.
+     - Anchor: node-box:Observation
+  2. the value
      - Description:
        ##### The value
        `observation_type` says what was measured, and `value_quantity` is
        where a numeric answer goes. Its dot is hollow: Quantity is not on the
        canvas. Clicking the row would add it.
      - Anchor: slot-row:Observation.value_quantity
+  3. from a person to a number
+     - Description:
+       ##### From a person to a number
+       *{{model-description:Quantity}}*
 
-
-### grow-quantity
-
-- **Title:** From a person to a number
-- **Tour:** Getting oriented
-- **Only:** sel=Person~Participant~Visit~Observation~Quantity
-- **Action:** Added Quantity, the same as clicking the `value_quantity` row.
-- **Anchor:** node-box:Quantity
-- **Description:**
-  *{{model-description:Quantity}}*
-
-  Five boxes: Person → Participant → Visit → Observation → Quantity is the
-  path from a human being to a number you would analyse, and four of the six
-  categories hang off it. The `value_quantity` dot is filled now that its
-  line is drawn.
+       Five boxes: Person → Participant → Visit → Observation → Quantity is
+       the path from a human being to a number you would analyse, and four of
+       the six categories hang off it. The `value_quantity` dot is filled now
+       that its line is drawn.
+     - Change: sel=Quantity
+     - Action: Added Quantity, the same as clicking the `value_quantity` row.
+     - Anchor: node-box:Quantity
 
 
 ### detail-panel
 
-- **Title:** Details
-- **Tour:** Getting oriented
+- **Title:** Details, and moving around
+- **Tour:** Using the Explorer
 - **Change:** detail=Observation
 - **Action:** Opened the details panel for Observation, the same as clicking its box header.
 - **Anchor:** none
@@ -892,31 +797,29 @@ introduced and then use one word.
   links, so you can follow references without changing what is drawn. The
   **ⓘ** beside a row in the relation bar opens the same panel for that
   entity. Close it with its ✕.
+- **Beats:**
+  1. moving around
+     - Description:
+       ##### Moving around
+       Drag the background to pan. Zoom with Ctrl+wheel (⌘+wheel on a Mac, or
+       a pinch), or with the `+` `−` `1:1` `⛶` buttons at the top right; `⛶`
+       fits the whole diagram in the window, and `LR` / `TB` lay it out left
+       to right or top down. Hover a box and everything not connected to it
+       fades.
 
-
-### moving-around
-
-- **Title:** Moving around
-- **Tour:** Getting oriented
-- **Change:** panels=0
-- **Action:** Closed the details panel.
-- **Anchor:** graph-canvas
-- **Highlight:** ring
-- **Description:**
-  Drag the background to pan. Zoom with Ctrl+wheel (⌘+wheel on a Mac, or a
-  pinch), or with the `+` `−` `1:1` `⛶` buttons at the top right; `⛶` fits
-  the whole diagram in the window, and `LR` / `TB` lay it out left to right
-  or top down. Hover a box and everything not connected to it fades.
-
-  You can drag a box out of the way, too. Its lines follow but are not
-  re-routed around anything, and the next change to the selection lays
-  everything out afresh.
+       You can drag a box out of the way, too. Its lines follow but are not
+       re-routed around anything, and the next change to the selection lays
+       everything out afresh.
+     - Change: panels=0
+     - Action: Closed the details panel.
+     - Anchor: graph-canvas
+     - Highlight: ring
 
 
 ### where-next
 
 - **Title:** Where to go from here
-- **Tour:** Getting oriented
+- **Tour:** Using the Explorer
 - **Anchor:** none
 - **Description:**
   That is the whole mechanism: tick, click a row or a bar entry, read the
@@ -938,128 +841,82 @@ introduced and then use one word.
   3. the other tours
      - Description:
        ##### The other tours
-       *Reading the diagram* explains the dots, colours and where a line
-       attaches; *Ownership* explains why boxes land where they do and what
-       the three kinds of line mean; *Inheritance* explains the boxes that
-       hold several entities at once.
+       If you came straight here, *The BioData Catalyst Harmonized Model*
+       is the one to take next: it walks the six categories and what is in
+       them, which is the model rather than the app. *Ownership* explains why
+       boxes land where they do and what the two kinds of line mean;
+       *Inheritance* explains the boxes that hold several entities at once;
+       and *What BDCHM is built with* is the schema behind all of it, for
+       anyone who wants to author or harmonize against it.
      - Anchor: tour-chooser
 
-</details><!-- end of Getting oriented tour -->
+</details><!-- end of Using the Explorer tour -->
 </div>
 
 <div style="margin-left: 40px">
 <details open>
-<summary><b>Reading the diagram</b></summary>
+<summary><b>What BDCHM is built with</b></summary>
 
-## Reading the diagram
+## What BDCHM is built with
 - **TourMetadata:**
-- **Description:** Rows, dots and colours, and where a line attaches
+- **TourAbbr:** Built with
+- **Description:** The schema behind the diagrams: LinkML, the size of the model, and how studies get harmonized into it
 
-### rows-and-dots
+### linkml-context
 
-- **Title:** Rows and dots
-- **Tour:** Reading the diagram
-- **Only:** sel=Visit&panels=0
-- **Action:** Drew Visit on its own.
-- **Anchor:** node-box:Visit
+- **Title:** A LinkML schema
+- **Tour:** What BDCHM is built with
+- Only: panels=0
+- **Anchor:** none
+- **Highlight:** none
+- **Width:** 700
 - **Description:**
-  One entity, no lines. Every row is an attribute, and the dot at its left
-  and the label at its right share a colour that says what KIND of thing
-  the attribute holds.
+  Everything the Explorer draws is read out of one schema. BDCHM and the
+  ingestion pipeline are built using [LinkML](https://linkml.io/), and the
+  model is a single [YAML file](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM/blob/main/src/bdchm/schema/bdchm.yaml)
+  of several thousand lines.
+
+  What the Explorer shows you is that file, rearranged: an entity box is a
+  LinkML **class**, a row is a **slot**, a purple row's value set is an
+  **enum**, and a line is a slot whose `range` is another class.
 - **Beats:**
-  1. a data type
+  1. how big
      - Description:
-       ##### Green: a data value
-       `age_at_visit_start` is an integer. Green rows hold plain data —
-       strings, numbers, dates — and never draw a line.
-     - Anchor: slot-row:Visit.age_at_visit_start
-  2. a value set
+       ##### How big it is
+       {{schema-count:classes}} classes, {{schema-count:slots}} attributes,
+       {{schema-count:enums}} permissible value sets and
+       {{schema-count:types}} primitive types. Of those attributes,
+       {{schema-count:classRangedSlots}} have another class as their range —
+       those are every line the canvas could ever draw.
+     - Anchor: selection-tree
+     - Highlight: ring
+  2. the generated docs
      - Description:
-       ##### Purple: a value set
-       `visit_category` holds one code from a permissible value set, an
-       enumeration. Purple rows never draw a line either.
-     - Anchor: slot-row:Visit.visit_category
-  3. an entity
-     - Description:
-       ##### Blue: another entity
-       `year_range` holds a TimePeriod, another entity in the model. Blue rows
-       are the only ones that draw lines, and this dot is hollow because
-       TimePeriod is not on the canvas. A hollow dot is an invitation: click
-       the row.
-     - Anchor: slot-row:Visit.year_range
-  4. cardinality
-     - Description:
-       ##### How many
-       The small grey figure after the type is the cardinality: `1..1`
-       exactly one, `0..1` at most one, `0..*` any number, `1..*` at least
-       one. The left digit says whether the attribute is required, the right
-       whether it is a list.
-     - Anchor: slot-row:Visit.visit_provenance
+       ##### Why not just read it
+       LinkML also produces [generated documentation](https://rtiinternational.github.io/NHLBI-BDC-DMC-HM/)
+       from that file, a page per class. Both it and the raw YAML are
+       authoritative and neither shows you a *shape*: to see that a Visit
+       belongs to a Participant and owns a TimePeriod you have to hold several
+       pages in your head at once. That is the gap this app fills.
 
+### harmonization
 
-### one-edge
-
-- **Title:** One line
-- **Tour:** Reading the diagram
-- **Only:** sel=Visit~TimePeriod
-- **Action:** Added TimePeriod.
-- **Anchor:** slot-row:Visit.year_range
+- **Title:** How data gets into it
+- **Tour:** What BDCHM is built with
+- **Anchor:** none
+- **Highlight:** none
+- **Width:** 700
 - **Description:**
-  Now the `year_range` dot is filled and a line leaves it. This is the one
-  idea the whole diagram rests on: **a line leaves the attribute row that
-  creates it**, not the box, so you can always see which attribute connects
-  two entities. The arrowhead lands on the entity the row names.
-- **Beats:**
-  1. the far end
-     - Description:
-       ##### The far end
-       At the other end the line points at TimePeriod as a whole, not at one
-       of its rows: the attribute is Visit's, and TimePeriod is only what it
-       holds. TimePeriod's own two blue rows are hollow, because TimePoint is
-       not drawn.
-     - Anchor: node-box:TimePeriod
+  Studies arrive with their own terminologies, units and file structures.
+  They are transformed into this common schema by the Data Model-Based
+  Ingestion Pipeline ([dm-bip](https://linkml.io/dm-bip/)), which is also
+  LinkML-driven — so the mapping from a study's own columns to BDCHM's
+  classes and slots is itself a schema artifact rather than a script.
 
+  That is why the structure in this app is worth learning even if you never
+  write a line of LinkML: it is the shape your harmonized data will have.
 
-### which-way
-
-- **Title:** Which way a line runs
-- **Tour:** Reading the diagram
-- **Only:** sel=Participant~Visit~TimePeriod
-- **Action:** Added Participant.
-- **Anchor:** slot-row:Visit.associated_participant
-- **Description:**
-  Participant landed on the LEFT, and the line from Visit's
-  `associated_participant` row runs backwards to it, arrowhead at
-  Participant. Same rule for both lines: the line leaves the row, and the
-  arrowhead lands on the entity the row names. What differs is which side
-  the named entity is drawn on, and that is decided by **ownership**: a
-  Visit belongs to its Participant, so Participant is drawn first; a Visit
-  owns its TimePeriod, so TimePeriod is drawn after. How the Explorer decides
-  which is which is the *Ownership* tour.
-- **Beats:**
-  1. left to right
-     - Description:
-       ##### Reading left to right
-       So the canvas reads left to right as "contains": everything that owns
-       an entity is to its left, everything it owns is to its right. Hover a
-       box and everything not connected to it fades.
-     - Anchor: node-box:Participant
-
-
-### loops
-
-- **Title:** An entity that names itself
-- **Tour:** Reading the diagram
-- **Only:** sel=ResearchStudy
-- **Action:** Drew ResearchStudy on its own.
-- **Anchor:** slot-row:ResearchStudy.part_of
-- **Description:**
-  `part_of` holds a ResearchStudy, so a study can be a sub-study of another.
-  A line from a box to itself would only be noise, so the row carries a loop
-  mark instead. Studies, specimens, containers, questionnaire items, files
-  and time points all nest this way.
-
-</details><!-- end of Reading the diagram tour -->
+</details><!-- end of What BDCHM is built with tour -->
 </div>
 
 <div style="margin-left: 40px">
@@ -1068,12 +925,15 @@ introduced and then use one word.
 
 ## Ownership
 - **TourMetadata:**
-- **Description:** Why boxes land where they do, and what the two kinds of line mean
+- **Description:** How to read a line's direction, why boxes land where they do, and the rule the Explorer decides it by
 
 <!--
 I've moved this section to the top just while i'm working actively on it.
 
 The structure, which the steps below now follow:
+- read a line's direction off the canvas, and the loop case -- which-way, loops
+  (both moved here 2026-09-17 from the folded-in "Reading the diagram" tour;
+  `which-way` used to END by handing off to this tour, so it now opens it)
 - explain ownership, why it's needed, the two edge types
   - (association edges can be explained in a commented-out appendix, or not)
 - explain the rule and its exceptions, in this order:
@@ -1091,6 +951,56 @@ the classifier at render — and the rule names are the legend's own `label`
 strings from `OWNERSHIP_RULES`, so tour, legend and classifier say one thing.
 If a label changes there, change it here. Do not hand-type a count.
 -->
+
+### which-way
+
+- **Title:** Which way a line runs
+- **Tour:** Ownership
+- **Only:** sel=Participant~Visit~TimePeriod
+- **Action:** Drew Participant, Visit and TimePeriod.
+- **Anchor:** slot-row:Visit.year_range
+- **Description:**
+  Two of Visit's rows draw lines, and they go opposite ways. `year_range`
+  holds a TimePeriod, drawn to the RIGHT. Same rule as ever — the line leaves
+  the row, the arrowhead lands on the entity the row names — so what differs
+  is only which SIDE the named entity is drawn on.
+- **Beats:**
+  1. the other way
+     - Description:
+       ##### The same rule, the other way
+       `associated_participant` also holds an entity, and Participant landed
+       on the LEFT: the line runs backwards to it, arrowhead at Participant.
+       Both rows point AT something; the schema gives no hint that one of
+       these is different from the other.
+     - Anchor: slot-row:Visit.associated_participant
+  2. left to right
+     - Description:
+       ##### The canvas reads left to right
+       What decides the side is **ownership**. A Visit belongs to its
+       Participant, so Participant is drawn first; a Visit owns its
+       TimePeriod, so TimePeriod is drawn after. So the canvas reads left to
+       right as "contains": everything that owns an entity is to its left,
+       everything it owns is to its right.
+
+       The schema does not say which end owns which — so the Explorer works
+       it out, and that is what the rest of this tour is about.
+     - Anchor: node-box:Participant
+
+
+### loops
+
+- **Title:** An entity that names itself
+- **Tour:** Ownership
+- **Only:** sel=ResearchStudy
+- **Action:** Drew ResearchStudy on its own.
+- **Anchor:** slot-row:ResearchStudy.part_of
+- **Description:**
+  One case has no side to land on. `part_of` holds a ResearchStudy, so a study
+  can be a sub-study of another — an entity owning its own kind. A line from a
+  box to itself would only be noise, so the row carries a loop mark instead.
+  Studies, specimens, containers, questionnaire items, files and time points
+  all nest this way.
+
 
 ### why-ownership
 
@@ -1567,6 +1477,21 @@ OWNERSHIP_CLASSIFICATION.md §When a schema needs it.
 
 <details>
 <summary><b>Non-tour help items</b></summary>
+
+### selection-tree-mechanics
+
+- **Title:** Choosing what to look at
+- **Description:**
+  The panel has two modes. **List** groups every entity under the six
+  categories; **tree** arranges them by **ownership**, nesting an entity under
+  whatever owns it. Either way, tick a checkbox to put an entity on the
+  diagram — the checkbox is the only thing that selects.
+- **Interactions:**
+  - Checkbox — add or remove that entity from the diagram.
+  - Arrow — expand or collapse, without changing the selection.
+  - Name — open the details panel without changing the selection.
+- **Context:** In tree mode an entity can sit in more than one place, because things can be owned by more than one kind of thing. The widget marks the duplicates for you.
+- **Anchor:** selection-tree
 
 ### graph-canvas-reading
 

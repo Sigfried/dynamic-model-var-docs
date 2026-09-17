@@ -26,9 +26,18 @@ import { remarkStyleDirectives } from './styleDirectives';
  * handle on this one.
  */
 export const MARKDOWN_COMPONENTS = {
-  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
-    <a href={href} target="_blank" rel="noreferrer">{children}</a>
-  ),
+  /**
+   * A `tour:` link renders as a button-shaped anchor even with no handler
+   * wired, so the DEFAULT here still has to recognise the scheme: dropping it
+   * through to `href` would give the reader a link that navigates to
+   * `tour:getting-oriented` and breaks the page. Without a handler it is
+   * inert text, which is the same graceful degradation `widgetImg` gives an
+   * unknown widget. `tourLinkAnchor` is the wired version.
+   */
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) =>
+    href && parseTourHref(href)
+      ? <span className="help-tour-link">{children}</span>
+      : <a href={href} target="_blank" rel="noreferrer">{children}</a>,
   /**
    * A markdown blockquote is the popover's ALERT.
    *
@@ -57,11 +66,63 @@ export const MARKDOWN_COMPONENTS = {
 const WIDGET_SCHEME = 'widget:';
 
 /**
+ * The URL scheme a link to another tour uses: `tour:<slug>` or
+ * `tour:<slug>:<step>`.
+ *
+ * An ordinary markdown link, because a cross-tour pointer is prose — the same
+ * argument `blockquote` settles for alerts. The alternative was an authored
+ * `{{link:...}}` placeholder (TASKS `tour-links`), which needs a grammar and a
+ * parse-time resolver; this needs neither and covers the case that actually
+ * came up: "if you came straight here, take that tour first".
+ *
+ * It must NOT be an `href` the browser follows. `?tour=` is a real param, but
+ * navigating to it reloads the app and throws away the reader's canvas, and
+ * `tour`/`step` are ONE_SHOT_PARAMS consumed at load. So the anchor calls
+ * `startTour` and prevents the default.
+ */
+const TOUR_SCHEME = 'tour:';
+
+/** `tour:ownership` / `tour:ownership:4` → the name to start and where. */
+export function parseTourHref(href: string): { slug: string; step?: number } | undefined {
+  if (!href.startsWith(TOUR_SCHEME)) return undefined;
+  const rest = href.slice(TOUR_SCHEME.length);
+  const colon = rest.lastIndexOf(':');
+  if (colon === -1) return { slug: rest };
+  const step = Number(rest.slice(colon + 1));
+  return Number.isInteger(step) && step > 0
+    ? { slug: rest.slice(0, colon), step }
+    : { slug: rest };
+}
+
+/**
  * `react-markdown` drops URLs whose scheme it does not know, `widget:` among
  * them; ordinary images and links keep the default (safe) treatment.
  */
 export const urlTransform = (url: string) =>
-  url.startsWith(WIDGET_SCHEME) ? url : defaultUrlTransform(url);
+  url.startsWith(WIDGET_SCHEME) || url.startsWith(TOUR_SCHEME)
+    ? url
+    : defaultUrlTransform(url);
+
+/**
+ * The `a` component, wired to the tour: a `tour:<slug>` link starts that tour
+ * instead of navigating. Anything else is an ordinary external link.
+ *
+ * Takes `onTour` rather than calling `useHelp` itself so the package's
+ * markdown parts stay hook-free and testable — same shape as `widgetImg`.
+ */
+export function tourLinkAnchor(onTour: (slug: string, step?: number) => void) {
+  return function Anchor({ href, children }: { href?: string; children?: React.ReactNode }) {
+    const tour = href ? parseTourHref(href) : undefined;
+    if (!tour) return <a href={href} target="_blank" rel="noreferrer">{children}</a>;
+    return (
+      <button
+        type="button"
+        className="help-tour-link"
+        onClick={ev => { ev.preventDefault(); onTour(tour.slug, tour.step); }}
+      >{children}</button>
+    );
+  };
+}
 
 /**
  * The `img` component: a `widget:` image is drawn by the host's widget of that

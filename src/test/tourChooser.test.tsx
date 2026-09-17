@@ -56,8 +56,8 @@ function api(over: Partial<HelpApi>): HelpApi {
 }
 
 const TOURS = [
-  'The BioData Catalyst Harmonized Model', 'Getting oriented',
-  'Ownership', 'Inheritance',
+  'The BioData Catalyst Harmonized Model', 'Using the Explorer',
+  'What BDCHM is built with', 'Ownership', 'Inheritance',
 ];
 
 const META = new Map<string, TourMeta>([
@@ -202,8 +202,8 @@ describe('the Help menu', () => {
     const showEntry = vi.fn();
     openMenu({ tours: TOURS, showEntry });
     for (const label of [
-      /reading the diagram/i, /relation bar/i, /merged boxes/i,
-      /closing a box/i, /sharing what you see/i,
+      /^the diagram$/i, /choosing what to look at/i, /relation bar/i,
+      /merged boxes/i, /closing a box/i, /sharing what you see/i,
     ]) {
       expect(screen.getByRole('button', { name: label })).toBeTruthy();
     }

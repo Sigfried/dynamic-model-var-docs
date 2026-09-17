@@ -6,6 +6,7 @@ import {
   DEFAULT_TOUR, tourSlug, tourBySlug, positionOfStep,
 } from '../help/parseHelpContent';
 import { stripAlerts } from '../help/HelpLayer';
+import { parseTourHref } from '../help/markdownParts';
 import { DEFAULTS, INSTRUCTION_PARAMS } from '../explore/exploreState';
 import { loadModelData } from '../utils/dataLoader';
 import { DataService } from '../services/DataService';
@@ -508,8 +509,8 @@ describe('help content', () => {
    * ARGUMENT was not, and `node-box:Participnt` therefore passed every test
    * and degraded to an unringed, centred popover with nothing to say it had
    * gone wrong (docs/TASKS.md flagged this as needing the browser). It does
-   * not: the arguments are class ids and category ids, both of which this
-   * suite can check against the live schema and config.
+   * not: the arguments are class ids, category ids and slot names, all of
+   * which this suite can check against the live schema and config.
    *
    * Deliberately NOT a check that the element is in the DOM -- that would need
    * the browser and would fail for legitimate reasons (a collapsed tree row, a
@@ -521,6 +522,28 @@ describe('help content', () => {
     const classes = new Set(ds.getContainmentGraph().nodes.map(n => n.id));
     const catIds = new Set(ENTITY_CATEGORIES.map(c => c.id));
 
+    /*
+     * The SLOT half of a `slot-row:` argument, checked too.
+     *
+     * Only the class half was checked until 2026-09-17, so
+     * `slot-row:Person.race` passed every test -- a real class, a slot it does
+     * not have -- and degraded to the same unringed popover as a class typo.
+     * Authored content hit this: a purple-row beat was written on `Person.race`
+     * (Person has `vital_status`; `race` is not in this schema at all).
+     *
+     * Inherited slots count, because a row an ancestor declared still renders
+     * on the child's box and `slot-row:<Child>.<slot>` is how FORMAT.md says to
+     * address a merged child's copy of it.
+     */
+    const slotsOf = (classId: string) => new Set(
+      (ds.getClassSummary(classId)?.slots ?? []).map(s => s.name),
+    );
+    const slotCache = new Map<string, Set<string>>();
+    const hasSlot = (classId: string, slot: string) => {
+      if (!slotCache.has(classId)) slotCache.set(classId, slotsOf(classId));
+      return slotCache.get(classId)!.has(slot);
+    };
+
     const bad: string[] = [];
     for (const e of content.entries.values()) {
       for (const a of [e.anchor, ...(e.beats ?? []).map(b => b.anchor)]) {
@@ -530,7 +553,11 @@ describe('help content', () => {
           : ['node-box', 'child-header', 'entity-row', 'entity-checkbox']
               .includes(a.kind) ? classes.has(a.arg)
           // `slot-row:<Class>.<slot>` splits on the LAST dot (FORMAT.md).
-          : a.kind === 'slot-row' ? classes.has(a.arg.slice(0, a.arg.lastIndexOf('.')))
+          : a.kind === 'slot-row' ? (() => {
+            const cut = a.arg.lastIndexOf('.');
+            const cls = a.arg.slice(0, cut);
+            return classes.has(cls) && hasSlot(cls, a.arg.slice(cut + 1));
+          })()
           : true;
         if (!known) bad.push(`${e.id}: ${a.kind}:${a.arg}`);
       }
@@ -1974,5 +2001,50 @@ describe('tour deep-link addressing', () => {
   test('a step number past the end is undefined, not a clamp', () => {
     // The caller decides what a stale deep link does; this does not guess.
     expect(positionOfStep(content, tourNames(content)[0], 9999)).toBeUndefined();
+  });
+
+  /*
+   * `[text](tour:<slug>)` — a cross-tour pointer written as an ordinary
+   * markdown link. The scheme is parsed in `markdownParts.tsx` and handled in
+   * `HelpLayer`, which resolves the slug with `tourBySlug` so this spelling
+   * and `?tour=<slug>&step=<n>` cannot drift apart.
+   */
+  describe('tour: links', () => {
+    test('parses a slug, with or without a step', () => {
+      expect(parseTourHref('tour:ownership')).toEqual({ slug: 'ownership' });
+      expect(parseTourHref('tour:ownership:4'))
+        .toEqual({ slug: 'ownership', step: 4 });
+      // A non-numeric tail is part of the slug, not a bad step number.
+      expect(parseTourHref('tour:what-bdchm-is-built-with'))
+        .toEqual({ slug: 'what-bdchm-is-built-with' });
+    });
+
+    test('is not confused with an ordinary link', () => {
+      expect(parseTourHref('https://example.org')).toBeUndefined();
+      expect(parseTourHref('#anchor')).toBeUndefined();
+    });
+
+    /*
+     * The drift guard, and the reason this belongs in the content tests: a
+     * `tour:` link naming a renamed tour renders as an inert span with no
+     * error, so nothing on screen says it stopped working. Every such link in
+     * the content file must name a tour that exists, and a step number in one
+     * must resolve to a position.
+     */
+    test('every tour: link in the content file resolves', () => {
+      const bad: string[] = [];
+      for (const m of markdown.matchAll(/\]\((tour:[^)\s]+)\)/g)) {
+        const href = m[1];
+        const parsed = parseTourHref(href);
+        if (!parsed) { bad.push(`${href} — unparseable`); continue; }
+        const name = tourBySlug(content, parsed.slug);
+        if (!name) { bad.push(`${href} — no such tour`); continue; }
+        if (parsed.step !== undefined
+            && positionOfStep(content, name, parsed.step) === undefined) {
+          bad.push(`${href} — tour "${name}" has no step ${parsed.step}`);
+        }
+      }
+      expect(bad, `Broken tour: links:\n  ${bad.join('\n  ')}`).toEqual([]);
+    });
   });
 });

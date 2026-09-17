@@ -73,8 +73,8 @@ describe('tour state stack, end to end', () => {
    * and the file's first tour is a category walk whose steps all draw. Naming
    * the tour also means adding one to the content file cannot silently
    * retarget them. (It was `Walkthrough` until that tour was split into the
-   * four app tours on 2026-09-09; `Getting oriented` would not do, because its
-   * spine steps re-push the class the untick test below removes.)
+   * four app tours on 2026-09-09; `Using the Explorer` would not do, because
+   * its spine steps re-push the class the untick test below removes.)
    */
   const startTour = async () => {
     render(<ExploreApp />);
@@ -238,7 +238,7 @@ describe('tour state stack, end to end', () => {
      * the misplacement itself; it can show the attribute.
      */
     Object.assign(Element.prototype, { setPointerCapture() {}, releasePointerCapture() {} });
-    // `Getting oriented`, not Ownership: its opening steps anchor on the
+    // `Using the Explorer`, not Ownership: its opening steps anchor on the
     // selection panel, which exists in jsdom. A diagram anchor needs the ELK
     // layout, which does not run here, so it would never resolve.
     render(<ExploreApp />);
@@ -246,16 +246,29 @@ describe('tour state stack, end to end', () => {
     fireEvent.mouseEnter(button(/guided tours/i));
     const chooser = await screen.findByRole('dialog', { name: /guided tours/i });
     fireEvent.click([...chooser.querySelectorAll('button')]
-      .find(b => /^getting oriented/i.test(b.textContent ?? ''))!);
+      .find(b => /^using the explorer/i.test(b.textContent ?? ''))!);
     await screen.findByRole('button', { name: /next/i, hidden: true });
     const popover = () => document.querySelector('[data-help-popover]')!;
-    // Its first two steps are `Anchor: none`; the third anchors on the panel.
+    /*
+     * Its opening position is `Anchor: none`; the first beat anchors on
+     * `entity-row:Person` in the panel. Only the PANEL anchors resolve here,
+     * and this tour has exactly one such position, so the walk must stop on it
+     * rather than run past it — hence the `waitFor` INSIDE the loop, which
+     * settles each position before testing it. Checking the attribute only at
+     * the top of the loop reads it mid-remount (HelpLayer keys the popover per
+     * position) and walks off the one position that would have passed.
+     */
     const untilAnchored = async () => {
-      for (let i = 0; i < 8 && !popover().hasAttribute('data-anchored'); i++) {
+      for (let i = 0; i < 8; i++) {
+        try {
+          await waitFor(() => expect(popover().hasAttribute('data-anchored')).toBe(true),
+            { timeout: 250 });
+          return;
+        } catch { /* not this position; advance */ }
         next();
         await new Promise(r => setTimeout(r, 0));
       }
-      await waitFor(() => expect(popover().hasAttribute('data-anchored')).toBe(true));
+      throw new Error('no anchored position in the first 8 of Using the Explorer');
     };
     await untilAnchored();
 
@@ -266,9 +279,19 @@ describe('tour state stack, end to end', () => {
     expect(popover().hasAttribute('data-anchored')).toBe(false);
     expect((popover() as HTMLElement).style.positionArea).toBe('none');
 
-    // The drag is an answer to THIS step's placement; the next anchored step
-    // gets the machinery back.
+    /*
+     * The drag is an answer to THIS position's placement; changing position
+     * gives the machinery back. Steps FORWARD then BACK, returning to the one
+     * anchored position, because it is the only one of this tour that resolves
+     * in jsdom — moving away and moving back is the same state change the
+     * assertion is about, and it does not depend on the content happening to
+     * carry a second panel anchor. (It walked forward to a second one until
+     * 2026-09-17, when the tour absorbed `Reading the diagram` and its later
+     * positions became diagram anchors.)
+     */
     next();
+    await new Promise(r => setTimeout(r, 0));
+    back();
     await untilAnchored();
   });
 
@@ -337,19 +360,26 @@ describe('tour state stack, end to end', () => {
      * The viewer overrules the tour, end to end.
      *
      * Scope note, so this test is not read as more than it is: it walks the
-     * tour FORWARD, and every later step of the shipping tour replaces the
-     * canvas with a selection that does not name the unticked class again. So
-     * it pins the compose path — an unticked class does not creep back on
-     * subsequent positions — and not the pop path. **The pop path is where `reconcile` earns its keep** (a stack
+     * tour FORWARD, and no later step of the shipping tour names the unticked
+     * class again. So it pins the compose path — an unticked class does not
+     * creep back on subsequent positions — and not the pop path. **The pop
+     * path is where `reconcile` earns its keep** (a stack
      * still holding the id re-adds it when the frame that pushed it is
      * examined), and it is pinned directly, and adversarially, in
      * `tourStateStack.test.ts` — "unticking a class the tour pushed keeps it
      * gone across the next pop".
+     *
+     * `TimePeriod` is NAMED rather than taken positionally, because the
+     * property above is a fact about the content: it is the one class in
+     * Ownership's opening `Only:` that no later step re-adds. Taking
+     * `sel()[0]` picked Participant, which `why-ownership` draws again, so
+     * the test failed on a reorder of the tour rather than on a regression.
      */
     await startTour();
     for (let i = 0; i < 12 && !sel(); i++) next();
     await waitFor(() => expect(sel()).toBeTruthy());
-    const pushed = sel()!.split('~')[0];
+    const pushed = 'TimePeriod';
+    expect(sel()!.split('~')).toContain(pushed);
 
     const box = () => document.querySelector<HTMLInputElement>(
       `[data-class-row="${pushed}"] input[type="checkbox"]`,
