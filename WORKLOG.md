@@ -223,6 +223,82 @@ resolver uses the model, which is the right source for prose about what the app
 shows. Not chased down; recorded so the next person does not think one of them
 is a bug.
 
+### Round 4: the bespoke tour link was the wrong shape, and came back out
+
+Siggie, on the `tour:<slug>` link scheme built in round 3: *"you did an awful
+lot of work to get the tour link to work special and i think you should
+probably undo it all and just include the link as a regular `<a>` but give a
+way to specify. it could be like `[Link Text](https://example.com){{target:replace}}`
+or something. or `{{target:_blank}}` could be used for a tour that wanted to
+default to url in place."*
+
+Right, and the general knob is strictly better: it covers linking into a tour
+(`./?tour=<slug>` navigating in place), and also `_blank` on a tour that chose
+`replace` as its default, and anything else a `target` can say. A second KIND
+of link was the wrong abstraction for "this one link opens differently".
+
+So `tour:` is fully removed — the scheme, `parseTourHref`, `tourLinkAnchor`,
+`HelpLayer`'s `onTourLink`, the `.help-tour-link` CSS and its tests. What
+replaced it is `{{target:value}}` after any ordinary markdown link.
+
+**It cannot be a remark plugin, which is how it was written first.**
+`remark-directive` eats it: in `{{target:replace}}` the `:replace` parses as a
+textDirective, so the tree holds `text("{{target") · textDirective(replace) ·
+text("}} ok")` and there is no marker left to find. Probed the AST rather than
+guessing, after the first version silently did nothing. This is the same
+collision `styleDirectives.ts` already documents for unresolved `{{kind:arg}}`
+placeholders, and the reason `:s[…]{…}` uses directive syntax instead of
+braces.
+
+So it runs BEFORE parsing, inside `fillPlaceholders` — where `{{…}}` syntax
+belongs anyway. Two consequences worth knowing:
+
+- **It is not a text resolver and has none.** It annotates the link before it
+  rather than resolving to text, so it is applied ahead of the resolver pass
+  and ahead of the `!resolvers` bail-out (it needs no host knowledge). The
+  content test that asserts every placeholder resolves had to learn to skip
+  `target`, or it reads as permanently unresolved.
+- **The target travels in the link's TITLE.** Markdown has no syntax for an
+  arbitrary attribute on a link, and the popover does not load `rehype-raw`,
+  so a raw `<a>` would render as literal text. The title is the one free
+  string that reaches the component; `MARKDOWN_COMPONENTS.a` strips the marker
+  and keeps any title the author actually wrote.
+
+Verified by rendering: `replace` drops the target, `_blank` keeps it, a plain
+link is untouched, an orphan marker stays visible, and an authored title
+survives. Also verified on the REAL content — the tour link renders with no
+target and the BDC link with `_blank`, in one step.
+
+**The marker may sit on the next line**, which matters because the content file
+is hand-wrapped at ~76 columns and the opening paragraph wraps between the link
+and its marker. The regex consumes any whitespace between them; there is a test
+for exactly that case.
+
+### The BDC link, and a paragraph written by Siggie
+
+The `why` bullets are back as bullets, with `[BDC's tools]` inside the
+analyze-data one where it started. Siggie supplied the new opening paragraph
+verbatim; it opens on what BDCHM IS, links to tour 1 in the first sentence, and
+ends on "examining a neighborhood of model entities you are interested in".
+
+⚠️ **Their draft linked `./?tour=bdchm`, which would not have worked.** `bdchm`
+is the entry id of tour 1's first step, not the tour's slug; the slug is
+`the-biodata-catalyst-harmonized-model`. Corrected in place. An unknown slug
+opens the first tour rather than erroring, so this would have half-worked by
+accident and been easy to miss.
+
+### "how did you let British spelling -- analyse -- sneak in?"
+
+Mine, not theirs: *"wasn't my content. you must have authored it. i know how to
+spell."* Worth recording that **`git blame` cannot settle this** — every commit
+in this repo is authored `Sigfried Gold`, including the ones I write (I am a
+Co-Author trailer, not the author), so blame attributes my prose to them.
+
+Fixed the whole class in the content file, not just today's: `analyse`/
+`analyses` and every `colour`/`coloured` in tour prose. `FORMAT.md` still has
+British spellings; left alone, being package documentation rather than
+reader-facing text, and not today's decision to make.
+
 ### Round 3: the BDC link, the panel header, and a correction I owed
 
 **I removed a link Siggie put there on purpose, then rationalized it.** The

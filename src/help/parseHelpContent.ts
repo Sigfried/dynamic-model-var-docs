@@ -13,6 +13,8 @@
  * `src/explore/help-content.md`.
  */
 
+import { applyLinkTargets } from './linkTarget';
+
 /**
  * What a step points at. The parser deliberately does NOT interpret the
  * `kind:argument` form: knowing what an `entity-row` IS belongs to the host, and
@@ -1342,8 +1344,17 @@ export function fillPlaceholders(
   block: string,
   resolvers: Record<string, TextResolver> | undefined,
 ): string {
-  if (!resolvers || !block.includes('{{')) return block;
-  return block.replace(PLACEHOLDER, (whole, kind: string, arg: string) => {
+  if (!block.includes('{{')) return block;
+  /*
+   * `{{target:…}}` is handled here rather than by a resolver because it is not
+   * text: it annotates the LINK before it. Done ahead of the resolver pass,
+   * and ahead of the `!resolvers` bail-out, so it works in a host that
+   * registered none — it needs no host knowledge. See `linkTarget.ts` for why
+   * it cannot be a remark plugin.
+   */
+  const withTargets = applyLinkTargets(block);
+  if (!resolvers) return withTargets;
+  return withTargets.replace(PLACEHOLDER, (whole, kind: string, arg: string) => {
     const text = resolvers[kind.toLowerCase()]?.(arg);
     return text ?? whole;
   });

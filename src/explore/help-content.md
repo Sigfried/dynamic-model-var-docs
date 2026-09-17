@@ -341,7 +341,7 @@ introduced and then use one word.
   6. what the category is for
      - Description:
        ##### What this category is for
-       Observations are the measured facts a researcher actually analyses.
+       Observations are the measured facts a researcher actually analyzes.
        Everything else in the model exists to say *whose* they are, *when* they
        were taken, and *what they mean*. The subclass hierarchy here is the
        largest in BDCHM, and how the diagram draws inheritance gets a tour of
@@ -585,22 +585,23 @@ introduced and then use one word.
 - **Highlight:** none
 - **Width:** 700
 - **Description:**
-  The **BioData Catalyst Harmonized Model (BDCHM)** is the common data model
-  that nine TOPMed cohorts and the INCLUDE Data Hub are harmonized into. This
-  app draws it, and this tour is about the app rather than the model: how to
-  put entities on the canvas, what a box shows, and how to move from one
-  entity to the ones it is connected to. It grows one small diagram a step at
-  a time, from a person in a study to a number you would analyse.
+  The **BioData Catalyst Harmonized Model (BDCHM)** is a general-purpose
+  schema for describing and storing clinical trial data (this
+  [tour](./?tour=the-biodata-catalyst-harmonized-model){{target:replace}}
+  walks through its contents). It is a complex model and this **BDCHM
+  Explorer** app provides a way to navigate through it and understand its
+  parts and how they relate to each other. This tour walks you through the
+  app's features: how to put entities on the canvas, what a box shows, and how
+  to move from one entity to the ones it is connected to. It grows one small
+  diagram a step at a time, illustrating the steps for examining a
+  neighborhood of model entities you are interested in.
 
-  You may want to use BDCHM to analyze data harmonized to it — with
-  [BDC's analysis tools](https://biodatacatalyst.nhlbi.nih.gov/use-bdc/analyze-data/)
-  or otherwise — to harmonize your own data to it, to design new studies
-  pre-harmonized to it, or for ideas in designing your own data models. Any of
-  those needs a basic, overall understanding of the model's structure, which
-  is what the Explorer is for.
-
-  For the model's own content rather than the app, take
-  [The BioData Catalyst Harmonized Model](tour:the-biodata-catalyst-harmonized-model).
+  You may want to use BDCHM:
+  - to analyze data harmonized to it (using [BDC's tools](https://biodatacatalyst.nhlbi.nih.gov/use-bdc/analyze-data/)
+    or otherwise);
+  - to harmonize your own data to it;
+  - to design new studies pre-harmonized to it; or
+  - for ideas or inspiration in designing your own data models.
 - **Beats:**
   1. the panel
      - Description:
@@ -648,8 +649,8 @@ introduced and then use one word.
 - **Only:** sel=Person
 - **Anchor:** node-box:Person
 - **Description:**
-  The dot at a row's left and the label at its right share a colour, and the
-  colour says what KIND of thing the attribute holds. There are three, and the
+  The dot at a row's left and the label at its right share a color, and the
+  color says what KIND of thing the attribute holds. There are three, and the
   difference that matters is whether what it holds is another **entity** — one
   of the things the panel lists, which can therefore get a box of its own.
 - **Beats:**
@@ -775,7 +776,7 @@ introduced and then use one word.
        *{{model-description:Quantity}}*
 
        Five boxes: Person → Participant → Visit → Observation → Quantity is
-       the path from a human being to a number you would analyse, and four of
+       the path from a human being to a number you would analyze, and four of
        the six categories hang off it. The `value_quantity` dot is filled now
        that its line is drawn.
      - Change: sel=Quantity
@@ -1351,7 +1352,7 @@ OWNERSHIP_CLASSIFICATION.md §When a schema needs it.
   3. the child's header
      - Description:
        ##### What it adds
-       Below them a coloured header names the subclass, and the rows under
+       Below them a colored header names the subclass, and the rows under
        it are the ones it adds: a normal range, a body site, the instrument.
        Everything under this header is MeasurementObservation's alone.
      - Anchor: child-header:MeasurementObservation
@@ -1421,13 +1422,13 @@ OWNERSHIP_CLASSIFICATION.md §When a schema needs it.
   The largest hierarchy in the model, and the best picture of what merging
   buys. One box holds Observation and all five subclasses; the rows they
   share are stated once, at the top, and each subclass adds its own beneath
-  its coloured header. Drawn as six separate boxes, the shared rows would be
+  its colored header. Drawn as six separate boxes, the shared rows would be
   repeated six times.
 - **Beats:**
-  1. colours
+  1. colors
      - Description:
        ##### Colours
-       Each subclass has a colour, worn by its header and by any line leaving
+       Each subclass has a color, worn by its header and by any line leaving
        one of its rows, so a line can be traced back to the subclass that
        declares it. A line from a shared row is drawn once, not once per
        subclass.
@@ -1445,7 +1446,7 @@ OWNERSHIP_CLASSIFICATION.md §When a schema needs it.
        a measurement set holds MeasurementObservations specifically, not
        Observations in general. So its line does not land on the Observation
        box as a whole but on the **MeasurementObservation header** inside
-       it, in that subclass's colour.
+       it, in that subclass's color.
      - Anchor: slot-row:MeasurementObservationSet.observations
   4. the landing
      - Description:
@@ -1524,8 +1525,8 @@ OWNERSHIP_CLASSIFICATION.md §When a schema needs it.
 
 - **Title:** Merged inheritance boxes
 - **Anchor:** none
-- **Description:** When several entities on the diagram share a parent class, they collapse into one box titled by that parent. Rows the parent defines come first, then a coloured header per child followed by the rows that child adds. Whatever owns the parent owns every child too, so a line into the box header is a line to the whole family.
-- **Context:** Lines leaving a child's rows take that child's colour, so you can trace a line back to the block it came from.
+- **Description:** When several entities on the diagram share a parent class, they collapse into one box titled by that parent. Rows the parent defines come first, then a colored header per child followed by the rows that child adds. Whatever owns the parent owns every child too, so a line into the box header is a line to the whole family.
+- **Context:** Lines leaving a child's rows take that child's color, so you can trace a line back to the block it came from.
 
 </details>
 

@@ -219,6 +219,13 @@ describe('the content file resolves against the live schema', () => {
     const resolvers = helpTextResolvers(new DataService(await loadModelData()));
 
     const unresolved = placeholdersIn(markdown)
+      /*
+       * `target` is not a text resolver and deliberately has none: it
+       * annotates the LINK before it and is consumed by `fillPlaceholders`
+       * ahead of the resolver pass (see `linkTarget.ts`). Without this it
+       * reads as permanently unresolved.
+       */
+      .filter(([kind]) => kind.toLowerCase() !== 'target')
       .filter(([kind, arg]) => resolvers[kind as keyof typeof resolvers]?.(arg) === undefined)
       .map(([kind, arg]) => `{{${kind}:${arg}}}`);
 
@@ -227,4 +234,47 @@ describe('the content file resolves against the live schema', () => {
       `Placeholders in help-content.md that do not resolve: ${unresolved.join(', ')}`,
     ).toEqual([]);
   }, 30_000);
+});
+
+/**
+ * `[text](url){{target:replace}}` — where a link opens.
+ *
+ * Help links open in a new tab, because following one in the same tab would
+ * leave the app and take the tour's state stack with it. A link INTO the app
+ * (`./?tour=<slug>`) wants the opposite, so the target is authored per link.
+ *
+ * Handled in `fillPlaceholders` rather than by a remark plugin: the plugin
+ * version did not work, because `remark-directive` parses the `:replace` of
+ * `{{target:replace}}` as a text directive and the marker never survives to
+ * the tree. See `linkTarget.ts`.
+ */
+describe('{{target:…}} on a link', () => {
+  const md = (s: string) => fillPlaceholders(s, {});
+
+  it('moves the target into the link, out of the prose', () => {
+    expect(md('[x](./?tour=a){{target:replace}} rest'))
+      .toBe('[x](./?tour=a "help-target:replace") rest');
+  });
+
+  it('works when the author wrapped the line between link and marker', () => {
+    // Content is hand-wrapped at ~76 columns, so the two routinely separate.
+    expect(md('[x](./?tour=a)\n{{target:replace}}'))
+      .toBe('[x](./?tour=a "help-target:replace")');
+  });
+
+  it('keeps a title the author actually wrote', () => {
+    expect(md('[x](./?t=a "hi"){{target:replace}}'))
+      .toBe('[x](./?t=a "help-target:replace hi")');
+  });
+
+  it('leaves a marker that follows no link visible', () => {
+    // Same contract as an unresolved placeholder: silently swallowing it
+    // would hide the fact that the author wrote it somewhere it does nothing.
+    expect(md('no link here {{target:replace}}')).toBe('no link here {{target:replace}}');
+  });
+
+  it('does not need resolvers, since it needs no host knowledge', () => {
+    expect(fillPlaceholders('[x](./?t=a){{target:replace}}', undefined))
+      .toBe('[x](./?t=a "help-target:replace")');
+  });
 });

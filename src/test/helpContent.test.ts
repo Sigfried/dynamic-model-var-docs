@@ -6,7 +6,6 @@ import {
   DEFAULT_TOUR, tourSlug, tourBySlug, positionOfStep,
 } from '../help/parseHelpContent';
 import { stripAlerts } from '../help/HelpLayer';
-import { parseTourHref } from '../help/markdownParts';
 import { DEFAULTS, INSTRUCTION_PARAMS } from '../explore/exploreState';
 import { loadModelData } from '../utils/dataLoader';
 import { DataService } from '../services/DataService';
@@ -2003,48 +2002,4 @@ describe('tour deep-link addressing', () => {
     expect(positionOfStep(content, tourNames(content)[0], 9999)).toBeUndefined();
   });
 
-  /*
-   * `[text](tour:<slug>)` — a cross-tour pointer written as an ordinary
-   * markdown link. The scheme is parsed in `markdownParts.tsx` and handled in
-   * `HelpLayer`, which resolves the slug with `tourBySlug` so this spelling
-   * and `?tour=<slug>&step=<n>` cannot drift apart.
-   */
-  describe('tour: links', () => {
-    test('parses a slug, with or without a step', () => {
-      expect(parseTourHref('tour:ownership')).toEqual({ slug: 'ownership' });
-      expect(parseTourHref('tour:ownership:4'))
-        .toEqual({ slug: 'ownership', step: 4 });
-      // A non-numeric tail is part of the slug, not a bad step number.
-      expect(parseTourHref('tour:what-bdchm-is-built-with'))
-        .toEqual({ slug: 'what-bdchm-is-built-with' });
-    });
-
-    test('is not confused with an ordinary link', () => {
-      expect(parseTourHref('https://example.org')).toBeUndefined();
-      expect(parseTourHref('#anchor')).toBeUndefined();
-    });
-
-    /*
-     * The drift guard, and the reason this belongs in the content tests: a
-     * `tour:` link naming a renamed tour renders as an inert span with no
-     * error, so nothing on screen says it stopped working. Every such link in
-     * the content file must name a tour that exists, and a step number in one
-     * must resolve to a position.
-     */
-    test('every tour: link in the content file resolves', () => {
-      const bad: string[] = [];
-      for (const m of markdown.matchAll(/\]\((tour:[^)\s]+)\)/g)) {
-        const href = m[1];
-        const parsed = parseTourHref(href);
-        if (!parsed) { bad.push(`${href} — unparseable`); continue; }
-        const name = tourBySlug(content, parsed.slug);
-        if (!name) { bad.push(`${href} — no such tour`); continue; }
-        if (parsed.step !== undefined
-            && positionOfStep(content, name, parsed.step) === undefined) {
-          bad.push(`${href} — tour "${name}" has no step ${parsed.step}`);
-        }
-      }
-      expect(bad, `Broken tour: links:\n  ${bad.join('\n  ')}`).toEqual([]);
-    });
-  });
 });

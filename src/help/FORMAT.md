@@ -35,6 +35,7 @@ spec.
   - [Pulling text from the model — `{{kind:arg}}`](#pulling-text-from-the-model--kindarg) — placeholders filled by host-registered resolvers
   - [Inline widgets](#inline-widgets) — `![alt](widget:name:arg)` drawn by a host widget
   - [Styling a span or a block — `:s[…]{…}`](#styling-a-span-or-a-block--s) — the `s` directive, its closed attribute list, and the host's colour names
+  - [Where a link opens — `{{target:…}}`](#where-a-link-opens--target) — a link opens in a new tab unless it says otherwise
   - [Subtitles inside a description](#subtitles-inside-a-description) — `### text` in a description renders as a subtitle; every level looks the same
   - [Alerts](#alerts) — a `>` blockquote is an amber alert band
     - [`Once:` — an alert you can put away](#once--an-alert-you-can-put-away) — an authored storage key for dismiss-for-good
@@ -343,6 +344,40 @@ do NOT size text — every level renders as the one subtitle style; see
 in [`styleDirectives.ts`](styleDirectives.ts); a text resolver could not do this,
 since it runs before markdown and could neither wrap formatted text nor know
 where a range ends.
+
+### Where a link opens — `{{target:…}}`
+
+**A link opens in a new tab by default.** Following one in the same tab leaves
+the app, and the tour's state stack goes with it.
+
+That default is wrong for a link back INTO the app — another tour, a share
+link — which wants to navigate in place. Write the target after the link:
+
+```markdown
+this [tour](./?tour=the-biodata-catalyst-harmonized-model){{target:replace}}
+walks through its contents
+```
+
+| Written | Means |
+|---|---|
+| *(nothing)* | opens in a new tab — the default |
+| `{{target:replace}}` | navigates in place, in the same tab |
+| `{{target:_blank}}` | a new tab, said explicitly |
+| `{{target:<name>}}` | any other value is passed through as the `target` attribute |
+
+- **The marker may be on the next line.** Content is hand-wrapped, so a link
+  and its marker routinely end up on separate lines; any whitespace between
+  them is consumed.
+- **A marker that follows no link is left visible**, like an unresolved
+  placeholder — so writing one where it does nothing is something you can see.
+- **A title you wrote is kept.** `[x](url "hi"){{target:replace}}` still has
+  the `hi` tooltip.
+
+⚠️ **This is not a `{{kind:arg}}` placeholder**, despite the spelling. It
+annotates the link before it rather than resolving to text, so it has no
+resolver and is consumed before the resolver pass. It also cannot be a remark
+plugin: `remark-directive` parses the `:replace` as a text directive, so by
+parse time the marker no longer exists. See `linkTarget.ts`.
 
 ### Subtitles inside a description
 

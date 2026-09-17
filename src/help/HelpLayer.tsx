@@ -38,7 +38,7 @@
  * what removes the portal.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import { useHelp } from './helpContext';
 import { useDragged } from './useDragged';
@@ -48,9 +48,8 @@ import { useDragged } from './useDragged';
    its content arrives already placeholder-filled from the provider, and a
    `Once:` entry needs a per-entry component table. */
 import {
-  MARKDOWN_COMPONENTS, remarkPluginsFor, urlTransform, widgetImg, tourLinkAnchor,
+  MARKDOWN_COMPONENTS, remarkPluginsFor, urlTransform, widgetImg,
 } from './markdownParts';
-import { tourBySlug, positionOfStep } from './parseHelpContent';
 import type { Offset, PopoverSide } from './parseHelpContent';
 import TourMap from './TourMap';
 import './help.css';
@@ -185,7 +184,7 @@ export default function HelpLayer() {
   const {
     helpMode, tourIndex, position, positions, stepCount, content, activeId,
     dismissEntry, nextStep, prevStep, endTour, showEntry, resolveAnchor, centerRect,
-    showAddresses, tourName, tourMeta, widgets, colors, startTour,
+    showAddresses, tourName, tourMeta, widgets, colors,
   } = useHelp();
   const remarkPlugins = useMemo(() => remarkPluginsFor(colors), [colors]);
 
@@ -340,20 +339,6 @@ export default function HelpLayer() {
   const [, setOnceTick] = useState(0);
   const onceKey = entry?.once;
   const onceDone = onceKey !== undefined && isDismissedOnce(onceKey);
-  /*
-   * A `[text](tour:<slug>)` link in a step's prose starts that tour, rather
-   * than navigating to a URL the browser cannot follow. Resolves the slug the
-   * same way `?tour=<slug>&step=<n>` does, so the two spellings of "which
-   * tour, which step" cannot drift apart. An unknown slug is a no-op, matching
-   * `startTour`'s own behaviour for an unknown name — a typo starts nothing
-   * rather than silently running whichever tour is first.
-   */
-  const onTourLink = useCallback((slug: string, step?: number) => {
-    const name = tourBySlug(content, slug);
-    if (!name) return;
-    startTour(name, step === undefined ? 0 : positionOfStep(content, name, step) ?? 0);
-  }, [content, startTour]);
-
   const markdownComponents = useMemo(
     () => ({
       ...(onceKey === undefined ? MARKDOWN_COMPONENTS : markdownComponentsWithOnce(() => {
@@ -361,11 +346,10 @@ export default function HelpLayer() {
         setOnceTick(n => n + 1);
       })),
       img: widgetImg(widgets),
-      a: tourLinkAnchor(onTourLink),
     }),
     // onceTick is a dependency in spirit: after a dismissal the table is dead
     // anyway, since `onceDone` strips the alert before it can render.
-    [onceKey, widgets, onTourLink],
+    [onceKey, widgets],
   );
 
   /*

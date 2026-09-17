@@ -569,31 +569,13 @@ body.help-mode {
    Description markdown are rendered as plain text". They open in a new tab
    because leaving the page mid-tour would throw away the tour's state. */
 .help-popover a,
-.help-prose a,
-/* A `[text](tour:<slug>)` link starts another tour instead of navigating —
-   which is the same reasoning as the new tab above, taken one step further:
-   there is no URL that can enter a tour without a reload (`tour`/`step` are
-   one-shot params consumed at load). It is a `<button>` so it cannot be
-   middle-clicked into a tab showing `tour:<slug>` as an address, and it is
-   styled with the links because inside a sentence it reads as one. */
-.help-tour-link {
+.help-prose a {
   color: #0369a1;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 .help-popover a:hover,
-.help-prose a:hover,
-.help-tour-link:hover { color: #0284c7; }
-
-/* Undo the button chrome; the rule above supplies the link look. */
-.help-tour-link {
-  display: inline;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  cursor: pointer;
-}
+.help-prose a:hover { color: #0284c7; }
 
 /* The ACTION band: what the tour just DID.
 
@@ -835,10 +817,8 @@ body.help-mode {
   .help-popover-address:hover { color: #38bdf8; }
   /* #0369a1 on the dark card fails contrast; the lighter end of the same
      ramp keeps links reading as links in both themes. */
-  .help-popover a,
-  .help-tour-link { color: #7dd3fc; }
-  .help-popover a:hover,
-  .help-tour-link:hover { color: #bae6fd; }
+  .help-popover a { color: #7dd3fc; }
+  .help-popover a:hover { color: #bae6fd; }
   .help-popover-body code { background: #1e293b; }
   /* The dark card's body TEXT is #e2e8f0, so the fade has more room to work
      with than it does on white and does not need to go as deep. */
