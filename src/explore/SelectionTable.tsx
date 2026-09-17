@@ -52,7 +52,22 @@ export default function SelectionTable({
       return next;
     });
 
-  const total = groups.reduce((n, g) => n + g.classIds.length, 0);
+  /*
+   * DISTINCT classes, so the header does not claim more entities than the
+   * model has. Three classes are deliberately listed in two categories each
+   * (`DUAL_LISTED` in entityCategories.test.ts: SpecimenQualityObservation,
+   * SpecimenQuantityObservation, BodySite), and summing the group lengths
+   * counted every one of them twice — the badge read "Entities (57)" for 54
+   * entities, which Siggie caught 2026-09-17 when a step of tour prose beside
+   * it said 54.
+   *
+   * `getCategorySelectorSection` in DataService already counted distinct for
+   * this exact reason; this panel had simply not been given the same
+   * treatment, so the same app showed two different totals. The per-category
+   * `selected / N` below stays a ROW count — that is how many rows that group
+   * shows, and a dual-listed class really does appear in both.
+   */
+  const total = new Set(groups.flatMap(g => g.classIds)).size;
 
   return (
     <div className="text-sm">

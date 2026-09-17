@@ -23,6 +23,7 @@
  * | `{{enum-description:<Enum>}}` | that enumeration's `description` |
  * | `{{category-label:<id>}}` | a category's display label (`admin` → "Admin / Study") |
  * | `{{ownership-count:<key>}}` | a live count: `declared`/`forward`/`backward`, or `<rule-id>.<owners\|attrs\|owned\|total>` |
+ * | `{{schema-count:<key>}}` | a live whole-schema total; the fields of `SchemaCounts` |
  *
  * **Returning undefined leaves the placeholder standing**, visibly, in the
  * popover. That is the designed behaviour for a name the schema no longer has
@@ -108,6 +109,27 @@ export function helpTextResolvers(dataService: DataService) {
       const field = key.slice(dot + 1);
       return rule && field in rule
         ? String(rule[field as keyof typeof rule])
+        : undefined;
+    },
+
+    /*
+     * `{{schema-count:<key>}}` — how big the schema is, computed at render.
+     *
+     * Same reasoning as `ownership-count` above, and a worse offender: the
+     * LinkML step's five hand-typed numbers were ALL stale (56/225/50/80
+     * classes-attributes-enums-links against 54/336/53/117), inherited from a
+     * paragraph written before two schema syncs. Keys are the fields of
+     * `SchemaCounts`. An unknown key leaves the placeholder visible and fails
+     * the content test.
+     *
+     * ⚠️ For "how many entities are in the panel" use `panelEntities`, NOT
+     * `concreteClasses` — see the warning on `getSchemaCounts`. Quoting the
+     * wrong one put 52 in the prose beside the panel's own 57.
+     */
+    'schema-count': (key: string) => {
+      const counts = dataService.getSchemaCounts();
+      return key in counts
+        ? String(counts[key as keyof typeof counts])
         : undefined;
     },
 

@@ -36,6 +36,32 @@ describe('SelectionTable', () => {
     return { onToggle, onShowCategory, ...result };
   };
 
+  /*
+   * The header says how many ENTITIES there are, not how many rows.
+   *
+   * Three classes are deliberately listed in two categories each
+   * (`DUAL_LISTED` in entityCategories.test.ts), and the badge used to sum the
+   * group lengths, so it read "Entities (57)" for 54 entities — caught by
+   * Siggie 2026-09-17 when tour prose beside it, resolving
+   * `{{schema-count:panelEntities}}`, correctly said 54.
+   *
+   * Note this sits beside the row-count assertion below, which stays
+   * `allIds.length`: a dual-listed class really does render two checkboxes,
+   * so rows and entities are different numbers and only one of them belongs
+   * in a header reading "Entities".
+   */
+  test('the header counts distinct entities, not category listings', () => {
+    renderTable();
+    const listings = ds.getCategoryGroups().flatMap(g => g.classIds);
+    const distinct = new Set(listings).size;
+    // A guard on the guard: with no dual-listing this test proves nothing.
+    expect(listings.length, 'expected some class listed in two categories')
+      .toBeGreaterThan(distinct);
+    // The count shares a text node with the label, so match the whole header.
+    expect(screen.getByText(new RegExp(`\\(${distinct}\\)`))).toBeTruthy();
+    expect(screen.queryByText(new RegExp(`\\(${listings.length}\\)`))).toBeNull();
+  });
+
   test('renders every categorized class with a checkbox', () => {
     renderTable();
     const groups = ds.getCategoryGroups();

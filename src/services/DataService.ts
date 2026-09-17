@@ -222,6 +222,47 @@ export interface OwnershipCounts {
   byRule: ReadonlyMap<OwnershipRule, OwnershipRuleCounts>;
 }
 
+/**
+ * Whole-schema totals, for prose that wants to say how big the model is.
+ *
+ * Separate from `OwnershipCounts`, which counts CLASSIFIED class-to-class
+ * attributes; these count the schema's elements as declared.
+ */
+export interface SchemaCounts {
+  /** Classes, abstract ones included. */
+  classes: number;
+  /** Classes a reader can actually draw — `Entity` and other abstracts out. */
+  concreteClasses: number;
+  /**
+   * Distinct classes the selection panel LISTS.
+   *
+   * ⚠️ **This is the number to quote in prose about the panel**, not
+   * `classes` or `concreteClasses`. The panel lists what
+   * `ENTITY_CATEGORIES` categorizes, which is neither: it includes the
+   * abstracts, and it excludes anything a schema sync added that nobody has
+   * categorized yet (`hand-curated-config-rot`).
+   */
+  panelEntities: number;
+  /**
+   * Category LISTINGS, i.e. rows the panel renders: `panelEntities` plus the
+   * dual-listed classes counted once per category they appear in.
+   *
+   * Not a count of entities, and not what the header shows — the header shows
+   * `panelEntities`. Here because "how many rows" and "how many entities" are
+   * genuinely different questions about the panel and conflating them is what
+   * made the header wrong; a per-category `selected / N` is still a row count.
+   */
+  panelRows: number;
+  /** Slots, i.e. attributes, across the whole schema. */
+  slots: number;
+  /** Permissible value sets. */
+  enums: number;
+  /** Primitive data types. */
+  types: number;
+  /** Slots whose range is a class: every line the canvas could ever draw. */
+  classRangedSlots: number;
+}
+
 /** How many ownership edges LEAVE one entity, and to whom. */
 export interface DivergenceInfo {
   entity: string;
@@ -1108,6 +1149,50 @@ export class DataService {
    * counting its edges among "the attributes in the schema" would inflate a
    * number the schema itself can be checked against.
    */
+  /**
+   * How big the schema is, counted from the loaded model.
+   *
+   * Exists because these numbers were hand-typed into the tour and every one
+   * of them had rotted: the `linkml-context` step claimed 56 classes, 225
+   * attributes, 50 value sets, 80 class-to-class links and a 4,000-line YAML,
+   * against an actual 54 / 336 / 53 / 117 / 5,023 (measured 2026-09-17). The
+   * schema sync moves all of them and nothing was checking, which is the same
+   * failure `getOwnershipCounts` was written for — see its note, and TASKS
+   * `hand-curated-config-rot`.
+   *
+   * ⚠️ **`panelEntities` vs `classes`/`concreteClasses` is a real distinction,
+   * not redundancy.** The first content to use this quoted `concreteClasses`
+   * (52) for "entities the panel lists" while the panel's header said 57 —
+   * two live numbers disagreeing. Both were wrong for the question: the panel
+   * lists all 54 categorized classes, abstracts included, and the header was
+   * double-counting the 3 dual-listed ones. `SelectionTable` now shows
+   * `panelEntities`' definition too, so prose and panel read one source.
+   */
+  getSchemaCounts(): SchemaCounts {
+    const classes = this.modelData.collections.get('class')?.getAllElements() ?? [];
+    const slots = this.modelData.collections.get('slot')?.getAllElements() ?? [];
+    const enums = this.modelData.collections.get('enum')?.getAllElements() ?? [];
+    const types = this.modelData.collections.get('type')?.getAllElements() ?? [];
+
+    // Exactly what SelectionTable sums for its header badge.
+    const panelIds = this.getCategoryGroups().flatMap(g => g.classIds);
+
+    const classNames = new Set(classes.map(c => c.name));
+    return {
+      classes: classes.length,
+      concreteClasses: classes.filter(c => !c.isAbstract()).length,
+      panelEntities: new Set(panelIds).size,
+      panelRows: panelIds.length,
+      slots: slots.length,
+      enums: enums.length,
+      types: types.length,
+      classRangedSlots: slots.filter(s => {
+        const range = (s as { range?: string }).range;
+        return range !== undefined && classNames.has(range);
+      }).length,
+    };
+  }
+
   getOwnershipCounts(): OwnershipCounts {
     const distinct = (ps: readonly OwnershipPair[], f: (p: OwnershipPair) => string) =>
       new Set(ps.map(f)).size;

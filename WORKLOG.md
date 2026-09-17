@@ -8,7 +8,262 @@ Newest first.
 
 
 ---
-## 2026-09-17 (latest) — the beat title line, and `?tour=<slug>&step=<n>`
+## 2026-09-17 (later) — Getting oriented pruned, and five tours become a different five
+
+`TASKS help-finish-authoring/oriented`, executed. Siggie had annotated
+GETTING_ORIENTED_PROPOSAL.md with their three `[DECIDE]` answers and said
+"i've just done my part of the work on task Now #1. you implement it." The
+proposal file is deleted; this is what it said and what happened to it.
+
+### The three answers, and the two decisions they opened
+
+- **#1 Person or Participant as the opener** — *"ok, Person"*, as proposed.
+- **#1b, unprompted and bigger than the question** — *"no one's going to go to
+  the end of tour 1 to see the why. let's put the researcher-oriented whys in
+  this tour, and fold in reading the diagram"*. That settles `why-overlap` by
+  MOVING rather than cutting: the `why` step is gone from tour 1 and its four
+  "you may want to use BDCHM" bullets now open tour 2.
+- **#2 fold in *Reading the diagram*** — *"yes"*.
+- **#3 where the orphaned LinkML paragraph goes** — none of the three options
+  offered. *"add a new tour for LinkML context, why to use the Explorer
+  oriented to LinkML people / modelers"*. I had recommended option (2), a
+  help-only entry, and had explicitly framed a separate modeler argument as
+  ruled out by the 2026-09-11 audience decision. It was not.
+
+Two things needed asking, and both changed the shape of the work:
+
+**Where the `why` step ends up.** Answer: moved, not copied. Tour 1 ends on
+`other-files` now.
+
+**Tour order — and an instinct worth recording.** Siggie: *"it can go last, but
+i'm thinking that the researcher-oriented should mostly be tour 1 and 2 (maybe
+tour 2 gets new name). the other three are more for modelers. in fact, now i'm
+wondering if they should all get combined into one tour"*. That last clause is
+the interesting one and it was declined after argument, not adopted:
+
+- **Ownership is not modeler-only.** It answers "why did this box land on the
+  left", which every reader hits — and this very session moved `which-way` and
+  `loops` to its head, which makes it MORE central to an ordinary reader, not
+  less.
+- **Length.** Ownership (10 steps) + Inheritance (5) + LinkML (2) is ~17 steps
+  in one walk, and there is still no way to generate a link to a position
+  (`TASKS tour-position-link` is unbuilt), so a reader who abandons it at step
+  6 restarts at 1.
+
+Siggie: *"keep separate. don't say what's for whom. put the linkml tour before
+ownership. researchers can read if interested but it will attract the eye of
+linkml people."* So **no audience labels in the chooser** — deliberate, and the
+opposite of what I proposed (I offered to rewrite the `TourMetadata:`
+descriptions to say who each tour is for). The LinkML tour's own title is the
+signal. Do not add audience labels back.
+
+Tour 2 renamed to **Using the Explorer** — Siggie picked it from three options;
+it matches the step title they had already retitled `bdchm-entities` to.
+
+### What the content file looks like now
+
+Five tours, in this order: **The BioData Catalyst Harmonized Model** (8) →
+**Using the Explorer** (8) → **What BDCHM is built with** (2) → **Ownership**
+(10) → **Inheritance** (5).
+
+Getting oriented's 12 steps → 8, as the proposal wanted, but not by the
+proposal's route, because folding in *Reading the diagram* changed the
+arithmetic:
+
+| gone | where it went |
+|---|---|
+| `linkml-context` | its own tour, expanded — it was the only orphan and is now two steps |
+| `selection-tree` | merged into `bdchm-entities`; it was the same three moves on Participant |
+| `selection-tree-mechanics` | help-only entry, and LISTED in `HELP_ENTRIES` — see below |
+| `why` (tour 1) | tour 2's opening description |
+| `rows-and-dots` (tour 3) | tour 2, retitled *Three kinds of row*, on Person instead of Visit |
+| `one-edge` (tour 3) | `grow-participant` beats 1–2 |
+| `which-way`, `loops` (tour 3) | the HEAD of Ownership |
+| `grow-visit`/`grow-observation`/`grow-quantity` | one step, *Three more hops*, three beats |
+| `moving-around` | a beat of `detail-panel` |
+
+`entity-box`'s two buried beats were promoted to steps as proposed
+(`rows-and-dots` absorbed the blue-row beat; `relation-bar-step` is the new id
+— `relation-bar` was taken by the help-only entry, and a duplicate `###` id
+silently overwrites).
+
+### `selection-tree-mechanics` had to be LISTED, not merely kept
+
+The proposal's verdict was "CUT the step, KEEP the entry", and keeping the
+entry is not enough: `HELP_ENTRIES` in `HelpMenu.tsx` is the ONLY door to a
+help-only entry, because `HELP_MODE_ENABLED` is false. An unlisted entry is
+unreachable, not merely unlisted. It is listed now, and rewritten — it used to
+describe tree mode as though that were the only mode, which is wrong (list is
+the default) and was part of why it was a broken tour step: its own
+`entity-row:` anchors do not resolve in tree mode.
+
+Also renamed the `graph-canvas-reading` menu item from "Reading the diagram" to
+"The diagram", which is that entry's own title. The old label borrowed the name
+of a tour that no longer exists.
+
+### Three tests broke, all coupled to content by NAME. None was a regression.
+
+Worth recording because the fixes are not all "rename the string":
+
+1. **`tourChooser` — `/reading the diagram/i`.** A menu label I renamed.
+   Straight rename, plus the new entry added to the list the test walks.
+
+2. **`tourStack` untick test.** It took `sel()!.split('~')[0]` — the first id
+   of the first non-empty selection — and asserted it stays off to the end of
+   the tour. Ownership now opens on `which-way`
+   (`sel=Participant~Visit~TimePeriod`), so `[0]` is Participant, and
+   `why-ownership` three steps later draws Participant again. The test's own
+   comment states the property it depends on: "every later step of the shipping
+   tour replaces the canvas with a selection that does not name the unticked
+   class again". **Fixed by NAMING `TimePeriod`** — the one class in that
+   opening `Only:` no later step re-adds — and asserting it is present, so the
+   next reorder fails loudly on the assertion instead of silently picking a
+   class that comes back.
+
+3. **`tourStack` drag test — the one that took real work.** It walks the tour
+   to a position whose popover is `data-anchored`, drags it, then walks to
+   ANOTHER anchored position to check the machinery comes back. Two separate
+   problems:
+   - Its `untilAnchored` tested the attribute at the TOP of the loop, then
+     advanced. With the old content there were two `Anchor: none` steps then a
+     panel-anchored one, so it had slack. Now the opening position is the only
+     `none` and its first beat is anchored, and the check read the attribute
+     mid-remount (HelpLayer keys the popover per position) and walked straight
+     past the one position that would have passed. Fixed by putting the
+     `waitFor` INSIDE the loop, so each position settles before being tested.
+   - The second `untilAnchored()` had nowhere to go. **Only panel anchors
+     resolve in jsdom** — `entity-row:`, `entity-checkbox:`, `category-row:`
+     render; every `node-box:`/`slot-row:` needs the ELK layout, which does not
+     run there. Tour 2 has exactly ONE panel-anchored position now. So it steps
+     forward then BACK to the same position, which is the same state change the
+     assertion is about and does not depend on the content happening to carry a
+     second panel anchor. That constraint is now written down in
+     TOURS_AND_CONTENT.md, because it will bite the next person who reorders a
+     tour.
+
+**A probe settled #3 in about a minute after two wrong guesses.** I first
+thought a stale mount was being queried (RTL's auto-cleanup rules that out),
+then that vitest was retrying. The probe printed `anchored=` per position and
+showed `untilAnchored` succeeding at position 1 on the FIRST pass and the
+SECOND call failing — which is what identified it as two calls, not two runs.
+Reasoning about it produced two wrong causes; printing the data produced the
+right one.
+
+### Siggie read step 1 and 2 in the browser — three fixes
+
+**1. Step 1 assumed tour 1.** *"Step 1 should not assume the reader has already
+gone through tour 1. Maybe they came here from a link. So spell out BDCHM and
+provide a link to tour 1. Even with that -- i don't think the first thing that
+stands out to the reader on this tour should be a link that takes them
+elsewhere."* Both halves respected: BDCHM is spelled out in the opening
+sentence with the one-line "nine TOPMed cohorts and the INCLUDE Data Hub"
+framing, and the pointer to tour 1 went to the LAST beat of `where-next`
+instead of the opener. The panel beat no longer says "the six categories the
+first tour walked through".
+
+**There is no way to author a link to another tour.** That is `TASKS
+tour-links`, unbuilt. A raw `?tour=` href would be a page navigation that
+throws away the reader's canvas, and `tour`/`step` are `ONE_SHOT_PARAMS`
+consumed at load. So the pointer names the tour in words, which is what
+`where-next` already did for the other three. Do not "fix" this by writing a
+`?tour=` link into the content.
+
+**2. The cardinality was being dropped, not merely truncated.** Siggie noticed
+range and cardinality were often cut off. Measuring it showed something worse
+than truncation: range and cardinality shared ONE `truncate max-w-[90px]` span,
+and since the range comes first it spent the whole budget. 35 of the schema's
+87 distinct range names are over 18 characters (`SpecimenProcessingActivityTypeEnum`
+is 34), so on those rows the cardinality was clipped to `0…` or pushed out of
+the box entirely — which is exactly what the screenshot showed for
+`Person.species` and `Person.breed` (no cardinality at all) and `vital_status`
+(`0…`).
+
+Arithmetic, since it confirms the cause rather than guessing at it: a 240px box
+leaves ~206px of row; at 9px a character is ~4.7px, so `CellularOrganismSpeciesEnum`
+alone is ~127px and range+cardinality ~151px — over the 90px cap. The three
+rows that lost their cardinality are precisely the three whose range+cardinality
+exceeded 90px, and the four that fit kept theirs.
+
+Fix: two separate flex children, `shrink` on the range and `shrink-0` on the
+cardinality, so only the name gives up space. Also added the cardinality to the
+`plain`-channel `title`, which omitted it — a green row's range name is just as
+likely to be a 30-character enum, and the tooltip's job is to recover what the
+row truncated.
+
+**Widening the box was Siggie's counter-suggestion and is deliberately NOT
+done:** *"it could be, but that's probably a pretty significant fix since the
+calculated width would need to be fed back to ELK... don't explore it now. Put
+the exploration and possible implementation as a low-priority task."* Filed as
+`TASKS variable-box-width` / BACKLOG, with the measurement as the first
+deliverable rather than a patch, and a note that it is not the same bug as this
+one.
+
+**3. Every hand-typed schema count in the tour was stale.** Writing "56
+entities browsable" into step 1 prompted checking it: the schema has 54 classes
+(52 concrete). Checking the rest of the inherited `linkml-context` paragraph
+found five wrong numbers, not one — 56/225/50/80 classes/attributes/enums/links
+and "over 4,000 lines" against an actual 54/335/53/117 and 5,023. They came
+from a paragraph written before two schema syncs, and nothing was checking.
+
+So: a `getSchemaCounts()` on DataService and a `{{schema-count:<key>}}`
+resolver, exactly parallel to `ownership-count` and for the same stated reason
+("any number a schema sync can move should be computed at render"). The YAML
+line count is the only one left as prose ("several thousand lines") — it is a
+property of the upstream source file, not of the loaded model, so there is
+nothing to resolve it against.
+
+`helpTextResolvers.test.ts` already scans the raw content file and fails on any
+placeholder that resolves to `undefined`, so the new kind is covered by an
+existing test with no change. Both count kinds are now in FORMAT.md's resolver
+table — neither was, which is part of why hand-typed numbers kept getting
+written.
+
+**Note `slots` is 335 from the loaded model and 336 from the raw JSON.** The
+resolver uses the model, which is the right source for prose about what the app
+shows. Not chased down; recorded so the next person does not think one of them
+is a bug.
+
+### Docs
+
+- `GETTING_ORIENTED_PROPOSAL.md` is **to be deleted** — its `[DECIDE]` answers
+  are quoted above, which is the part worth keeping. Not deleted in-session
+  because Siggie's six `[sg]` annotation lines in it were uncommitted, and the
+  standing rule is never to destroy uncommitted work; the sequence offered was
+  commit-their-annotations, then delete.
+- `TOURS_AND_CONTENT.md` was slated for deletion too, and was **cut instead**.
+  Its §Getting oriented is now answered-and-done, but §The recipe for a
+  category step is six live traps and §Not in scope carries two standing
+  decisions. Deleting the file would have lost those. Added the jsdom
+  panel-anchor trap from #3 above.
+- BACKLOG §The `why` argument now records that 2026-09-11's "one audience" was
+  partly REVERSED on 2026-09-17, and why the two-tour split is the answer to
+  its own two-readers diagnosis. The discussion under it is kept, because that
+  diagnosis is what the split answers.
+
+### A real hole in the anchor test, found by writing bad content into it
+
+`Person` has no `race` attribute — I wrote a purple-row beat on it. Its slots
+are `species breed year_of_birth vital_status age_at_death year_of_death
+cause_of_death identity`, and `vital_status` → `VitalStatusEnum` is the enum
+example the beat now uses. I caught it by probing
+`bdchm.processed.json` before running anything.
+
+**The content test would NOT have caught it.** `every anchor argument names
+something that exists` validated only the CLASS half of a
+`slot-row:<Class>.<slot>` argument, so `slot-row:Person.race` — a real class,
+a slot it does not have — passed and degraded to exactly the same unringed,
+centred popover that the test was written to prevent for class typos. The test
+now checks the slot name too, against `getClassSummary(cls).slots`, inherited
+slots included (a parent-declared row still renders on the child's box, and
+`slot-row:<Child>.<slot>` is how FORMAT.md says to address a merged child's
+copy).
+
+Verified by reintroducing `slot-row:Person.race` and watching it fail with the
+entry id named, then restoring. A check that has never been seen to fail is
+not a check.
+
+---
+## 2026-09-17 — the beat title line, and `?tour=<slug>&step=<n>`
 
 Two popover changes while Siggie read the five tours in the browser, plus a
 deep-link format that grew out of the second.

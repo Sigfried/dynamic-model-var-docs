@@ -164,6 +164,43 @@ describe("dmvd's text resolvers", () => {
         n('declared') + n('child-following-parent.total'));
     });
   });
+
+  describe('schema-count', () => {
+    const n = (k: string) => Number(resolve['schema-count'](k));
+
+    /*
+     * The bug this pins: the panel's header said "Entities (57)" while a step
+     * of prose beside it said "52 entities", because the prose quoted
+     * `concreteClasses` and the panel counts categorized rows. Two LIVE
+     * numbers disagreeing, which a reader reads as one of them being broken.
+     *
+     * Both the header and this resolver now show `panelEntities`, the DISTINCT
+     * count; `panelRows` is the listing count and is not a count of entities.
+     * Recomputed here from the same config the panel reads, so a category
+     * edit that splits them again fails rather than shipping.
+     */
+    it('counts the panel the way the panel counts itself', () => {
+      const groups = dataService.getCategoryGroups();
+      const rows = groups.flatMap(g => g.classIds);
+      expect(n('panelEntities'), 'distinct classes, as the header shows')
+        .toBe(new Set(rows).size);
+      expect(n('panelRows'), 'listings, which dual-listing inflates')
+        .toBe(rows.length);
+    });
+
+    it('distinguishes the panel from the schema', () => {
+      // Not interchangeable, which is exactly why quoting the wrong one was
+      // possible: the panel lists the abstracts, so it exceeds
+      // `concreteClasses`, and dual-listing makes the badge exceed the rest.
+      expect(n('panelEntities')).toBeGreaterThan(n('concreteClasses'));
+      expect(n('panelRows')).toBeGreaterThanOrEqual(n('panelEntities'));
+      expect(n('classes')).toBeGreaterThanOrEqual(n('concreteClasses'));
+    });
+
+    it('leaves an unknown key unresolved rather than answering zero', () => {
+      expect(resolve['schema-count']('nope')).toBeUndefined();
+    });
+  });
 });
 
 /**
