@@ -425,20 +425,33 @@ body.help-mode {
 
 /* A divider between the tour label and the step title, so the two read as two
    things and not one long caption. It carries more of that job now that the
-   two halves share a size and weight, so it is drawn LARGER than the text
-   either side rather than quieter than it (Siggie, 2026-09-17: *"make the dot
-   bigger"*) -- `line-height: 0` keeps the bigger glyph from growing the row.
+   two halves share a size and weight, so it is bigger than a typed `·`
+   (Siggie, 2026-09-17: *"make the dot bigger"*).
+
+   DRAWN, not typed. It was a `·` glyph at 1.7em, and that sat visibly low: a
+   `·` sits at about x-height inside its own em box, so scaling the box up
+   moves the mark DOWN relative to the text beside it, and `line-height: 0`
+   and `vertical-align: middle` both then fight the row's baseline alignment.
+   A drawn circle is sized and placed by its own box, so none of that depends
+   on what the host's font stack resolves to.
 
    Generated rather than authored: it belongs to this layout only, and the
    stacked form must not get one. The gap either side is the flex `gap` plus
    this margin. */
 .help-popover-title-inline .help-popover-tour::after {
-  content: '·';
-  margin-left: 0.5em;
-  font-size: 1.7em;
-  line-height: 0;
-  vertical-align: middle;
+  content: '';
+  display: inline-block;
+  width: 0.3em;
+  height: 0.3em;
+  border-radius: 50%;
+  background: currentcolor;
   opacity: 0.75;
+  margin-left: 0.5em;
+  /* Lifts the circle off the baseline to the middle of the lowercase text.
+     `0.25em` is half the x-height of a typical face at this size -- the one
+     font-dependent number left, and it moves the mark by a pixel or two at
+     worst rather than dropping it to the baseline. */
+  vertical-align: 0.25em;
 }
 
 /* Which tour the step belongs to, in front of its title (TASKS 1c). Quieter
