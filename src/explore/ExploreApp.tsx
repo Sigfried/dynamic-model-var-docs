@@ -28,6 +28,7 @@ import TourChooser from './TourChooser';
 import type { ExampleCase } from './exampleCases';
 import { HelpProvider } from '../help/HelpProvider';
 import { useHelp, HELP_MODE_ENABLED } from '../help/helpContext';
+import { tourBySlug, positionOfStep } from '../help/parseHelpContent';
 import HelpLayer from '../help/HelpLayer';
 import { helpTextResolvers, helpWidgets, helpColors } from './helpTextResolvers';
 import helpMarkdown from './help-content.md?raw';
@@ -715,24 +716,45 @@ export default function ExploreApp() {
  * which is only available inside the provider.
  */
 function HelpButton() {
-  const { helpMode, toggleHelpMode, startTour } = useHelp();
+  const { helpMode, toggleHelpMode, startTour, content } = useHelp();
 
   /*
-   * `?tour=1` opens the tour on arrival, for a link that drops someone
-   * straight into it (Siggie, 2026-08-28).
+   * `?tour` opens a tour on arrival, for a link that drops someone straight
+   * into it (Siggie, 2026-08-28); `?tour=<slug>` picks which, and `?step=<n>`
+   * which step.
    *
-   * Read in a `useState` initialiser, which runs during the first RENDER --
-   * before any effect, and so before `writeExploreState` strips the param
-   * (it has to strip it; see ONE_SHOT_PARAMS). Reading it in the effect itself
-   * would race that write, and reading it at module load would bind the answer
-   * to import time, which is wrong for anything that navigates.
+   * Reading it HERE, in the effect, is safe only because `readTourRequest`
+   * latches: `writeExploreState` strips the params in its own mount effect
+   * (it has to; see ONE_SHOT_PARAMS), and whichever effect runs first, the
+   * latched answer is the same. Without the latch this would race that write.
+   * Reading at module load would instead bind the answer to import time, which
+   * is wrong for anything that navigates.
    *
-   * Fires once: the ref survives the StrictMode double-invoke, and since the
-   * param is gone by then a reload does NOT restart the tour -- following the
-   * link again is what asks for it.
+   * A reload does NOT restart the tour, since the params are gone from the URL
+   * by then -- following the link again is what asks for it.
    */
   useEffect(() => {
-    if (readTourRequest()) startTour();
+    const req = readTourRequest();
+    if (!req) return;
+    /*
+     * `?tour=<slug>` names a tour; a valueless `?tour` leaves `tour`
+     * undefined and `startTour` falls back to the first. An UNRECOGNISED slug
+     * resolves to `undefined` here, so a link whose tour has been renamed
+     * opens the first tour rather than nothing -- the same call shape either
+     * way, which is why there is no branch for it.
+     */
+    const name = req.tour ? tourBySlug(content, req.tour) : undefined;
+    /*
+     * `?step=` is a STEP number and `startTour` takes a POSITION index; they
+     * diverge as soon as a step has beats. `positionOfStep` is the conversion.
+     * A step number past the end resolves to `undefined` and the tour opens at
+     * its beginning (`startTour` also clamps), because a stale deep link
+     * should still start the tour.
+     */
+    const at = req.step === undefined
+      ? undefined
+      : positionOfStep(content, name, req.step);
+    startTour(name, at);
     // Mount only. `readTourRequest` LATCHES its answer on the first call, so
     // it does not matter that the param has been stripped from the URL by
     // now -- and a reload does not restart the tour, since the link is what

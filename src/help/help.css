@@ -208,6 +208,15 @@ body.help-mode {
 
   position: fixed;
 
+  /* Lets a child raise the width past the inline `width` the layer sets.
+     `min-width` resolves OVER `width`, so `min-content` here means "at least
+     as wide as the widest thing inside that refuses to wrap". Today that is
+     the beat title row (`.help-popover-title-inline`); everything else in the
+     popover wraps, contributes a small min-content, and so changes nothing.
+     Without this the beat title row's `width: max-content` would overflow the
+     fixed-width box instead of growing it. */
+  min-width: min-content;
+
   /* The gap between the popover and its anchor, on whichever side it lands —
      stated once, and still right after a fallback flips it to another side.
 
@@ -348,6 +357,65 @@ body.help-mode {
   font-size: 1.15em;
   font-weight: 700;
   line-height: 1.25;
+}
+
+/* ON A BEAT the title joins the tour label on ONE line (Siggie, 2026-09-17).
+   Through a run of beats the step title does not change while the prose under
+   it does, so a stacked title repeats itself at the reader and spends a line
+   of height doing it. The step's opening position keeps the stacked form --
+   `HelpLayer` only adds this class when `beatCount > 0 && beatIndex >= 0`.
+
+   THE LINE MUST NOT WRAP, and it is allowed to widen the popover to avoid it.
+   "BDCHM Data Categories" + "Survey / Questionnaire" is the current worst case
+   and wants ~390px against the ~292px inside a floor-width (320px) popover.
+
+   How it widens WITHOUT measuring anything: `width: max-content` here makes
+   the h4's own min-content contribution the full unwrapped line, and
+   `min-width: min-content` on the popover (in the `.help-popover` rule) lets
+   that contribution beat the inline `width` the layer sets -- `min-width`
+   resolves over `width` in CSS, which is the whole mechanism. No layout pass,
+   no second render, and a short title changes nothing because its max-content
+   is already under the floor. */
+.help-popover-title-inline {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  width: max-content;
+  /* Never wider than the popover can be; past this the title wraps rather
+     than pushing the box off the screen. */
+  max-width: calc(100vw - 16px);
+}
+
+/* Neither part wraps: the flex line is sized to hold both whole. */
+.help-popover-title-inline .help-popover-tour,
+.help-popover-title-inline .help-popover-title-text {
+  white-space: nowrap;
+}
+
+/* On the beat line the step title is only BOLD, not the stacked title's
+   1.15em (Siggie, 2026-09-17). The big size exists to stop a stacked title
+   reading as `**bold**` in the prose below it; on this line it sits beside a
+   label instead of above prose, and the size just made the row shout. */
+.help-popover-title-inline .help-popover-title-text {
+  font-size: 1em;
+}
+
+/* The tour label sits inline here, and its bottom margin is the stacked
+   layout's gap -- on one line it would push the baselines apart. */
+.help-popover-title-inline .help-popover-tour {
+  display: inline;
+  margin-bottom: 0;
+}
+
+/* A divider between the tour label and the step title, so the two read as two
+   things and not one long caption. Generated rather than authored: it belongs
+   to this layout only, and the stacked form must not get one. The gap either
+   side is the flex `gap` plus this margin. */
+.help-popover-title-inline .help-popover-tour::after {
+  content: '·';
+  margin-left: 0.5em;
+  opacity: 0.55;
+  font-weight: 400;
 }
 
 /* Which tour the step belongs to, in front of its title (TASKS 1c). Quieter

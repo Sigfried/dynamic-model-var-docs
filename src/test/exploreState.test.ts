@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   readExploreState, writeExploreState, buildShareURL, DEFAULTS, rememberPreference,
-  INSTRUCTION_PARAMS,
+  INSTRUCTION_PARAMS, ONE_SHOT_PARAMS, readTourRequest, resetTourRequest,
   type ExploreState,
 } from '../explore/exploreState';
 import { ENTITY_CATEGORIES } from '../config/entityCategories';
@@ -92,7 +92,7 @@ describe('explore state', () => {
 
   test('`panels=0` closes every overlay, and never survives into a link', () => {
     /*
-     * The sweep is an INSTRUCTION, like `tour=1`: it is resolved into the
+     * The sweep is an INSTRUCTION, like `tour`: it is resolved into the
      * individual keys on read. Left in the URL it would re-close the panels on
      * every reload and be copied into whatever the visitor shared next.
      */
@@ -251,5 +251,68 @@ describe('the cat shorthand', () => {
      * re-expand on every reload, over whatever selection they had since made.
      */
     expect(INSTRUCTION_PARAMS).toContain('cat');
+  });
+});
+
+/**
+ * `?tour=` / `?step=` — the deep link into a tour (Siggie, 2026-09-17).
+ *
+ * The thing under test is the PARSE, not the navigation: what the URL means,
+ * and that the old spelling keeps meaning what it meant. Whether the tour then
+ * opens is `tourStack.integration.test.tsx`'s job.
+ *
+ * Every test resets the latch. `readTourRequest` answers once per page load
+ * and caches it (the param is stripped before some readers ask), so without a
+ * reset the second test in the file would read the first one's URL.
+ */
+describe('tour deep links', () => {
+  beforeEach(() => resetTourRequest());
+  afterEach(() => resetTourRequest());
+
+  test('no `tour=` is not a tour request', () => {
+    expect(readTourRequest('?sel=Person')).toBeNull();
+  });
+
+  test('a valueless `?tour` means "the first tour"', () => {
+    /*
+     * `tour: undefined` is exactly what `startTour` treats as "the default
+     * one". Both spellings of valueless reach it: `?tour` and `?tour=`.
+     */
+    for (const q of ['?tour', '?tour=']) {
+      expect(readTourRequest(q), q).toEqual({});
+      resetTourRequest();
+    }
+  });
+
+  test('`tour=<slug>` names the tour', () => {
+    expect(readTourRequest('?tour=ownership')).toEqual({ tour: 'ownership' });
+  });
+
+  test('`step=` rides along as a 1-based step number', () => {
+    expect(readTourRequest('?tour=ownership&step=3')).toEqual({ tour: 'ownership', step: 3 });
+  });
+
+  test('a step that is not a positive integer is dropped, and the tour still opens', () => {
+    // A typo in a hand-written link costs the reader the step, not the tour.
+    for (const bad of ['0', '-2', 'two', '2.5', '']) {
+      expect(readTourRequest(`?tour=ownership&step=${bad}`), bad)
+        .toEqual({ tour: 'ownership' });
+      resetTourRequest();
+    }
+  });
+
+  test('the answer is latched, because the params do not outlive the first write', () => {
+    /*
+     * `writeExploreState` strips `tour`/`step` in a mount effect (they are
+     * ONE_SHOT_PARAMS), and the component that acts on them is a sibling that
+     * has not necessarily asked yet. So the answer has to be a fact about the
+     * page load, not a question about the address bar right now.
+     */
+    expect(readTourRequest('?tour=ownership&step=3')).toEqual({ tour: 'ownership', step: 3 });
+    expect(readTourRequest('?sel=Person')).toEqual({ tour: 'ownership', step: 3 });
+  });
+
+  test('both params are one-shot, so neither survives into a shared link', () => {
+    for (const k of ['tour', 'step']) expect(ONE_SHOT_PARAMS).toContain(k);
   });
 });

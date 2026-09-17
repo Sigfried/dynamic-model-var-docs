@@ -200,6 +200,26 @@ export default function HelpLayer() {
   const [mapOpen, setMapOpen] = useState(false);
 
   const inTour = tourIndex !== null;
+
+  /*
+   * On a BEAT, the step title joins the tour label on one line instead of
+   * sitting on its own above the prose (Siggie, 2026-09-17): across a run of
+   * beats the title repeats itself unchanged while the text underneath
+   * changes, which both distracts and costs a line of height.
+   *
+   * The step's OPENING position keeps the stacked layout -- that is where the
+   * title is doing real work introducing the step, and it should stay
+   * prominent. So this is beats only.
+   *
+   * ⚠️ `beatCount > 0` is load-bearing. A BEATLESS step parses to
+   * `beatIndex: 0, beatCount: 0` (`tourPositions` in parseHelpContent.ts), so
+   * `beatIndex >= 0` alone is true for every ordinary step and would flatten
+   * all of them. Only `beatCount > 0` distinguishes a step that has beats,
+   * and within one `beatIndex === -1` is its opening position.
+   */
+  const onBeat = inTour && !!position
+    && position.beatCount > 0 && position.beatIndex >= 0;
+
   /*
    * The map does not outlive the tour it maps. The layer stays mounted across
    * tours, so without this a map left open at exit (the ✕, `?`, "done") came
@@ -790,7 +810,7 @@ export default function HelpLayer() {
                 always there, always at the top, and carries no control of its
                 own — and the reader's eye is already on it. */}
             <h4
-              className="help-popover-title"
+              className={onBeat ? 'help-popover-title help-popover-title-inline' : 'help-popover-title'}
               onPointerDown={drag.onPointerDown}
               style={{ cursor: drag.offset ? 'grabbing' : 'grab', userSelect: 'none' }}
               title="Drag to move"
@@ -798,7 +818,10 @@ export default function HelpLayer() {
               {inTour && tourLabel && (
                 <span className="help-popover-tour">{tourLabel}</span>
               )}
-              {entry.title}
+              {/* Always wrapped, so the beat layout has something to style:
+                  `-inline` in help.css sizes and spaces this span against the
+                  tour label beside it. */}
+              <span className="help-popover-title-text">{entry.title}</span>
             </h4>
 
             {/*

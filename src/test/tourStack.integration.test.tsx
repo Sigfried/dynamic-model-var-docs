@@ -50,7 +50,7 @@ describe('tour state stack, end to end', () => {
   beforeEach(() => {
     localStorage.clear();
     window.history.replaceState(null, '', '/dynamic-model-var-docs/');
-    // `?tour=1` is latched on first read so it can outlive the URL rewrite;
+    // `?tour` is latched on first read so it can outlive the URL rewrite;
     // one module instance serves every test here, so each simulated page load
     // has to clear it.
     resetTourRequest();
@@ -97,16 +97,17 @@ describe('tour state stack, end to end', () => {
   };
   const back = () => fireEvent.click(button(/back/i));
 
-  test('?tour=1 opens the tour and removes itself from the URL', async () => {
+  test('?tour opens the tour and removes itself from the URL', async () => {
     /*
      * A link that drops someone straight into the tour (Siggie, 2026-08-28).
+     * VALUELESS `?tour` means the first tour; `?tour=<slug>` names one.
      *
      * The param must NOT survive: `writeExploreState` mutates the live URL
      * rather than rebuilding it, so anything nobody deletes stays in the
-     * address bar forever -- a `tour=1` left there would restart the tour on
+     * address bar forever -- a `tour` left there would restart the tour on
      * every reload and be copied into whatever the visitor shared next.
      */
-    window.history.replaceState(null, '', '/dynamic-model-var-docs/?tour=1&sel=Person');
+    window.history.replaceState(null, '', '/dynamic-model-var-docs/?tour&sel=Person');
     render(<ExploreApp />);
     // `next|done`: the link starts the file's FIRST tour, which is today a
     // one-step introduction whose only forward control says "done".
@@ -134,12 +135,12 @@ describe('tour state stack, end to end', () => {
      * able to restore it and leaving the tour has to hand it back.
      *
      * The regression this pins: `onTourStart` used to re-read `sel` from the
-     * URL at call time, and a `?tour=1&sel=X` link is a race — the mount
-     * effect consuming `tour=1` and the first step both write the URL first.
+     * URL at call time, and a `?tour&sel=X` link is a race — the mount
+     * effect consuming `tour` and the first step both write the URL first.
      * `held` started empty, so the replace swept a selection it should have
      * suppressed and `X` was gone for good.
      */
-    window.history.replaceState(null, '', '/dynamic-model-var-docs/?tour=1&sel=Person');
+    window.history.replaceState(null, '', '/dynamic-model-var-docs/?tour&sel=Person');
     render(<ExploreApp />);
     await screen.findByRole('button', { name: /next|done/i, hidden: true });
     // Suppressed by the opening step's `Only:` — whatever that step selects,

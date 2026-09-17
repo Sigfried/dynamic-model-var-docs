@@ -8,7 +8,115 @@ Newest first.
 
 
 ---
-## 2026-09-17 (latest) — hover engaged itself on every tour step
+## 2026-09-17 (latest) — the beat title line, and `?tour=<slug>&step=<n>`
+
+Two popover changes while Siggie read the five tours in the browser, plus a
+deep-link format that grew out of the second.
+
+### The step title on a beat
+
+Through a run of beats the step title sits above prose that changes underneath
+it, repeating itself and costing a line of height. So on BEAT positions the
+title joins the tour label on one line; the step's OPENING position keeps the
+stacked, prominent title, because that is where the title is introducing the
+step rather than repeating.
+
+**The guard is `beatCount > 0 && beatIndex >= 0`, and the first half is
+load-bearing.** A beatless step parses to `beatIndex: 0, beatCount: 0`
+(`tourPositions`), so `beatIndex >= 0` alone is true for every ordinary step
+and would have flattened all of them. This is the same trap the tour map hit
+(`beatless beatIndex: 0`, TASKS `tour-map`) — worth expecting a third time.
+
+**Making the line not wrap without measuring anything.** `width: max-content`
+on the h4 makes its min-content contribution the whole unwrapped line, and
+`min-width: min-content` on `.help-popover` lets that beat the inline `width`
+the layer sets, because min-width resolves over width. So the popover grows to
+fit the line. No layout pass, no second render. The worst case
+("BDCHM Data Categories" + "Survey / Questionnaire") wants ~390px against the
+~292px inside a floor-width popover, so something had to give and this was the
+option that cost nothing else.
+
+**Two corrections from Siggie, both worth keeping.**
+
+First, I described `navMinWidth`'s reasoning — that the reveal dots wrap rather
+than widen the popover — as a standing rule that "chrome must not drive the
+width", and wrote a paragraph in help.css defending this change as an exception
+to it. Siggie: *"i don't remember making that rule. and i hven't noticed dots
+wrapping for a long time. i don't think i want the rule."* It is one decision
+about one elastic progress hint, not a general law, and generalising it
+produced exactly the doc smell CLAUDE.md names — text arguing with an objection
+nobody would raise. The paragraph is gone. **Do not reconstruct that rule from
+the `navMinWidth` comment.**
+
+Second, I built right-alignment and a separator together on the first pass.
+They conflict: with the title pushed right by `margin-left: auto`, a separator
+glued to the label strands itself mid-row on any popover the prose made wider
+than the line needs. Asked rather than picked; Siggie chose separator, no
+right-align. The title is also plain bold at body size on this line — the
+1.15em exists to stop a STACKED title reading as `**bold**` in the prose below
+it, and on a line beside a label there is no prose to be confused with.
+
+### Category numbers out of the BDCHM tour titles
+
+"5. Survey / Questionnaire" → "Survey / Questionnaire", six titles. Nothing
+read the prefixes — no test, no parser, no id derivation (ids come from the
+`### ` heading, not the title). Two things the check turned up:
+
+- **`TourMap.tsx:187` already renders the step ordinal in its own span**, so
+  the map was showing "1  1. Admin / Study". The manual numbers were redundant
+  there and this removes the duplication.
+- These six were the **only numbered titles among ~48** in the file, so the
+  numbers were the exception, not the convention.
+
+The 2026-09-08 decision that ADDED them is at WORKLOG:282 and stands as
+history. What it was buying: outside the map the popover shows an `n / N`
+counter rather than the title's ordinal, so the manual prefixes were the only
+place the ordinal appeared in the caption itself. Siggie is reading the tours
+and judged that not worth the repetition.
+
+### Deep links into a tour
+
+`?tour=<slug>` opens a tour; `?step=<n>` opens it at a step. Both one-shot,
+stripped at load, so a reload does not restart the tour and neither rides along
+into `copy link`.
+
+**Slugs are DERIVED from the tour name** (`tourSlug`), not authored, so there is
+no third spelling to keep in agreement alongside the `## ` heading and
+`TourMetadata:`. The cost is that renaming a tour invalidates links to it;
+`tourBySlug` answers `undefined` and the caller opens the first tour rather
+than fuzzy-matching, so a stale link fails visibly. If tour names start
+churning the fix is an authored `TourSlug:` field, not near-match resolution.
+
+**`positionOfStep` exists because a step number is not a position index.**
+`tourPositions` expands each step into its beats, so step 4 of the BDCHM tour
+is position 14, not 3. Everything that NAVIGATES works in positions;
+everything a reader SEES — the `n / N` counter, the map's step column, a
+`?step=` link — is a step number. That conversion now has one home. The naive
+`step - 1` is the obvious wrong answer and the test catches it (verified by
+mutation, not by watching it pass).
+
+**Siggie, mid-session: *"i don't care about backward compatibility."*** So the
+`tour=1` special case came out entirely rather than being carried as a
+compatibility branch — `?tour=` was never a published URL, just something they
+typed. A valueless `?tour` now means "the first tour", which is why the parse
+tests `p.has('tour')` and not `p.get('tour')`: `get` returns `''` for a bare
+`?tour`, indistinguishable from absent under a truthiness test.
+
+Also folded the duplicate parse at the `writeExploreState` latch site into
+`readTourRequest`; it had been a second copy of the same param reading, which
+is how two readers of one param drift apart.
+
+### A note on the two questions asked
+
+Both of the `AskUserQuestion` calls this session (what gives when the top line
+does not fit; separator vs. right-align) were genuine forks where the options
+led to materially different work, and both got answers that changed the build —
+the second reversed something already written. Worth the interruption. The
+third design fork (live URL vs. popover button vs. chooser) became TASKS
+`tour-position-link` rather than a question, because Siggie asked for a task.
+
+---
+## 2026-09-17 — hover engaged itself on every tour step
 
 Siggie: stepping a tour often left the canvas dimmed, because the redraw put a
 box under the stationary cursor and everything else greyed out until the mouse

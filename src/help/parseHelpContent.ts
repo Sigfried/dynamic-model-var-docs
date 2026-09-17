@@ -1010,6 +1010,36 @@ export function tourNames(content: HelpContent): string[] {
 }
 
 /**
+ * A tour's name as it travels in a URL: lowercase, non-alphanumerics collapsed
+ * to `-`. "Reading the diagram" -> `reading-the-diagram`.
+ *
+ * DERIVED rather than authored, so there is no third spelling of a tour name
+ * to keep in agreement (the section heading and `TourMetadata:` are already
+ * two, and `parseSection` collapses those with a bare `TourMetadata:`).
+ *
+ * The cost of deriving: renaming a tour's heading silently invalidates links
+ * to it. `tourBySlug` answers `undefined` in that case, and the caller falls
+ * back to the first tour rather than guessing at a near match -- a stale link
+ * should land somewhere predictable, not somewhere that looks intended. If
+ * tour names start churning, the fix is an authored `TourSlug:` field, not
+ * fuzzy matching.
+ */
+export function tourSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+/**
+ * The tour a slug names, or `undefined` if none matches.
+ *
+ * Compares slug to slug rather than trying to reverse the slugify, which is
+ * not invertible. Linear over five tours.
+ */
+export function tourBySlug(content: HelpContent, slug: string): string | undefined {
+  const want = tourSlug(slug);
+  return tourNames(content).find(n => tourSlug(n) === want);
+}
+
+/**
  * Steps of one tour, in FILE ORDER. Entries with no `Tour:` field are
  * help-only.
  *
@@ -1186,6 +1216,30 @@ export function tourPositions(content: HelpContent, tour?: string): TourPosition
     });
   });
   return positions;
+}
+
+/**
+ * The POSITION index that opens step `step` (1-based), for a caller that has a
+ * step number and needs the index `startTour`/`goToStep` take.
+ *
+ * The two are not the same number once a step has beats: `tourPositions`
+ * expands each step into its beats, so step 3 of a tour whose first two steps
+ * have four beats each is position 10. Everything that navigates works in
+ * positions; everything a reader SEES -- the `n / N` counter, the map's step
+ * column, a `?step=` link -- is a step number. This is the one conversion
+ * between them.
+ *
+ * Returns the step's FIRST position, which is its opening (the state before
+ * any beat is revealed), matching what the map's rows point at.
+ *
+ * `undefined` when no such step exists, leaving "what should a bad step number
+ * do" to the caller rather than silently clamping here.
+ */
+export function positionOfStep(
+  content: HelpContent, tour: string | undefined, step: number,
+): number | undefined {
+  const i = tourPositions(content, tour).findIndex(p => p.step === step);
+  return i === -1 ? undefined : i;
 }
 
 export function parseHelpContent(markdown: string): HelpContent {

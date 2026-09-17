@@ -104,7 +104,7 @@ introduced and then use one word.
 
 ### admin-study
 
-- **Title:** 1. Admin / Study
+- **Title:** Admin / Study
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Anchor:** category-row:admin
 - **Description:**
@@ -202,7 +202,7 @@ introduced and then use one word.
 
 ### clinical-records
 
-- **Title:** 2. Clinical
+- **Title:** Clinical
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
   Eight entities record *what happened to a participant medically*. Every one of
@@ -276,7 +276,7 @@ introduced and then use one word.
 
 ### observation-measurement
 
-- **Title:** 3. Observations / Measurements
+- **Title:** Observations / Measurements
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
   This is where the numbers live. Twelve entities, but only four ideas: an
@@ -351,7 +351,7 @@ introduced and then use one word.
 
 ### lab-biospecimen
 
-- **Title:** 4. Laboratory / Biospecimen
+- **Title:** Laboratory / Biospecimen
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
   Twelve entities about *physical material* — what was collected from a
@@ -431,7 +431,7 @@ introduced and then use one word.
 
 ### survey-questionnaire
 
-- **Title:** 5. Survey / Questionnaire
+- **Title:** Survey / Questionnaire
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
   This section contains the defining data for surveys
@@ -502,7 +502,7 @@ introduced and then use one word.
 
 ### other-files
 
-- **Title:** 6. Files / Other
+- **Title:** Files / Other
 - **Tour:** The BioData Catalyst Harmonized Model
 - **Description:**
   The leftovers, and they are leftovers of two quite different kinds: **files**

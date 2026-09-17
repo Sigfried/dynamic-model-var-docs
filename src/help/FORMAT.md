@@ -43,6 +43,7 @@ spec.
   - [Who the tour is for](#who-the-tour-is-for) — the arrive-by-link reader
   - [Tours and order](#tours-and-order) — `Tour:` names the tour; order comes from the file, not a number; several tours per file
   - [`TourMetadata:` — describing a tour, not a step](#tourmetadata--describing-a-tour-not-a-step) — a section-body block naming and describing a tour; `TourAbbr:`
+  - [Linking into a tour](#linking-into-a-tour) — `?tour=<slug>` and `?step=<n>`; one-shot params; slugs are derived
   - [Selecting a tour](#selecting-a-tour) — `startTour(name)`, `tourNames()`, and the once-unreachable second tour
   - [Finding a step you can see on screen](#finding-a-step-you-can-see-on-screen) — the dev-only content-id readout; duplicate ids
 - [Pointing at the screen](#pointing-at-the-screen)
@@ -509,6 +510,43 @@ replaces the full name there when the name is too long to sit over a title:
 - **TourAbbr:** BDCHM
 - **Description:** Introduction to the model: what it contains and what it's for
 ```
+
+On a step's BEATS the tour name and the step title share one line, and the
+title drops to plain bold; the step's opening position keeps the title stacked
+and prominent. A step title repeats itself unchanged through a run of beats
+while the prose under it moves, so on the beats it steps out of the way.
+
+### Linking into a tour
+
+`?tour=<slug>` opens a tour on arrival, for a link that drops someone straight
+into it. The slug is the tour's name lowercased with every run of
+non-alphanumerics replaced by `-`:
+
+| tour | link |
+|---|---|
+| Ownership | `?tour=ownership` |
+| Reading the diagram | `?tour=reading-the-diagram` |
+| The BioData Catalyst Harmonized Model | `?tour=the-biodata-catalyst-harmonized-model` |
+
+A valueless `?tour` opens whichever tour comes first in the file.
+
+`?step=<n>` opens the tour at its nth step, counting from 1 the way the
+popover's `n / N` counter does. It lands on the step's opening position, before
+any beat is revealed, and is ignored without a `tour`.
+
+```
+?tour=ownership&step=4
+?tour=getting-oriented&sel=Person~Visit
+```
+
+Both params are **one-shot**: they are consumed at load and stripped from the
+URL, so a reload does not restart the tour and neither rides along into a link
+the viewer copies afterwards.
+
+The slug is DERIVED from the tour name, not authored, so there is no third
+spelling to keep in agreement — but **renaming a tour invalidates links to
+it**. An unrecognised slug opens the first tour rather than guessing at a near
+match. If tour names start churning, the fix is an authored `TourSlug:` field.
 
 It is a label, not a second name: the chooser and the map still show the full
 name. A test keeps it under 16 characters.

@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   parseHelpContent, tourSteps, tourPositions, tourNames, parseAnchor,
-  DEFAULT_TOUR,
+  DEFAULT_TOUR, tourSlug, tourBySlug, positionOfStep,
 } from '../help/parseHelpContent';
 import { stripAlerts } from '../help/HelpLayer';
 import { DEFAULTS, INSTRUCTION_PARAMS } from '../explore/exploreState';
@@ -1912,5 +1912,67 @@ describe('TourMetadata', () => {
       `Tours with steps but no TourMetadata block, so the chooser shows no `
       + `description: ${undescribed.join(', ')}`,
     ).toEqual([]);
+  });
+});
+
+/**
+ * Tour SLUGS and the step->position conversion, the two pieces a `?tour=` deep
+ * link is built from (Siggie, 2026-09-17).
+ *
+ * Against the REAL content file, like everything else here: a slug is only
+ * useful if it is the slug of a tour that exists, and the whole point of
+ * `positionOfStep` is the beat expansion the real file has and a fixture
+ * would not.
+ */
+describe('tour deep-link addressing', () => {
+  test('every tour has a distinct, URL-safe slug', () => {
+    const slugs = tourNames(content).map(tourSlug);
+    // URL-safe: lowercase, digits and `-`, no leading or trailing `-`.
+    for (const s of slugs) expect(s, s).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+    // Distinct, or a link would be ambiguous about which tour it names.
+    expect(new Set(slugs).size, `slugs collide: ${slugs.join(', ')}`)
+      .toBe(slugs.length);
+  });
+
+  test('a slug round-trips to the tour it came from', () => {
+    for (const name of tourNames(content)) {
+      expect(tourBySlug(content, tourSlug(name)), name).toBe(name);
+    }
+  });
+
+  test('an unknown slug resolves to undefined rather than a near match', () => {
+    /*
+     * A renamed tour's old link should fail visibly (the caller opens the
+     * first tour) rather than land on whichever tour happens to be closest.
+     */
+    expect(tourBySlug(content, 'no-such-tour')).toBeUndefined();
+  });
+
+  test('step numbers convert to the position that OPENS the step', () => {
+    /*
+     * The two numbers diverge as soon as a step has beats, which is the whole
+     * reason this function exists. Checked against `tourPositions` directly:
+     * the index it returns must be the FIRST position carrying that step
+     * number -- the opening, before any beat is revealed.
+     */
+    // The FIRST tour, not `DEFAULT_TOUR` -- that constant is the fallback for
+    // a bare `Tour:` field and names no section in the file, so a tour taken
+    // from it would have no positions and the loop below would vacuously pass.
+    const tour = tourNames(content)[0];
+    const all = tourPositions(content, tour);
+    const lastStep = all[all.length - 1].step;
+    for (let step = 1; step <= lastStep; step++) {
+      const i = positionOfStep(content, tour, step);
+      expect(i, `step ${step}`).toBe(all.findIndex(p => p.step === step));
+      expect(all[i!].step, `step ${step}`).toBe(step);
+      // It is the step's opening: either a beatless step, or beatIndex -1.
+      expect(all[i!].beatCount === 0 || all[i!].beatIndex === -1,
+        `step ${step} is not an opening position`).toBe(true);
+    }
+  });
+
+  test('a step number past the end is undefined, not a clamp', () => {
+    // The caller decides what a stale deep link does; this does not guess.
+    expect(positionOfStep(content, tourNames(content)[0], 9999)).toBeUndefined();
   });
 });

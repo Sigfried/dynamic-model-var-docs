@@ -85,7 +85,7 @@ export const DEFAULTS: ExploreState = {
  */
 /**
  * Params that are INSTRUCTIONS rather than state: they are resolved on read and
- * never written back. `tour=1` starts the tour; `panels=0` sweeps the overlays.
+ * never written back. `tour` starts a tour; `panels=0` sweeps the overlays.
  *
  * Kept beside `DEFAULTS` so anything validating "is this a real param" can ask
  * for both halves instead of keeping its own copy — a hand-kept list is what
@@ -136,24 +136,45 @@ const RETIRED_PARAMS = ['exp', 'hidden', 'owners'] as const;
 /**
  * Params that are read once at startup and then removed from the URL.
  *
- * `tour=1` sends someone straight into the tour (Siggie, 2026-08-28, for
- * sharing a link that opens it). It is a one-shot INSTRUCTION, not view state,
- * and the difference matters here: `writeExploreState` mutates the live URL
- * rather than rebuilding it, so a param nobody deletes sits in the address bar
- * forever. Left there, `tour=1` would survive a reload and restart the tour
- * every time the page was refreshed, and would be copied into every `copy
- * link` the visitor shared afterwards.
+ * `tour` sends someone straight into a tour (Siggie, 2026-08-28, for sharing
+ * a link that opens it), and `step` into one of its steps. They are one-shot
+ * INSTRUCTIONS, not view state, and the difference matters here:
+ * `writeExploreState` mutates the live URL rather than rebuilding it, so a
+ * param nobody deletes sits in the address bar forever. Left there, `tour`
+ * would survive a reload and restart the tour every time the page was
+ * refreshed, and would be copied into every `copy link` the visitor shared
+ * afterwards.
  *
  * Distinct from RETIRED_PARAMS, which are dead spellings being swept up. These
  * are live and meaningful -- they are just consumed rather than reflected.
  */
-export const ONE_SHOT_PARAMS = ['tour'] as const;
+export const ONE_SHOT_PARAMS = ['tour', 'step'] as const;
 
 /**
- * Is this a `?tour=1` link?
+ * What a `?tour` link asked for.
  *
- * LATCHED on first call, because the answer has to outlive the URL. The param
- * is stripped by the first `writeExploreState` (it must be -- see
+ * `null` is the ordinary load. Otherwise `tour` is the slug the link named,
+ * or `undefined` for a valueless `?tour`, which means "the first one". `step`
+ * is a 1-BASED step number from `?step=`, absent when the link did not name
+ * one.
+ */
+export interface TourRequest {
+  /** The tour's URL slug, or `undefined` for "whichever is first". */
+  tour?: string;
+  /** 1-based step number the link asked to open at. */
+  step?: number;
+}
+
+/**
+ * Does this page load ask for a tour, and which?
+ *
+ * `?tour=<slug>` starts the tour whose name slugifies to `<slug>` (see
+ * `tourSlug` in help/parseHelpContent.ts); a valueless `?tour` starts the
+ * first one. `?step=<n>` opens it at the nth step, 1-based to match the
+ * `n / N` counter the popover shows; it is ignored without a `tour`.
+ *
+ * LATCHED on first call, because the answer has to outlive the URL. The params
+ * are stripped by the first `writeExploreState` (they must be -- see
  * ONE_SHOT_PARAMS), which runs in a mount effect, and the component that acts
  * on the answer is a sibling that has not necessarily asked yet. Latching
  * makes "did this page load ask for the tour?" a fact about the page load
@@ -162,11 +183,31 @@ export const ONE_SHOT_PARAMS = ['tour'] as const;
  * `resetTourRequest` exists for tests, which drive several page loads through
  * one module instance.
  */
-let tourRequest: boolean | undefined;
+let tourRequest: TourRequest | null | undefined;
 
-export function readTourRequest(search = window.location.search): boolean {
+export function readTourRequest(search = window.location.search): TourRequest | null {
   if (tourRequest === undefined) {
-    tourRequest = new URLSearchParams(search).get('tour') === '1';
+    const p = new URLSearchParams(search);
+    /*
+     * `has` and not `get`, because a VALUELESS `?tour` is meaningful -- it
+     * asks for the first tour, and `get` returns `''` for it, which is
+     * indistinguishable from an absent param under a truthiness test.
+     */
+    if (!p.has('tour')) {
+      tourRequest = null;
+    } else {
+      // `''` (from a bare `?tour`) leaves `tour` undefined, which is exactly
+      // the argument `startTour` already treats as "the default one".
+      const tour = p.get('tour') || undefined;
+      const n = Number(p.get('step'));
+      /*
+       * A `step` that is not a positive integer is DROPPED, not clamped: the
+       * tour still opens, at its beginning. A typo in a hand-written link
+       * should cost the reader the step, not the tour.
+       */
+      const step = Number.isInteger(n) && n >= 1 ? n : undefined;
+      tourRequest = { ...(tour ? { tour } : {}), ...(step ? { step } : {}) };
+    }
   }
   return tourRequest;
 }
@@ -342,7 +383,7 @@ export function writeExploreState(state: ExploreState, { push = false } = {}): v
    * the right answer, whatever the render/effect ordering turns out to be --
    * which is what made this hard to get right by hand (2026-08-28).
    */
-  if (tourRequest === undefined && q.has('tour')) tourRequest = q.get('tour') === '1';
+  if (tourRequest === undefined && q.has('tour')) readTourRequest(`?${q}`);
   for (const once of ONE_SHOT_PARAMS) q.delete(once);
 
   setIds('sel', state.sel);
