@@ -2584,8 +2584,12 @@ export default function OwnershipGraphView({
                           data-help-id={slotRowAnchor(n, r)}
                           data-expandable={isExpandable(r) ? '' : undefined}
                           data-no-drag={isExpandable(r) ? '' : undefined}
+                          /* Carries the cardinality on EVERY channel: it is
+                             the tooltip's job to recover what the row had to
+                             truncate, and a plain row's range name is exactly
+                             as likely to be a 30-character enum. */
                           title={(r.channel === 'plain'
-                            ? `${r.slot}: ${r.range}`
+                            ? `${r.slot}: ${r.range} (${r.cardinality})`
                             : `${r.slot} → ${r.range} (${r.cardinality})${r.flipped ? ' — owner side' : ''}` +
                               (isExpandable(r) ? ` — click to add ${r.range}` : ''))
                             // A slot several children declare independently is
@@ -2664,11 +2668,25 @@ export default function OwnershipGraphView({
                           )}
                           {/* P1 again: the range label names the thing the dot
                               colors, so the two agree. Cardinality is not a
-                              range kind and stays neutral. */}
-                          <span className="ml-auto text-[9px] truncate max-w-[90px]">
-                            <span style={{ color: r.rangeColor }}>{r.range}</span>
-                            <span className="text-gray-400 dark:text-gray-500"> {r.cardinality}</span>
-                          </span>
+                              range kind and stays neutral.
+
+                              The two are SEPARATE flex children so only the
+                              range name truncates. They used to share one
+                              `truncate max-w-[90px]` span, and since the range
+                              comes first it spent the whole budget: 35 of the
+                              schema's 87 range names are over 18 characters
+                              (up to `SpecimenProcessingActivityTypeEnum`, 34),
+                              so on those rows the cardinality was clipped to
+                              `0…` or pushed out of the box entirely — which is
+                              how `Person.species` and `Person.breed` came to
+                              show no cardinality at all. Cardinality is four
+                              characters of fixed width and is never the thing
+                              worth dropping; `shrink-0` keeps it whole and the
+                              range name gives up space instead. The row's
+                              `title` still carries both in full. */}
+                          <span className="ml-auto text-[9px] truncate max-w-[90px] shrink"
+                                style={{ color: r.rangeColor }}>{r.range}</span>
+                          <span className="text-[9px] shrink-0 text-gray-400 dark:text-gray-500">{r.cardinality}</span>
                         </div>
                       ))}
                       {n.hiddenCount > 0 && (
