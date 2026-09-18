@@ -192,10 +192,30 @@ landing via a fallback I had deliberately kept, which the screenshot had been
 showing all along — `inline-end span-all` is exactly "beside the box, spanning
 vertically".
 
-A step can now be authored too tall for its side, and it will overflow rather
-than quietly relocate. Survivable because the popover is capped at viewport
-height and scrolls its body — and mostly moot, because the size now tracks the
-zoom.
+⚠️ **And the fallback list was still not the whole of it.** With
+`position-try-fallbacks: none` in place Siggie tested again: *"you're wrong
+about tradeoff. i'd be fine with that, but instead the popover is moving itself
+up. let it overflow at this point"*.
+
+`max-height: calc(100vh - 16px)` on the base class was the other half. It is
+nearly the whole window, so for a box high on the canvas the popover cannot be
+that tall AND begin below it — and the browser satisfies the cap by sliding the
+popover UP. Removing the fallbacks had not stopped the movement, it had just
+left `max-height` as the only thing still causing it. Three passes on one
+question, each fixing a real mechanism and each leaving another behind it.
+
+So an authored side now also gets `max-height: none`: the popover keeps the
+height its content wants, starts where the author said, and runs off the bottom
+of the window when it is too long. The base rule still caps every step that did
+NOT author a side, which is where the 2026-09-08 "popover getting cut off
+again" guard lives. One statement, one set of consequences.
+
+**The test case was Siggie's own doing, and I misread it first.** Their
+screenshot showed the step's body duplicated — "Clicking the row has" twice —
+and I went looking for a render bug before they said *"i copied it twice as a
+test"*. Doubling the content is how they forced the too-tall case. Worth
+remembering that an oddity in a screenshot during a placement investigation may
+be the fixture, not the symptom.
 
 **One test had pinned a proxy.** `helpPlacement` asserted dmvd's
 `--help-font-size` matched `\d+px`. The rule that test is about is WHERE the
