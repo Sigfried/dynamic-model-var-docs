@@ -139,3 +139,51 @@ sync-manual:  ## Run the sync yourself (Action does this daily)
 sync-check:  ## Is upstream ahead? (no changes written)
 	cd scripts && (test -d .venv || npm run --prefix .. setup-python) \
 	  && .venv/bin/python download_source_data.py --check
+
+# --------------------------------------------------------------------------
+# browser probes
+# --------------------------------------------------------------------------
+#
+# ⚠️ CLAUDE CANNOT LAUNCH A BROWSER. Bash commands run under a macOS Seatbelt
+# sandbox that denies Chromium's Mach port registration, so `chromium.launch()`
+# dies at startup with
+#
+#     FATAL: bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer
+#            ...: Permission denied (1100)
+#
+# `--no-sandbox` does not help: the denial is macOS refusing Chromium's IPC,
+# not Chromium's own sandbox. So a probe cannot spawn its own browser.
+#
+# `make probe-browser` is the way around it, and it has to be run BY SIGGIE in
+# a normal terminal: it starts a long-lived Chrome with a debugging port, which
+# a probe then CONNECTS to (`chromium.connectOverCDP`) rather than launching.
+# Connecting is an ordinary localhost connection, which the sandbox allows.
+#
+# Why this matters beyond any one bug: jsdom implements no CSS anchor
+# positioning at all, so no vitest can measure where a popover actually lands.
+# Reasoning from screenshots instead produced three wrong fixes on 2026-09-18.
+# Measure first.
+#
+# Leave it running in its own terminal for the session; Ctrl-C when done.
+
+CHROME_PROFILE ?= $(TMPDIR)cdp-profile
+CDP_PORT       ?= 9222
+
+.PHONY: probe-browser
+probe-browser:  ## Start Chrome with a debug port for probes (RUN THIS YOURSELF; Claude cannot)
+	@BIN=$$(node -e "console.log(require('playwright').chromium.executablePath())"); \
+	 echo "Chrome:  $$BIN"; \
+	 echo "Port:    $(CDP_PORT)"; \
+	 echo "Profile: $(CHROME_PROFILE)"; \
+	 echo ""; \
+	 echo "Leave this running. Ctrl-C to stop."; \
+	 echo ""; \
+	 "$$BIN" --remote-debugging-port=$(CDP_PORT) \
+	         --user-data-dir="$(CHROME_PROFILE)" \
+	         --no-first-run --no-default-browser-check
+
+.PHONY: probe-check
+probe-check:  ## Is the debug browser up and reachable?
+	@curl -sf http://127.0.0.1:$(CDP_PORT)/json/version \
+	  && echo "" && echo "OK: debug browser reachable on $(CDP_PORT)" \
+	  || (echo "NOT reachable on $(CDP_PORT). Run: make probe-browser"; exit 1)
