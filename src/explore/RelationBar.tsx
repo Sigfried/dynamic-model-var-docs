@@ -226,8 +226,17 @@ export function RelationBar({
       {chip('left', nLeft, leftRef)}
       {/* The box's own name sits between the two counts, so each arrow reads
           as pointing at THIS box rather than floating free. */}
-      <span className="flex-1 min-w-0 text-center text-[9px] text-gray-400
-                       dark:text-slate-500 truncate select-none">
+      {/* CAPS, bold, and the same sky as the counts either side (Siggie,
+          2026-09-18: "i would still like related to be stronger. maybe bold
+          and the same blue as the counts"). Matching the chips' colour is what
+          makes the band read as ONE control rather than two buttons with a
+          caption between them.
+
+          Tracking rather than a larger size — the band is RELATIONS_BAND_H
+          (22px) and a taller glyph would not fit. */}
+      <span className="flex-1 min-w-0 text-center text-[9px] font-bold uppercase
+                       tracking-[0.08em] text-sky-800 dark:text-sky-200
+                       truncate select-none">
         related
       </span>
       {chip('right', nRight, rightRef)}

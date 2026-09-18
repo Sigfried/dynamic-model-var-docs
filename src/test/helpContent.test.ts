@@ -489,6 +489,38 @@ describe('help content', () => {
     expect(bad, bad.join('; ')).toEqual([]);
   });
 
+  test('no anchor names a kind without its argument', () => {
+    /*
+     * `Anchor: relation-bar` (no `:Person`) parses as `help-id:relation-bar` --
+     * a bare tag that no render site writes any more, so it resolves to
+     * nothing. It USED to resolve, to whichever box was first in document
+     * order, because every box carried the same constant `data-help-id`
+     * (Siggie, 2026-09-18: "how does anchor/spotlight: relation-bar pick which
+     * relation-bar? it should require specifying a node-box"). The tag is now
+     * keyed by class, and this fails the argless form outright rather than
+     * letting it degrade to an unringed popover.
+     *
+     * The same trap as the `node-box`-for-a-merged-child fallback, which was
+     * removed for the same reason: it looked like it worked.
+     */
+    const bad: string[] = [];
+    const check = (where: string, a: { kind: string; arg?: string } | undefined) => {
+      if (a?.kind === 'help-id' && a.arg && KNOWN_KINDS.has(a.arg)) {
+        bad.push(`${where}: "${a.arg}" is an anchor KIND and needs an argument `
+          + `(\`${a.arg}:<Entity>\`), not a bare id`);
+      }
+    };
+    for (const e of content.entries.values()) {
+      check(e.id, e.anchor);
+      for (const sp of e.spotlight ?? []) check(`${e.id} spotlight`, sp);
+      for (const b of e.beats ?? []) {
+        check(`${e.id} beat`, b.anchor);
+        for (const sp of b.spotlight ?? []) check(`${e.id} beat spotlight`, sp);
+      }
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
   test('every help-id anchor is actually tagged in the app', () => {
     // A `data-help-id` that no longer exists yields help for something that
     // isn't there, and a tour step anchored to nothing. Greps the source
@@ -863,6 +895,48 @@ describe('alerts and Once:', () => {
         `tour step 1 (${first.id}) has an alert but no Once: to dismiss it`,
       ).toBeTruthy();
     }
+  });
+});
+
+describe("a field value keeps the author's markdown", () => {
+  /*
+   * `fieldOf` used to strip every `**` on the line to normalise the
+   * `- **Field:**` syntax, which also ate the author's own bold: an
+   * `Action:` reached the popover as plain text while the identical `**`
+   * inside a `Description:` rendered bold, because a description is
+   * extracted as a block and never passes through `fieldOf` (Siggie,
+   * 2026-09-18). The strip now applies to the field NAME only.
+   */
+  const c = parseHelpContent(`
+## Bits
+
+### thing
+
+- **Title:** T
+- **Action:** Clicked **Participant** via the *related* menu
+- **Description:** D
+- **Anchor:** none
+
+### bare
+
+- Title: T2
+- Action: Clicked **Person** directly
+- Description: D2
+- Anchor: none
+`);
+
+  test('bold in a value survives the field-name strip', () => {
+    expect(c.entries.get('thing')!.action)
+      .toBe('Clicked **Participant** via the *related* menu');
+  });
+
+  test('and survives it when the field name is written bare', () => {
+    expect(c.entries.get('bare')!.action).toBe('Clicked **Person** directly');
+  });
+
+  test('the field name is still found and lower-cased', () => {
+    expect(c.problems).toEqual([]);
+    expect(c.entries.get('thing')!.title).toBe('T');
   });
 });
 

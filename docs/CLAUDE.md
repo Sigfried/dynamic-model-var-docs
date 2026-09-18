@@ -132,9 +132,13 @@ if (!element) {
 
 ## 🚧 GOTCHAS — read before running anything
 
-- **`npx vitest` needs node 22+.** The default `node` is v16 and fails with a
-  `node:fs/promises` export error that looks like a broken test setup but is
-  not. Use `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"`.
+- **Node needs no PATH export.** `node` is v24 here and both `npx vitest run`
+  and `npm run build` are clean on it. An older note told every session to
+  `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"` first, against a
+  system Node 16 that Vite 7 could not start on; that shell is gone. If a
+  `node:fs/promises` / `constants` error ever comes back, it means `node` has
+  resolved to something ancient again — check `node --version` before reaching
+  for a version pin.
 - **Never run `npm run dev`** — Siggie keeps the app running themselves.
 - **Verify with `npm run build`** (~2s). `npx tsc --noEmit` is too weak and has
   let breakage through; `npm run typecheck` is `tsc -b --noEmit`, which caught

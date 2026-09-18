@@ -636,11 +636,27 @@ interface Field { name: string; value: string; parked: boolean }
  * Strikethrough marks the field PARKED. Three spellings, all read the same:
  * `~~Field:~~ value`, `~~Field~~: value`, and the whole line after the bullet
  * `~~Field: value~~`. Bold may sit inside or outside the tildes.
+ *
+ * ⚠️ **The `**` strip applies to the NAME only, never the value.** It used to
+ * run over the whole line, which silently ate an author's own bold: a
+ * `- **Action:** Clicked **Participant**` reached the popover as plain text
+ * while the identical `**` inside a `Description:` bolded fine, because a
+ * description is extracted as a block by `extractBlockField` and never passes
+ * through here (Siggie, 2026-09-18: "it looks like bold doesn't work, though
+ * it does in warning text"). Markdown belongs to the value; the `**` this
+ * removes is the FORMAT's own punctuation around the field name.
  */
 function fieldOf(line: string): Field | undefined {
   const m = line.trimStart().match(/^-\s+(.*)$/);
   if (!m) return undefined;
-  let rest = m[1].replace(/\*\*/g, '').trim();
+  /*
+   * Two views of the same line: `rest` with every `**` gone, used ONLY to find
+   * the name and the colon that ends it, and `raw` untouched, which the value
+   * is sliced from. Detection needs the stripped form (the name may be written
+   * `**Field:**`, `**Field**:` or bare); the value needs the original.
+   */
+  const raw = m[1].trim();
+  let rest = raw.replace(/\*\*/g, '').trim();
   let parked = false;
   if (rest.startsWith('~~')) {
     const close = rest.indexOf('~~', 2);
@@ -656,7 +672,26 @@ function fieldOf(line: string): Field | undefined {
   // A field name is a single word; anything else is prose that has a colon in
   // it, which is common in a description's bullet list.
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) return undefined;
-  return { name: name.toLowerCase(), value: rest.slice(colon + 1).trim(), parked };
+  return { name: name.toLowerCase(), value: valueOf(raw, name), parked };
+}
+
+/**
+ * The text after `<name>:` in the ORIGINAL line, with the format's own `**` and
+ * `~~` around the name removed but the author's markdown left alone.
+ *
+ * Finds the name in the raw line rather than counting characters, because the
+ * stripped and raw forms are different lengths and an offset from one does not
+ * land in the other.
+ */
+function valueOf(raw: string, name: string): string {
+  const at = raw.toLowerCase().indexOf(name.toLowerCase());
+  if (at === -1) return raw.replace(/\*\*/g, '').trim();   // unreachable in practice
+  const after = raw.slice(at + name.length);
+  // Whatever punctuation closes the name -- `**`, `~~`, the colon -- then the
+  // value. A `~~Field: value~~` closes with tildes at the END of the line too,
+  // which is why the trailing pair is dropped as well.
+  const val = after.replace(/^(?:\*\*|~~)*\s*:\s*(?:\*\*|~~)*/, '');
+  return val.replace(/~~$/, '').trim();
 }
 
 /** The name of a LIVE (not parked) field on this line, for lookups by name. */

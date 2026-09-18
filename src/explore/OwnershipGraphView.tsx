@@ -61,7 +61,7 @@ import {
   groupSiblings, isMergedId, mergedIdFor, siblingColor, withChildHeaders,
 } from './siblingMerge';
 import type { MergedMember, SiblingColor } from './siblingMerge';
-import { childHeaderTag, nodeBoxAnchor, slotRowAnchor } from './helpAnchors';
+import { childHeaderTag, nodeBoxAnchor, relationBarAnchor, slotRowAnchor } from './helpAnchors';
 import { RelationBar, type RelationRowVM } from './RelationBar';
 import {
   rememberPreference,
@@ -2528,7 +2528,7 @@ export default function OwnershipGraphView({
                       */}
                       {n.relationGroups.length > 0 && (
                         <div
-                          data-help-id="relation-bar"
+                          data-help-id={relationBarAnchor(n)}
                           className="flex items-center gap-1 px-2 border-b overflow-hidden
                                      border-gray-200 dark:border-slate-600
                                      bg-sky-50/60 dark:bg-sky-950/30"

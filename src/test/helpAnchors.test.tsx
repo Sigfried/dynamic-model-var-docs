@@ -32,7 +32,7 @@ import SelectionTable from '../explore/SelectionTable';
 import { buildViewModel, mergeSiblings } from '../explore/OwnershipGraphView';
 import {
   ANCHOR_KINDS, categoryRowTag, childHeaderTag, entityCheckboxTag, entityRowTag,
-  nodeBoxAnchor, nodeBoxTag, slotRowAnchor, slotRowTag,
+  nodeBoxAnchor, nodeBoxTag, relationBarTag, slotRowAnchor, slotRowTag,
 } from '../explore/helpAnchors';
 import { parseHelpContent } from '../help/parseHelpContent';
 import { ENTITY_CATEGORIES } from '../config/entityCategories';
@@ -318,6 +318,7 @@ test('ANCHOR_KINDS and the builders name the same six kinds', () => {
   const emitted = [
     entityRowTag('X'), entityCheckboxTag('X'), categoryRowTag('X'),
     nodeBoxTag('X'), childHeaderTag('X'), slotRowTag('X', 's'),
+    relationBarTag('X'),
   ].map(tag => tag.slice(0, tag.indexOf(':')));
   expect(emitted.sort()).toEqual([...ANCHOR_KINDS].sort());
 });

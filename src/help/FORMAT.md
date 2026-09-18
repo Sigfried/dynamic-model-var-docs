@@ -694,6 +694,7 @@ whatever is wearing exactly that string, right now.
 | `slot-row:<DeclaringClass>.<slot>` | one attribute row inside a diagram box |
 | `node-box:<Entity>` | a whole entity box on the diagram — **not** a merged child |
 | `child-header:<Entity>` | a merged child's header strip inside its parent's box |
+| `relation-bar:<Entity>` | the `← N … M →` band at the top of that entity's box |
 
 Only `help-id` and `none` are built in. **The other kinds belong to the host app
 and are unknown to the parser**, which splits `kind:argument` and stops: knowing
@@ -725,6 +726,13 @@ Some kinds have an edge worth knowing when you author:
   header strip inside the parent's. Address it `child-header:<E>` instead. (There
   is deliberately no fallback: one used to return the PARENT's box under the
   child's name, which looked like it worked.)
+- **`relation-bar:<E>` needs its entity.** Every box on the canvas has a
+  relation bar, so a bare `relation-bar` names all of them; the resolver takes
+  the first visible match in document order, which is whichever box the layout
+  happened to put first. The content test rejects the argless form rather than
+  letting it ring an arbitrary box (Siggie, 2026-09-18). `relation-bar:E` and
+  `node-box:E` always name the same box, including for a merged box, where `E`
+  is the parent that titles it.
 - **`slot-row:<E>.<slot>`** splits on the LAST dot, and `<E>` is the class that
   DECLARES the row — for a child that narrows an inherited slot, the child, not
   the parent. That is what picks between the several rows a merged box can hold
@@ -1109,6 +1117,11 @@ Write it as a plain sentence in the tour's own voice. This exists because a step
 that silently changes the diagram reads as a description of whatever just
 appeared. The popover renders `Action:` text in its own band, visually distinct
 from the description.
+
+**Markdown works in a field's value**, `Action:` included — `**bold**`,
+`` `code` ``, a link. The `**` around a field NAME is the format's own
+punctuation and is removed; anything after the colon is yours and reaches the
+renderer untouched.
 
 **Rule of thumb:** if the step carries a `Change:` that actually changes
 something, it needs an `Action:`. A test enforces this.

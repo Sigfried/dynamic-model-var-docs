@@ -61,7 +61,7 @@ import type { NodeVM, RowVM } from './OwnershipGraphView';
  */
 export const ANCHOR_KINDS = [
   'entity-row', 'entity-checkbox', 'category-row',
-  'node-box', 'child-header', 'slot-row',
+  'node-box', 'child-header', 'slot-row', 'relation-bar',
 ] as const;
 
 export type AnchorKind = typeof ANCHOR_KINDS[number];
@@ -86,6 +86,17 @@ export const nodeBoxTag = (classId: string) => `node-box:${classId}`;
 
 /** A merged child's header strip — its only addressable element. */
 export const childHeaderTag = (classId: string) => `child-header:${classId}`;
+
+/** One box's relation bar, keyed by the class the box is titled by.
+ *
+ *  ⚠️ **Keyed, because every box has one.** This was once the bare constant
+ *  `relation-bar`, which made `Anchor: relation-bar` match every box on the
+ *  canvas; the resolver takes the first visible match in document order, so the
+ *  ring landed on whichever box ELK happened to lay out first and an author had
+ *  no way to say which they meant (Siggie, 2026-09-18, reading the Explorer
+ *  tour). Same failure as the `node-box`-for-a-merged-child fallback that was
+ *  removed for looking like it worked — see FORMAT.md §Anchor kinds. */
+export const relationBarTag = (classId: string) => `relation-bar:${classId}`;
 
 /**
  * One attribute row, as `<DeclaringClass>.<slot>`.
@@ -119,6 +130,10 @@ const nodeClassOf = (node: NodeVM) =>
  * dependency and there is no cycle.
  */
 export const nodeBoxAnchor = (node: NodeVM) => nodeBoxTag(nodeClassOf(node));
+
+/** The relation bar of the box `node` draws — same class `nodeBoxAnchor` uses,
+ *  so `node-box:E` and `relation-bar:E` always name the same box. */
+export const relationBarAnchor = (node: NodeVM) => relationBarTag(nodeClassOf(node));
 
 /** `declaringClass` is set only on a merged box's rows; on an unmerged one the
  *  box's own class already said it, so that is the fallback. */

@@ -8,6 +8,150 @@ Newest first.
 
 
 ---
+## 2026-09-18 — `relation-bar` was an ambiguous anchor, and a typo that only the test could see
+
+Siggie reading *Using the Explorer* in the browser. The first two findings are
+both a step LOOKING broken for a reason that was not where it appeared to be;
+then a styling ask and one piece of stale process that came up alongside.
+
+### The dimming was `Hightlight: ring`
+
+Siggie: *"now i'm confused why this step has dimming on even though it's
+Highlight: ring"*. It was not — the field read `Hightlight:`. An unknown field
+is dropped, so the step fell back to the default highlight, which dims.
+
+**The misspelling detector already caught it**; it just had not been run. The
+content test reported `relation-bar-step: unknown field "hightlight"` on the
+first invocation. Worth noting the diagnosis path, because reasoning about the
+scrim-stacking rule from the screenshot would have gone somewhere plausible and
+wrong: `Highlight: ring` means no scrim, several spotlights stack their scrims,
+and this step has a `Spotlight:` — all true, all irrelevant. Running the test
+was faster than thinking about it.
+
+That is now TASKS `content-problems-in-dev`: `HelpContent.problems` exists and
+nothing in the running app reads it, so an authoring session in the browser
+cannot see what `npm test` would say.
+
+### `relation-bar` matched every box; now it is keyed
+
+Siggie: *"how does anchor/spotlight: relation-bar pick which relation-bar? i
+think maybe it tries to find the first one. it should require specifying a
+node-box"*. Correct on both counts. `OwnershipGraphView` wrote the CONSTANT
+`data-help-id="relation-bar"` inside a per-node render, so every box carried the
+identical tag, and `resolveAnchor` takes the first VISIBLE match in document
+order — the ring landed on whichever box the layout put first, and an author had
+no way to say which they meant.
+
+It was the one anchor kind that did not key by class, sitting three lines from
+`nodeBoxAnchor(n)`, `slotRowAnchor(n, r)` and `childHeaderTag(...)` which all do.
+
+So `relationBarTag`/`relationBarAnchor` beside them, `relation-bar` added to
+`ANCHOR_KINDS`, and the bare form made an error rather than left to degrade.
+
+**This is the same trap as the merged-child `node-box` fallback**, removed on
+2026-09-08 for returning the PARENT's box under the child's name: an anchor that
+resolves to something plausible is worse than one that resolves to nothing,
+because nothing is visible and plausible is not. Siggie chose the error for
+`relation-bar` for that reason; FORMAT.md now states it beside the `node-box`
+note it echoes.
+
+**How the bare form is detected, which is not obvious.** `parseAnchor` turns a
+colon-less value into `{kind:'help-id', arg:'relation-bar'}` — it never sees a
+"kind with no argument". So the check is "a `help-id` anchor whose arg is itself
+a known KIND", not a check on the anchor grammar.
+
+⚠️ **That check flagged the help-only `### relation-bar` entry**, because an
+entry with no `Anchor:` self-anchors to `help-id:<its own id>` — and this
+entry's id IS the kind name. Gave it `Anchor: none`, which is right
+independently: it is displayed on click in help mode and rings nothing.
+
+**Help mode is off** (`HELP_MODE_ENABLED === false`), so nothing about that
+entry is reachable today. But if it is ever turned back on, note that the click
+handler calls `showEntry(el.getAttribute('data-help-id'))` — which now passes
+`relation-bar:Person` and will not match an entry called `relation-bar`.
+Whatever turns help mode on has to strip the argument, or key entries by kind.
+Not fixed here; it would be dead code with no way to test it.
+
+### The relation bar label, made prominent
+
+Siggie: *"i'd like the relation bar to be a little more prominent. 'related'
+could be all caps and stronger or the row could be a dark gray with white
+text"*. Offered both; they chose the label-only version.
+
+**Why the dark band was the riskier of the two**, which is what the choice
+turned on: the box header directly above is already `bg-slate-700` with white
+text, so a dark 22px band under it reads as one 52px header and the boundary
+between "what this box is" and "what it relates to" goes away. The light band
+keeps that line for free.
+
+First pass was caps, `font-semibold`, tracked, `text-gray-600`, reasoning that
+the label should stay lighter than the chips so as not to pull the eye to the
+inert part of the band. Siggie wanted it stronger still — *"maybe bold and the
+same blue as the counts"* — so it is now `font-bold text-sky-800`, matching the
+chips exactly. **Their instinct was better than my rule:** a label in the
+chips' own colour makes the band read as ONE control, where a grey caption
+between two blue buttons reads as two buttons and a label.
+
+Tracking rather than a bigger size throughout, because `RELATIONS_BAND_H` is
+22px and a taller glyph does not fit.
+
+### `**bold**` in any single-line field was eaten by the parser
+
+Siggie, from the popover: *"it looks like bold doesn't work, though it does in
+warning text"*. ⚠️ **I first read this as being about the relation bar label**
+and started probing computed font weights in the graph; they corrected it —
+the screenshot was the popover, and the two bolds in question were an
+`Action:` receipt (plain) against an alert (bold). Re-read the image before
+diagnosing next time.
+
+The cause, measured with a five-line node probe rather than argued: `fieldOf`
+ran `m[1].replace(/\*\*/g, '')` over the WHOLE line to normalise the
+`- **Field:**` syntax, so an author's `**` went with it. `- **Action:** Clicked
+**Participant**` arrived as `Clicked Participant`.
+
+**Why alerts were fine, which is the clue that locates it:** an alert is a `>`
+blockquote inside `Description:`, and a description is pulled out by
+`extractBlockField`, which never calls `fieldOf`. So the bug was invisible
+exactly where authors do most of their writing, and hit only the one-line
+fields — `Action:`, `Title:`, `Interactions:`.
+
+Fix: `fieldOf` keeps two views of the line. The `**`-stripped one finds the
+name and its colon (the name may be `**Field:**`, `**Field**:` or bare); the
+value is sliced out of the ORIGINAL by `valueOf`. It locates the name by search
+rather than by offset, because the two forms are different lengths and an index
+from one does not land in the other.
+
+Note `*italic*` was never affected — only `**` was stripped, which is why this
+survived so long as "bold specifically doesn't work".
+
+Three tests pin it, and I checked they FAIL against the old `fieldOf` before
+keeping them: bold in a value, bold when the field name is written bare, and
+the name still being found and lower-cased.
+
+### The node-22 export was stale, and the note describing it was wrong twice
+
+Siggie: *"is it time to fix this so it's not an issue?"* — yes, and the issue
+had already fixed itself.
+
+Measured instead of assuming: `node --version` in a NON-interactive shell is
+**v24.2.0** (`~/.nvm/versions/node/v24.2.0/bin/node`), and with no PATH export
+at all `npx vitest run` gives 803 passed / 3 skipped and `npm run build` is
+clean. The export every session was told to run first has been unnecessary for
+a while.
+
+The old note (CLAUDE.md §GOTCHAS, from WORKLOG 2026-08) said *"the default
+`node` is v16 and fails with a `node:fs/promises` export error"*. Two things
+were wrong with it by the time I read it: the default is v24, not v16, and
+nothing fails. Something changed the shell setup and nobody re-checked, so the
+workaround outlived the problem and every session paid for it.
+
+**Not fixed with `.nvmrc` or `engines`.** An `.nvmrc` is not sourced by a
+non-interactive shell so it would change nothing here, and `engines` only warns.
+There is nothing to pin: the default node is already correct. The note now says
+so, and says what to check (`node --version`) if the symptom ever returns,
+rather than naming a version to force.
+
+---
 ## 2026-09-17 (later) — Getting oriented pruned, and five tours become a different five
 
 `TASKS help-finish-authoring/oriented`, executed. Siggie had annotated
