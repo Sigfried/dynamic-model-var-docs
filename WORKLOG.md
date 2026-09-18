@@ -128,6 +128,62 @@ Three tests pin it, and I checked they FAIL against the old `fieldOf` before
 keeping them: bold in a value, bold when the field name is written bare, and
 the name still being found and lower-cased.
 
+### The popover was too big for the canvas, not badly placed
+
+Step 3.4 had grown tall enough that `Position: bottom` stopped holding: it sat
+over the box it described. Siggie proposed two things — stop letting `Position:`
+be overridden, and scroll the canvas when the popover falls outside it.
+
+⚠️ **The second half was the wrong fix and Siggie caught it before I built
+it.** I had started sketching a measure-place-measure-scroll cycle. Their
+correction: *"there is already a mechanism that automatically fits to screen…
+you can see here that i've added a bunch of boxes -- they all fit but the
+popover is huge."* The canvas was never the problem. Nothing was off screen;
+the popover was simply enormous relative to a zoomed-out diagram.
+
+**Why it only shows with several boxes**, which is the whole mechanism: a
+box's attribute text is `text-[11px]` in CANVAS coordinates, so on screen it is
+`11px * zoom`. The popover is `fixed` and in the top layer, so it scales with
+nothing. At 1:1 that is Siggie's chosen 16px against 11px. Auto-fit six boxes
+and the rows drop to a few px while the popover stays 16 — a slab over the
+diagram.
+
+So the fix is to hold the RATIO rather than the size:
+`clamp(11px, calc(16px * var(--graph-zoom, 1)), 16px)`. `16/11` of
+`11px * zoom` reduces to `16px * zoom`, so the authored ratio is preserved at
+every zoom by a single multiplication.
+
+- **`--graph-zoom` is published on `documentElement`**, not on the transformed
+  wrapper, because the consumer is not a descendant of it — a popover is in the
+  TOP LAYER. Written in `useZoomPan`'s existing rAF beside the transform, so it
+  costs nothing and cannot drift from the scale it describes.
+- **Clamped at both ends, because the ratio alone is not a design.** The floor
+  is what binds: min zoom is 0.2, which unclamped gives a 3px popover, and the
+  reader is reading the POPOVER even when the diagram is tiny. The ceiling
+  stops it growing past the authored size when someone zooms past 1:1.
+- **The `var()` fallback of `1` is load-bearing.** Nothing has published a zoom
+  before the first frame, and a popover opened then would otherwise get
+  `calc(16px * )` — invalid, and the whole declaration drops.
+
+**The `Position:` half was still right**, and shipped: an authored side now
+drops `flip-block`/`flip-inline` via a `[data-authored-side]` rule. The two
+SPANNING last resorts stay, and the distinction matters — they do not pick
+another side, they span the viewport across the anchor, which is the one
+guarantee the fallback list exists for (*"all it really needs to do is not go
+on top of what it's anchored on"*). Dropping those too would restore the bug
+they were written to fix.
+
+A step can now be authored too tall for its side. That is survivable because
+the popover is capped at viewport height and scrolls its body — and mostly
+moot, because the size now tracks the zoom.
+
+**One test had pinned a proxy.** `helpPlacement` asserted dmvd's
+`--help-font-size` matched `\d+px`. The rule that test is about is WHERE the
+knob is set (app sheet, not package), not what it is set to; the shape
+assertion was incidental and failed on a legitimate value. Loosened to "any
+value", with the package half still pinning a bare `13px` — a default has
+nothing to track, so it must be a length.
+
 ### The node-22 export was stale, and the note describing it was wrong twice
 
 Siggie: *"is it time to fix this so it's not an issue?"* — yes, and the issue

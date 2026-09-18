@@ -327,6 +327,28 @@ body.help-mode {
                           --help-shift, --help-shift-start;
 }
 
+/* AN AUTHORED `Position:` IS NOT A PREFERENCE, it is the placement.
+
+   The flips are dropped, the two spanning last resorts are kept. Siggie,
+   2026-09-18, on a step that had grown tall enough for `flip-block` to throw
+   it above the box and `--help-shift` to park it beside: *"get rid of rule
+   that allows Position to be overridden"*.
+
+   Why the last resorts STAY. They are not "another side" -- both span the
+   whole viewport across the anchor (`span-all`), so they keep the one
+   guarantee the fallback list exists for: *"all it really needs to do is not
+   go on top of what it's anchored on"*. Dropping them too would let a tall
+   popover cover its own anchor, which is the bug the spanning fallbacks were
+   written to fix. What is gone is only the part that silently picked a
+   DIFFERENT SIDE than the author asked for.
+
+   This does not make a too-tall popover fit; nothing can. It makes it
+   predictable, and the size now tracks the canvas zoom (`--help-font-size` in
+   `helpTheme.css`), which is what actually stopped the slab. */
+.help-popover[data-anchored][data-authored-side] {
+  position-try-fallbacks: --help-shift, --help-shift-start;
+}
+
 .help-popover:popover-open {
   display: flex;
 }

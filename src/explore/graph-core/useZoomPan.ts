@@ -143,6 +143,18 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
       // and a live wheel zoom must clear a transition a previous fit left on.
       wrapper.style.transition = ms ? `transform ${ms}ms` : '';
       wrapper.style.transform = `scale(${zoomRef.current})`;
+      /*
+       * Publish the zoom so CSS outside the transform can track it. The tour
+       * popover is the consumer: it is `fixed`, so it does not scale with the
+       * canvas, and at a fit-to-screen zoom the boxes shrink while it does
+       * not -- which is how a step that reads fine over one box becomes a
+       * slab covering six (Siggie, 2026-09-18). See `--help-font-size` in
+       * `helpTheme.css` for what is done with it.
+       *
+       * On the documentElement rather than the wrapper, because the consumer
+       * is not a descendant of the wrapper -- a popover is in the TOP LAYER.
+       */
+      document.documentElement.style.setProperty('--graph-zoom', String(zoomRef.current));
     });
 
     if (spacerTimerRef.current) {

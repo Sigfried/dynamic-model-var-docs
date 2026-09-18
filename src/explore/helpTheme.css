@@ -18,6 +18,31 @@
   /* Base size for the whole popover. Everything inside is `em` off this, so
      one value moves prose, title, action band, alert, context and tour nav
      together. Package default is 13px; see the comment on `.help-popover` in
-     `../help/help.css` for the em-nesting caveat if you touch the children. */
-  --help-font-size: 16px;
+     `../help/help.css` for the em-nesting caveat if you touch the children.
+
+     TRACKS THE CANVAS ZOOM, and this is the whole reason the value is not a
+     constant. A diagram box's attribute text is 11px in CANVAS coordinates,
+     so it is `11px * zoom` on screen; the popover is `fixed` and in the top
+     layer, so it scales with nothing. At 1:1 that is 16px against 11px and
+     reads correctly, but the canvas auto-fits, and at the zoom six boxes need
+     the rows shrink to a few px while the popover stays 16 — the step becomes
+     a slab covering the diagram it is describing (Siggie, 2026-09-18: "they
+     all fit but the popover is huge. let's keep the existing size difference
+     ratio for default").
+
+     So: hold the RATIO Siggie picked at 1:1 rather than the size. 16/11 of
+     the on-screen attribute size, which is `11px * var(--graph-zoom)`,
+     reduces to `16px * zoom`. `--graph-zoom` is published by `useZoomPan` on
+     the documentElement.
+
+     ⚠️ CLAMPED, because the ratio alone is not a design. Below ~11px the
+     popover's own prose stops being readable, and the reader is reading the
+     popover even when the diagram is tiny; above the authored 16px there is
+     no reason to grow just because someone zoomed in past 1:1. The floor is
+     the binding end in practice — `useZoomPan`'s min zoom is 0.2, which
+     unclamped would give a 3px popover.
+
+     The fallback `1` in `var()` matters: nothing has published a zoom before
+     the first frame, and a popover opened then must not collapse to 0. */
+  --help-font-size: clamp(11px, calc(16px * var(--graph-zoom, 1)), 16px);
 }

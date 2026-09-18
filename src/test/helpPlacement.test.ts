@@ -157,7 +157,14 @@ describe('dmvd overrides the popover font size without touching the package', ()
   });
 
   it("puts dmvd's value in the app sheet, not the package", () => {
-    expect(app).toMatch(/--help-font-size:\s*\d+px/);
+    /*
+     * Any VALUE, not `\d+px`. dmvd's is a `clamp()` that tracks the canvas
+     * zoom, and asserting the shape was a proxy for the rule this test is
+     * actually about — where the knob is SET, not what it is set to. The
+     * package half below still pins a bare `13px`, which is the half that
+     * matters: a default has to be a length because it has nothing to track.
+     */
+    expect(app).toMatch(/--help-font-size:\s*\S/);
     /*
      * Every declaration in the PACKAGE is the package default, whichever
      * surface it is on. There are two now — `.help-popover` and `.help-map`,
@@ -173,6 +180,41 @@ describe('dmvd overrides the popover font size without touching the package', ()
     const inPackage = pkg.match(/--help-font-size:\s*(\d+)px/g) ?? [];
     expect(inPackage.length).toBeGreaterThan(0);
     for (const decl of inPackage) expect(decl).toMatch(/13px/);
+  });
+
+  it('tracks the canvas zoom, with a floor and a ceiling', () => {
+    /*
+     * A diagram box's attribute text is 11px in CANVAS coordinates, so it is
+     * `11px * zoom` on screen; the popover is `fixed` and scales with nothing.
+     * At the zoom an auto-fit picks for six boxes the rows shrink and the
+     * popover does not, and the step becomes a slab over the diagram (Siggie,
+     * 2026-09-18). The ratio Siggie chose at 1:1 is 16/11, which held against
+     * `11px * zoom` reduces to `16px * zoom`.
+     *
+     * Clamped at both ends: the popover's own prose has to stay readable when
+     * the diagram is tiny (the floor is what binds — min zoom is 0.2, which
+     * unclamped is a 3px popover), and there is no reason to grow past the
+     * authored size when someone zooms in.
+     */
+    const decl = app.match(/--help-font-size:\s*([^;]+);/)?.[1] ?? '';
+    expect(decl).toMatch(/clamp\(/);
+    expect(decl).toMatch(/var\(--graph-zoom/);
+    // The `var()` FALLBACK: nothing has published a zoom before the first
+    // frame, and a popover opened then must not collapse to zero.
+    expect(decl).toMatch(/var\(--graph-zoom,\s*1\)/);
+  });
+
+  it('has something publishing --graph-zoom for it to read', () => {
+    // Two files that must agree, and neither mentions the other's mechanism in
+    // code. The publisher is the zoom hook, on the documentElement because a
+    // popover is in the top layer and not a descendant of the transformed
+    // wrapper.
+    const zoomPan = readFileSync(
+      resolve(__dirname, '../explore/graph-core/useZoomPan.ts'), 'utf8',
+    );
+    expect(zoomPan).toMatch(
+      /documentElement\.style\.setProperty\(\s*'--graph-zoom'/,
+    );
   });
 
   it('imports the override sheet after the package CSS', () => {
@@ -349,6 +391,36 @@ describe('a tall popover is kept on screen', () => {
     expect(anchoredRule).toMatch(/position-try-fallbacks:[^;]*flip-block/);
     expect(anchoredRule).toMatch(/position-try-fallbacks:[^;]*flip-inline/);
     expect(css).toMatch(/@position-try\s+--help-shift\s*\{/);
+  });
+
+  it('drops the flips when the author named a side, keeping the span-alls', () => {
+    /*
+     * An authored `Position:` is the placement, not a preference (Siggie,
+     * 2026-09-18: "get rid of rule that allows Position to be overridden").
+     * A step that had grown tall was thrown above its box by `flip-block` and
+     * then parked beside it by `--help-shift`, landing on the thing it
+     * described.
+     *
+     * The two SPANNING fallbacks stay: they do not pick another side, they
+     * span the viewport across the anchor, which is the one guarantee the
+     * list exists for -- never cover your own anchor.
+     */
+    const authored = css.match(
+      /\.help-popover\[data-anchored\]\[data-authored-side\]\s*\{([^}]*)\}/,
+    )?.[1];
+    expect(authored, 'no [data-authored-side] rule').toBeTruthy();
+    expect(authored).toMatch(/position-try-fallbacks:[^;]*--help-shift/);
+    expect(authored).not.toMatch(/flip-block/);
+    expect(authored).not.toMatch(/flip-inline/);
+  });
+
+  it('only suppresses the flips while anchored and undragged', () => {
+    // The attribute is gated exactly like `data-anchored`: a dragged popover
+    // has no placement to constrain, and an unanchored one has no side.
+    const layer = readFileSync(resolve(__dirname, '../help/HelpLayer.tsx'), 'utf8');
+    expect(layer).toMatch(
+      /data-authored-side=\{\s*anchored && !drag\.offset && inTour && position\?\.position/,
+    );
   });
 
   it('does not hide itself when the anchor scrolls away', () => {
