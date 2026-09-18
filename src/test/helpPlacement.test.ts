@@ -393,60 +393,6 @@ describe('a tall popover is kept on screen', () => {
     expect(css).toMatch(/@position-try\s+--help-shift\s*\{/);
   });
 
-  it('takes an authored side literally: no fallbacks at all', () => {
-    /*
-     * Siggie, 2026-09-18: "get rid of rule that allows Position to be
-     * overridden", then "i expected you to get rid of all the flipping stuff
-     * altogether".
-     *
-     * A first pass dropped only the flips and kept the two spanning last
-     * resorts, on the grounds that they never abandon the anchor. That missed
-     * the point: they protect the anchor BY MOVING TO ANOTHER SIDE, which is
-     * the thing an authored side forbids. With the flips gone they became the
-     * common path rather than a corner case, and a tall `Position: bottom`
-     * step went straight to `--help-shift` and landed beside its box.
-     */
-    const authored = css.match(
-      /\.help-popover\[data-anchored\]\[data-authored-side\]\s*\{([^}]*)\}/,
-    )?.[1];
-    expect(authored, 'no [data-authored-side] rule').toBeTruthy();
-    expect(authored).toMatch(/position-try-fallbacks:\s*none/);
-    for (const escape of ['flip-block', 'flip-inline', '--help-shift']) {
-      expect(authored, `authored side must not fall back to ${escape}`)
-        .not.toMatch(escape);
-    }
-  });
-
-  it('drops the viewport height cap for an authored side too', () => {
-    /*
-     * The cap was the OTHER half of the move, and killing the fallbacks alone
-     * left it as the whole of it: `max-height: calc(100vh - 16px)` is nearly
-     * the window, so a box high on the canvas cannot have a popover that tall
-     * starting below it, and the browser slides the popover UP to satisfy the
-     * cap (Siggie, 2026-09-18: "instead the popover is moving itself up. let
-     * it overflow at this point").
-     *
-     * A step that names a side opts out of the cap along with the fallbacks.
-     * Every step that does NOT name one keeps the cap, which is the
-     * 2026-09-08 "popover getting cut off again" guard.
-     */
-    const authored = css.match(
-      /\.help-popover\[data-anchored\]\[data-authored-side\]\s*\{([^}]*)\}/,
-    )?.[1];
-    expect(authored).toMatch(/max-height:\s*none/);
-    // And the base rule still carries the guard for everyone else.
-    expect(popover).toMatch(/max-height:\s*calc\(100vh/);
-  });
-
-  it('only suppresses the flips while anchored and undragged', () => {
-    // The attribute is gated exactly like `data-anchored`: a dragged popover
-    // has no placement to constrain, and an unanchored one has no side.
-    const layer = readFileSync(resolve(__dirname, '../help/HelpLayer.tsx'), 'utf8');
-    expect(layer).toMatch(
-      /data-authored-side=\{\s*anchored && !drag\.offset && inTour && position\?\.position/,
-    );
-  });
-
   it('does not hide itself when the anchor scrolls away', () => {
     /*
      * `position-visibility: no-overflow` would make a popover vanish

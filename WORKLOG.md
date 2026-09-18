@@ -8,6 +8,131 @@ Newest first.
 
 
 ---
+## 2026-09-18 (later) — the popover placement fixes were reverted; measured, not argued
+
+Three commits earlier the same day (f721eae, 75d9759, 80bd24a) tried to make
+`Position: bottom` hold on step 3 beat 5 of *Using the Explorer*. Each was
+reasoned from a screenshot, each shipped, each was wrong. Siggie: *"that last
+session was old when i started that work and i shouldn't have."* The placement
+half of all three is now reverted; **the zoom half of f721eae is kept.**
+
+### What a browser measured, which no vitest can
+
+⚠️ **jsdom implements no CSS anchor positioning.** `helpPlacement.test.ts`
+asserts that stylesheet TEXT contains `max-height: none` — it cannot observe
+where a popover lands. Every assertion about placement in this repo before
+today was a claim about CSS source, not about geometry. That gap is where all
+three wrong fixes lived.
+
+Driving a real browser (`make probe-browser`, below) at 1600x1000:
+
+| beat | anchor bottom | popover top | gap | verdict |
+|---|---|---|---|---|
+| 3.4 `Position: bottom`, 246px tall | 645.5 | 657.5 | **+12** | correct |
+| 3.5 `Position: bottom`, 520px tall | 499.5 | 321.8 | **-177.7** | slid UP over the box |
+| 3.5, same content, 1400px viewport | 804.5 | 816.5 | **+12** | correct |
+| 3.5, 244px body, overflowing 60px | 804.5 | 816.5 | **+12** | correct |
+
+**What that rules out.** Not the anchor (3.4 uses the same `node-box:Person`),
+not the authored-side CSS path (identical computed values in both), and not
+viewport overflow as such — row 4 overflows the window by 60px and places
+correctly anyway. Give row 2 more room and it behaves. The exact height
+threshold at which it starts sliding was never measured; that probe
+(`probe-sweep.mjs`) was written and not run before the revert.
+
+⚠️ **80bd24a's stated cause is false.** It claims `max-height: calc(100vh -
+16px)` is what slides the popover up. The measurement shows `max-height: none`
+in effect on the broken beat with the popover still sliding 178px. The commit
+did not fix what it said it fixed. Its CSS comment and WORKLOG entry both
+asserted that mechanism as established; do not carry it forward.
+
+### What the ORIGINAL bug was, which is not what got measured
+
+Siggie checked out 61cf9b0 with current help-content and photographed the
+symptom the session had set out to fix: the popover to the **right** of the
+Person box, spanning it vertically, with `Position: bottom` authored. That is
+`--help-shift` (`inline-end span-all`) winning over the authored side.
+
+So the two symptoms are different bugs in the same area: the ORIGINAL is a
+fallback overriding an authored side; what the probe measured is the
+POST-FIX behaviour after the fallbacks were removed. **Everything in the table
+above describes the post-fix state.** Do not read it as evidence about the
+original.
+
+⚠️ **And "61cf9b0 plus zoom" — the state this revert produces — is a
+configuration neither of us has seen.** Measured right after the revert, beat
+3.5 sits at left 392 against an anchor at left 380: overlapping the box, NOT
+beside it as the screenshot shows. The zoom change alters the popover's height,
+a different height fails a different fallback, and a different fallback wins.
+The screenshot is not this tree's baseline.
+
+### The decision that was NOT made, and why it is bigger than it looks
+
+The open question was "discard flipping entirely, or only for explicitly
+positioned popovers". Siggie's objection was specifically to the second kind:
+a fallback that relocates a popover to a side the author explicitly ruled out.
+
+But the constraint that reframes it — Siggie, and I had not been thinking about
+it either:
+
+> the whole reason we added `Position:` in the first place is because the
+> placement engine was doing such a poor job. That problem needs to be faced,
+> either by writing new placement code or requiring `Position:` everywhere. But
+> even then, box layout is not consistent — weird states happen all the time,
+> especially with stepping backwards, not to mention user actions.
+
+**So "require `Position:` everywhere" is not a solution.** It moves the same
+guess from the engine into the content, where it is worse: authored once at
+write time, against a layout that shifts with back-stepping and user actions. A
+static answer cannot be right for a dynamic layout.
+
+That leaves something that has to react at runtime — either the fallback
+machinery (better behaved), or real placement code that measures. Today there
+are two half-systems: an authored hint, and a fallback list that overrides it,
+neither of which measures anything. Worth designing rather than patching.
+
+Siggie also half-recalls having had ideas that would address what flipping is
+FOR — *"maybe nothing more than the zoom and allowing popovers to overflow the
+viewport"*. That is coherent on its own: if a popover may overflow, it never
+needs to relocate, and the fallbacks' reason for existing goes with it. Not
+pursued here.
+
+### `make probe-browser`, and why Claude cannot just run a browser
+
+⚠️ **Claude cannot launch a browser.** Bash commands run under a macOS Seatbelt
+sandbox that denies Chromium's Mach port registration:
+
+    FATAL: bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer...
+           Permission denied (1100)
+
+`--no-sandbox` does not help — the denial is macOS refusing Chromium's IPC, not
+Chromium's own sandbox. `chromium.launch()` dies at startup, every time.
+
+The way around it is `make probe-browser`, **run by Siggie** in a normal
+terminal: it starts a long-lived Chrome with `--remote-debugging-port=9222`,
+which a probe then CONNECTS to via `chromium.connectOverCDP`. Connecting is an
+ordinary localhost connection, which the sandbox permits. Verified working.
+`make probe-check` says whether it is up.
+
+Two gotchas. `browser.close()` on a CDP connection closes the CONNECTION, not
+Siggie's browser — close pages explicitly or tabs pile up. And bare `node` in
+the non-interactive shell is v16, too old for both Playwright and Vite; use
+`~/.nvm/versions/node/v22.20.0/bin/node`, or put it on PATH first.
+
+Also: `waitUntil: 'networkidle'` never fires against the Vite dev server, whose
+HMR websocket stays open forever. Use `domcontentloaded`.
+
+### What a real placement test should assert
+
+Not "the stylesheet contains `max-height: none`" but, for a beat authoring
+`Position: bottom`, `popover.top >= anchor.bottom`. That single assertion fails
+on beat 3.5 and passes on 3.4 — the discrimination three rounds of reasoning
+never made. Committing such a suite needs a server the test can drive itself
+(`webServer` running `vite preview` on its own port); it must NOT depend on
+Siggie's hand-started dev server on 5173. Deferred deliberately.
+
+
+---
 ## 2026-09-18 — `relation-bar` was an ambiguous anchor, and a typo that only the test could see
 
 Siggie reading *Using the Explorer* in the browser. The first two findings are

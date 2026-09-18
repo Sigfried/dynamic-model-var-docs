@@ -773,12 +773,6 @@ export default function HelpLayer() {
            cursor". Undragged steps never showed it because the inline
            `position-area` is what the fallback flips FROM. */
         data-anchored={anchored && !drag.offset ? '' : undefined}
-        /* An AUTHORED `Position:` suppresses the flips -- see the
-           `[data-authored-side]` rule in `help.css`. Only meaningful while
-           anchored and undragged, so it is gated the same way. */
-        data-authored-side={
-          anchored && !drag.offset && inTour && position?.position ? '' : undefined
-        }
         className="help-popover"
         style={{
           ...popoverPosition(anchored, inTour ? position?.position : undefined,

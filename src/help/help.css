@@ -327,58 +327,6 @@ body.help-mode {
                           --help-shift, --help-shift-start;
 }
 
-/* AN AUTHORED `Position:` IS THE PLACEMENT. No fallbacks at all.
-
-   Siggie, 2026-09-18: *"get rid of rule that allows Position to be
-   overridden"*, and then, when a first pass kept the two spanning last
-   resorts: *"i expected you to get rid of all the flipping stuff
-   altogether"*.
-
-   ⚠️ **Keeping the spanning fallbacks did not work, and the reason is worth
-   writing down.** They were kept because they never abandon the anchor --
-   `inline-end span-all` still sits in the anchor's column, so the popover
-   cannot cover the element it points at. True, but beside the point: they
-   protect the anchor BY MOVING TO ANOTHER SIDE, and moving to another side is
-   exactly what an authored `Position:` forbids. With the flips gone they
-   stopped being a corner case and became the common one -- any popover too
-   tall for the space below `Position: bottom` overflowed straight into
-   `--help-shift` and landed to the right of the box, which is what step 3.4
-   was still doing after the first fix.
-
-   So an authored side gets `position-try-fallbacks: none`. What was a
-   preference is now a statement.
-
-   What keeps this survivable is that the popover can no longer be far too big
-   for its space: `--help-font-size` in `helpTheme.css` tracks the canvas zoom,
-   and `max-height: calc(100vh - 16px)` with a scrolling body still applies. A
-   step authored tall enough to overflow its named side will overflow it --
-   that is the author's to fix, and it is visible rather than silent. */
-.help-popover[data-anchored][data-authored-side] {
-  position-try-fallbacks: none;
-
-  /* ⚠️ THE VIEWPORT CAP HAS TO GO WITH THE FALLBACKS, and this is not
-     obvious. `max-height: calc(100vh - 16px)` on the base class is nearly the
-     whole window, so for a box high on the canvas the popover cannot be that
-     tall AND start below it — and the browser resolves that by SLIDING IT UP
-     until the cap is satisfied. Siggie, 2026-09-18, with the fallbacks
-     already gone: *"you're wrong about tradeoff. i'd be fine with that, but
-     instead the popover is moving itself up. let it overflow at this point"*.
-
-     So the move was never the fallback list alone; `max-height` was the other
-     half, and killing the fallbacks only made it the whole of it.
-
-     `max-height: none` for an authored side. The popover keeps the height its
-     content wants, starts exactly where the author said, and runs off the
-     bottom of the window if it is too long — which is the behaviour Siggie
-     asked for, and is visible rather than silent.
-
-     The base rule still applies to every step that did NOT author a side, and
-     that is where the 2026-09-08 "popover getting cut off again" guard lives.
-     An authored side opts out of the guard along with the flips: one
-     statement, one set of consequences. */
-  max-height: none;
-}
-
 .help-popover:popover-open {
   display: flex;
 }

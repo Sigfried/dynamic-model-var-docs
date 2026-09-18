@@ -855,25 +855,8 @@ for a box the step is about to add — and it stays right if the box width
 changes. It is a closed grammar, not an expression: `anchor.width + 10` and
 `anchor.left` do not parse.
 
-**An authored `Position:` is the placement, not a preference.** The popover
-goes on the side you named and stays there — it never flips, never shifts, and
-never picks a different side because the step grew tall. Nothing overrides it.
-
-A step with NO `Position:` behaves as before: a side is chosen automatically
-and the popover flips out of one that does not fit.
-
-So a step can be authored too tall for the side it names, and it will **run off
-the bottom of the window** rather than quietly relocate. A step that names a
-side also opts out of the viewport height cap, deliberately: the cap is nearly
-the whole window, so a popover below a box high on the canvas cannot be that
-tall and start where it was told — and the browser resolves that by sliding it
-up, which is the relocation the authored side is there to prevent.
-
-What keeps this manageable is that the font size tracks the canvas zoom
-(`--help-font-size` in [helpTheme.css](../explore/helpTheme.css)), so a popover
-shrinks along with the diagram when the canvas auto-fits a large selection. If
-a step still does not fit, shorten it or take the `Position:` off — a step with
-no authored side keeps the cap and the scrolling body.
+Both `Position:` and `OffsetX:` are clamped to the viewport. An override can
+pick a bad side; it cannot push the popover off-screen.
 
 A beat inherits its step's `Position:`, `OffsetX:` and `Width:` and can override
 each independently, the same way it inherits `Anchor:`.
