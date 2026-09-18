@@ -624,7 +624,6 @@ introduced and then use one word.
 - **Title:** What a box shows
 - **Tour:** Using the Explorer
 - **Only:** sel=Person
-- **Action:** Drew just Person, so there is one box to read.
 - **Anchor:** node-box:Person
 - **Description:**
   A box is one entity. Its header carries the entity name and, at the far
@@ -640,6 +639,7 @@ introduced and then use one word.
        one. The left digit says whether the attribute is required, the right
        whether it is a list.
      - Anchor: slot-row:Person.year_of_birth
+     - Position: right
 
 
 ### rows-and-dots
@@ -647,7 +647,8 @@ introduced and then use one word.
 - **Title:** Three kinds of row
 - **Tour:** Using the Explorer
 - **Only:** sel=Person
-- **Anchor:** node-box:Person
+- Anchor: slot-row:Person.year_of_birth
+- Position: right
 - **Description:**
   The dot at a row's left and the label at its right share a color, and the
   color says what KIND of thing the attribute holds. There are three, and the
@@ -664,34 +665,81 @@ introduced and then use one word.
      - Description:
        ##### Purple: a value set
        `vital_status` holds one code from a fixed list of permitted values, an
-       enumeration. Still not an entity, so still nothing to draw.
+       enumeration. The Explorer does not yet display enumeration values.
      - Anchor: slot-row:Person.vital_status
   3. an entity
      - Description:
        ##### Blue: another entity
-       `cause_of_death` holds a **CauseOfDeath**, which IS an entity — it is
-       in the panel, and it can be drawn. Its dot is hollow because it is not
-       on the canvas yet. A hollow dot is an invitation: click the row and the
-       entity appears, joined to this row. Blue rows are the only ones that
-       ever connect two boxes.
-     - Anchor: slot-row:Person.cause_of_death
+       `cause_of_death` holds CauseOfDeath, another entity, which also
+       appears in the Entities panel. on the canvas yet. Clicking the row
+       (or ticking its checkbox in the panel) will add it to the canvas.
+     - Anchor: node-box:Person
+     - Position: bottom
+     - Spotlight: slot-row:Person.cause_of_death, entity-row:CauseOfDeath
+     - Highlight: ring
+  4. click cause_of_death
+     - **Action:** Clicked Person.cause_of_death row
+     - Description: 
+       #### Clicking the row has
+       - Added CauseOfDeath to the canvas
+       - Drawn a forward-pointing arrow {{edge:own-fwd}}
+         from the `Person.cause_of_death`
+         attribute to the CauseOfDeath box, meaning that
+         *Person **owns** CauseOfDeath through this attribute*
+       - Ticked CauseOfDeath in the panel
+       - Moved the row to the top of the Person attributes, and
+       - Made the dot to the left of the attribute solid
+       #### Clicking the row has
+       - Added CauseOfDeath to the canvas
+       - Drawn a forward-pointing arrow {{edge:own-fwd}}
+         from the `Person.cause_of_death`
+         attribute to the CauseOfDeath box, meaning that
+         *Person **owns** CauseOfDeath through this attribute*
+       - Ticked CauseOfDeath in the panel
+       - Moved the row to the top of the Person attributes, and
+       - Made the dot to the left of the attribute solid
+     - Change: sel=CauseOfDeath
+     - Anchor: node-box:Person
+     - Position: bottom
+     - Spotlight: slot-row:Person.cause_of_death, entity-row:CauseOfDeath, node-box:CauseOfDeath
+     - Highlight: ring
 
 
 ### relation-bar-step
 
 - **Title:** The relation bar
 - **Tour:** Using the Explorer
-- **Only:** sel=Person
-- **Anchor:** relation-bar
+- Only: sel=Person~CauseOfDeath
+- **Anchor:** node-box:Person
+- Position: bottom
+- **Spotlight:** relation-bar:Person
+- Highlight: ring
 - **Description:**
-  The two counts in the header are the relation bar. **← N** is how many
-  entities this one belongs to, which the layout draws to its left; **M →**
-  how many it owns, drawn to its right. Hover either count for the list, and
-  click a row in that list to draw it.
+  #### Connecting to non-attribute relations
+  The attribute list only shows attributes declared on this entity,
+  but it can also be related to other entities based on attributes
+  called on them. In order to make those apparent and reachable,
+  there's a row above the attributes showing counts of all RELATED
+  entities on the left and right.
 
-  This is how you reach an entity that has no row here: Participant is
-  connected to Person, but the attribute connecting them is declared on
-  Participant, so it shows up in Person's bar and not in Person's rows.
+  **← N** is how many entities this one belongs to, which the layout draws to its left; **M →**
+  how many it owns, drawn to its right.
+  **Hover either count for the list, and click a row in that list to draw it.**
+
+  Person does not belong to any other entity but, in addition to CauseOfDeath,
+  it owns Participant through `Participant.associated_person`. We will add
+  that now.
+- **Beats:**
+  1. the row that made the line
+     - **Only:** sel=Person~CauseOfDeath~Participant
+     - Anchor: node-box:Participant
+     - Position: bottom
+     - ~~Anchor: slot-row:Participant.associated_person~~
+     - **Spotlight:** relation-bar:Person, slot-row:Participant.associated_person
+     - Position: right
+     - **Action:** Clicked `Participant.associated_person` through **Person**'s RELATED menu
+     - Description:
+       blafjlakjdfgfg 
 
 
 ### grow-participant
@@ -1507,6 +1555,7 @@ OWNERSHIP_CLASSIFICATION.md §When a schema needs it.
 ### relation-bar
 
 - **Title:** The relation bar
+- **Anchor:** none
 - **Description:** Every entity related to this one, split by which side of the diagram it sits on. **← N** counts the entities this one belongs to, drawn to its left; **M →** counts the ones it owns, drawn to its right. Hovering either opens the list.
 - **Interactions:**
   - Hover **← N** or **M →** to list the relationships on that side.
