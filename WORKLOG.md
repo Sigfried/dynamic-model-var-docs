@@ -11,7 +11,7 @@ Newest first.
 ## 2026-09-18 (later) — the popover placement fixes were reverted; measured, not argued
 
 Three commits earlier the same day (f721eae, 75d9759, 80bd24a) tried to make
-`Position: bottom` hold on step 3 beat 5 of *Using the Explorer*. Each was
+`Position: bottom` hold on step 3 beat 4 of *Using the Explorer*. Each was
 reasoned from a screenshot, each shipped, each was wrong. Siggie: *"that last
 session was old when i started that work and i shouldn't have."* The placement
 half of all three is now reverted; **the zoom half of f721eae is kept.**
@@ -28,14 +28,14 @@ Driving a real browser (`make probe-browser`, below) at 1600x1000:
 
 | beat | anchor bottom | popover top | gap | verdict |
 |---|---|---|---|---|
-| 3.4 `Position: bottom`, 246px tall | 645.5 | 657.5 | **+12** | correct |
-| 3.5 `Position: bottom`, 520px tall | 499.5 | 321.8 | **-177.7** | slid UP over the box |
-| 3.5, same content, 1400px viewport | 804.5 | 816.5 | **+12** | correct |
-| 3.5, 244px body, overflowing 60px | 804.5 | 816.5 | **+12** | correct |
+| 3.3 `Position: bottom`, 246px tall | 645.5 | 657.5 | **+12** | correct |
+| 3.4 `Position: bottom`, 520px tall | 499.5 | 321.8 | **-177.7** | slid UP over the box |
+| 3.4, same content, 1400px viewport | 804.5 | 816.5 | **+12** | correct |
+| 3.4, 244px body, overflowing 60px | 804.5 | 816.5 | **+12** | correct |
 
-**What that rules out.** Not the anchor (3.4 uses the same `node-box:Person`),
+**What that rules out.** Not the anchor (3.3 uses the same `node-box:Person`),
 not the authored-side CSS path (identical computed values in both), and not
-viewport overflow as such — row 4 overflows the window by 60px and places
+viewport overflow as such — the last row overflows the window by 60px and places
 correctly anyway. Give row 2 more room and it behaves. The exact height
 threshold at which it starts sliding was never measured; that probe
 (`probe-sweep.mjs`) was written and not run before the revert.
@@ -61,7 +61,7 @@ original.
 
 ⚠️ **And "61cf9b0 plus zoom" — the state this revert produces — is a
 configuration neither of us has seen.** Measured right after the revert, beat
-3.5 sits at left 392 against an anchor at left 380: overlapping the box, NOT
+3.4 sits at left 392 against an anchor at left 380: overlapping the box, NOT
 beside it as the screenshot shows. The zoom change alters the popover's height,
 a different height fails a different fallback, and a different fallback wins.
 The screenshot is not this tree's baseline.
@@ -122,11 +122,29 @@ the non-interactive shell is v16, too old for both Playwright and Vite; use
 Also: `waitUntil: 'networkidle'` never fires against the Vite dev server, whose
 HMR websocket stays open forever. Use `domcontentloaded`.
 
+### ⚠️ Counting clicks to identify a beat is how you get the beat wrong
+
+I mislabelled beat 4 as "beat 5" throughout this session, in probe output and
+in prose, until Siggie corrected it. The cause: `?step=N` opens a step on its
+DESCRIPTION, which is not a beat. Click once and you are on beat 1. I counted
+the description as beat 1, so every number after it was one too high.
+
+**Never derive the beat from a click count.** The popover renders its own
+address in `.help-popover-address`: `rows-and-dots` with no marker for the
+step's description, then `rows-and-dots ▸1`, `▸2`, ... for the beats. Read it.
+
+`.help-tour-count` ("3 / 8") is the STEP counter and is identical on every beat
+of a step, so it cannot distinguish them -- dumping it instead of the address
+is what let the miscount survive several rounds of measurement.
+
+So the beat this session was chasing is **step 3 beat 4**, the doubled
+"Clicking the row has" one. Any earlier reference to "beat 5" means beat 4.
+
 ### What a real placement test should assert
 
 Not "the stylesheet contains `max-height: none`" but, for a beat authoring
 `Position: bottom`, `popover.top >= anchor.bottom`. That single assertion fails
-on beat 3.5 and passes on 3.4 — the discrimination three rounds of reasoning
+on beat 3.4 and passes on 3.3 — the discrimination three rounds of reasoning
 never made. Committing such a suite needs a server the test can drive itself
 (`webServer` running `vite preview` on its own port); it must NOT depend on
 Siggie's hand-started dev server on 5173. Deferred deliberately.

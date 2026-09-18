@@ -165,6 +165,14 @@ sync-check:  ## Is upstream ahead? (no changes written)
 # Measure first.
 #
 # Leave it running in its own terminal for the session; Ctrl-C when done.
+#
+# ⚠️ IDENTIFY A BEAT BY READING THE PAGE, NOT BY COUNTING CLICKS. `?step=N`
+# opens a step on its DESCRIPTION, which is not a beat -- click once and you
+# are on beat 1. Counting the description as beat 1 put every number one too
+# high for a whole session on 2026-09-18. The popover renders its own address
+# in `.help-popover-address`: "rows-and-dots" for the description, then
+# "rows-and-dots \u25b81", "\u25b82", ... for the beats. `.help-tour-count`
+# ("3 / 8") is the STEP counter and is the same on every beat of a step.
 
 CHROME_PROFILE ?= $(TMPDIR)cdp-profile
 CDP_PORT       ?= 9222
