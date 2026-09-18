@@ -327,26 +327,34 @@ body.help-mode {
                           --help-shift, --help-shift-start;
 }
 
-/* AN AUTHORED `Position:` IS NOT A PREFERENCE, it is the placement.
+/* AN AUTHORED `Position:` IS THE PLACEMENT. No fallbacks at all.
 
-   The flips are dropped, the two spanning last resorts are kept. Siggie,
-   2026-09-18, on a step that had grown tall enough for `flip-block` to throw
-   it above the box and `--help-shift` to park it beside: *"get rid of rule
-   that allows Position to be overridden"*.
+   Siggie, 2026-09-18: *"get rid of rule that allows Position to be
+   overridden"*, and then, when a first pass kept the two spanning last
+   resorts: *"i expected you to get rid of all the flipping stuff
+   altogether"*.
 
-   Why the last resorts STAY. They are not "another side" -- both span the
-   whole viewport across the anchor (`span-all`), so they keep the one
-   guarantee the fallback list exists for: *"all it really needs to do is not
-   go on top of what it's anchored on"*. Dropping them too would let a tall
-   popover cover its own anchor, which is the bug the spanning fallbacks were
-   written to fix. What is gone is only the part that silently picked a
-   DIFFERENT SIDE than the author asked for.
+   ⚠️ **Keeping the spanning fallbacks did not work, and the reason is worth
+   writing down.** They were kept because they never abandon the anchor --
+   `inline-end span-all` still sits in the anchor's column, so the popover
+   cannot cover the element it points at. True, but beside the point: they
+   protect the anchor BY MOVING TO ANOTHER SIDE, and moving to another side is
+   exactly what an authored `Position:` forbids. With the flips gone they
+   stopped being a corner case and became the common one -- any popover too
+   tall for the space below `Position: bottom` overflowed straight into
+   `--help-shift` and landed to the right of the box, which is what step 3.4
+   was still doing after the first fix.
 
-   This does not make a too-tall popover fit; nothing can. It makes it
-   predictable, and the size now tracks the canvas zoom (`--help-font-size` in
-   `helpTheme.css`), which is what actually stopped the slab. */
+   So an authored side gets `position-try-fallbacks: none`. What was a
+   preference is now a statement.
+
+   What keeps this survivable is that the popover can no longer be far too big
+   for its space: `--help-font-size` in `helpTheme.css` tracks the canvas zoom,
+   and `max-height: calc(100vh - 16px)` with a scrolling body still applies. A
+   step authored tall enough to overflow its named side will overflow it --
+   that is the author's to fix, and it is visible rather than silent. */
 .help-popover[data-anchored][data-authored-side] {
-  position-try-fallbacks: --help-shift, --help-shift-start;
+  position-try-fallbacks: none;
 }
 
 .help-popover:popover-open {

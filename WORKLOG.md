@@ -165,17 +165,37 @@ every zoom by a single multiplication.
   before the first frame, and a popover opened then would otherwise get
   `calc(16px * )` — invalid, and the whole declaration drops.
 
-**The `Position:` half was still right**, and shipped: an authored side now
-drops `flip-block`/`flip-inline` via a `[data-authored-side]` rule. The two
-SPANNING last resorts stay, and the distinction matters — they do not pick
-another side, they span the viewport across the anchor, which is the one
-guarantee the fallback list exists for (*"all it really needs to do is not go
-on top of what it's anchored on"*). Dropping those too would restore the bug
-they were written to fix.
+**The `Position:` half was still right**, and shipped as
+`position-try-fallbacks: none` on a `[data-authored-side]` rule.
 
-A step can now be authored too tall for its side. That is survivable because
-the popover is capped at viewport height and scrolls its body — and mostly
-moot, because the size now tracks the zoom.
+⚠️ **It took two passes, and the first one was a half-measure I argued myself
+into.** I dropped `flip-block`/`flip-inline` but KEPT the two spanning last
+resorts, reasoning that they never abandon the anchor — `inline-end span-all`
+still sits in the anchor's column, so the popover cannot cover what it points
+at. Siggie tested it: *"still not honoring position: bottom"*, then *"i
+expected you to get rid of all the flipping stuff altogether"*.
+
+They were right and the reasoning was wrong in an instructive way. The spanning
+fallbacks protect the anchor **by moving to another side**, and moving to
+another side is precisely what an authored `Position:` forbids. Worse, removing
+the flips PROMOTED them: they had been a corner case reached only when both
+flips failed, and with the flips gone any popover too tall for the space below
+`Position: bottom` overflowed straight into `--help-shift` and landed to the
+right of the box. The first fix changed which mechanism moved the popover, not
+whether it moved.
+
+Note the diagnosis path, because the CSS was not where I should have looked
+first: I probed the parsed content to confirm beat 3 really carried
+`position: "bottom"` (it did) and grepped the BUILT css to confirm both rules
+shipped in the right order (they did). Only then was it clear the popover was
+landing via a fallback I had deliberately kept, which the screenshot had been
+showing all along — `inline-end span-all` is exactly "beside the box, spanning
+vertically".
+
+A step can now be authored too tall for its side, and it will overflow rather
+than quietly relocate. Survivable because the popover is capped at viewport
+height and scrolls its body — and mostly moot, because the size now tracks the
+zoom.
 
 **One test had pinned a proxy.** `helpPlacement` asserted dmvd's
 `--help-font-size` matched `\d+px`. The rule that test is about is WHERE the

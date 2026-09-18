@@ -393,25 +393,28 @@ describe('a tall popover is kept on screen', () => {
     expect(css).toMatch(/@position-try\s+--help-shift\s*\{/);
   });
 
-  it('drops the flips when the author named a side, keeping the span-alls', () => {
+  it('takes an authored side literally: no fallbacks at all', () => {
     /*
-     * An authored `Position:` is the placement, not a preference (Siggie,
-     * 2026-09-18: "get rid of rule that allows Position to be overridden").
-     * A step that had grown tall was thrown above its box by `flip-block` and
-     * then parked beside it by `--help-shift`, landing on the thing it
-     * described.
+     * Siggie, 2026-09-18: "get rid of rule that allows Position to be
+     * overridden", then "i expected you to get rid of all the flipping stuff
+     * altogether".
      *
-     * The two SPANNING fallbacks stay: they do not pick another side, they
-     * span the viewport across the anchor, which is the one guarantee the
-     * list exists for -- never cover your own anchor.
+     * A first pass dropped only the flips and kept the two spanning last
+     * resorts, on the grounds that they never abandon the anchor. That missed
+     * the point: they protect the anchor BY MOVING TO ANOTHER SIDE, which is
+     * the thing an authored side forbids. With the flips gone they became the
+     * common path rather than a corner case, and a tall `Position: bottom`
+     * step went straight to `--help-shift` and landed beside its box.
      */
     const authored = css.match(
       /\.help-popover\[data-anchored\]\[data-authored-side\]\s*\{([^}]*)\}/,
     )?.[1];
     expect(authored, 'no [data-authored-side] rule').toBeTruthy();
-    expect(authored).toMatch(/position-try-fallbacks:[^;]*--help-shift/);
-    expect(authored).not.toMatch(/flip-block/);
-    expect(authored).not.toMatch(/flip-inline/);
+    expect(authored).toMatch(/position-try-fallbacks:\s*none/);
+    for (const escape of ['flip-block', 'flip-inline', '--help-shift']) {
+      expect(authored, `authored side must not fall back to ${escape}`)
+        .not.toMatch(escape);
+    }
   });
 
   it('only suppresses the flips while anchored and undragged', () => {
