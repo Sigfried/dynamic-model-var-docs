@@ -21,7 +21,9 @@ placement test can only read the stylesheet; this one measures real rects.
 
 When the two disagree, `make e2e` wins. Claude cannot run `make e2e`: the
 sandbox denies a browser *launch*, which is what `playwright test` does, and
-allows a *connection*, which is what `e2e-probe` makes.
+allows a *connection*, which is what `e2e-probe` makes. **Headless is not a way
+around this** — measured 2026-09-19, a headless launch dies the same way
+(`mach_port_rendezvous ... Permission denied (1100)`).
 
 ### What Siggie actually does
 
@@ -53,8 +55,15 @@ changes what the tests see.
 
 ```bash
 make e2e-ui             # step through it visually
+make e2e-headed         # the same run, but with a visible browser window
 make e2e-report         # open the report from the last `make e2e` run
 ```
+
+`make e2e` is **headless**, so it no longer raises a window and steals focus on
+every click. It drives the same browser binary either way — `channel: 'chromium'`
+in [`playwright.config.ts`](../playwright.config.ts) keeps headless on real
+Chrome rather than the stripped-down `chrome-headless-shell`. Reach for
+`make e2e-headed` to watch a placement happen, not for a verdict.
 
 ⚠️ **All five should pass.** They pin the two faults behind
 `popover-placement`, fixed 2026-09-19 — an authored `Position:` is obeyed at any

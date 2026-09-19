@@ -12,7 +12,9 @@ import { defineConfig, devices } from '@playwright/test';
  * Siggie keeps on 5173 -- that one is hand started and not always up.
  *
  * This is the trustworthy way to run the suite, and it is Siggie's and CI's:
- * `playwright test` LAUNCHES a browser, which the sandbox denies Claude.
+ * `playwright test` LAUNCHES a browser, which the sandbox denies Claude --
+ * headless included, so that is not a way around it. Measured 2026-09-19: the
+ * launch dies on `mach_port_rendezvous ... Permission denied (1100)`.
  * `playwright.probe.config.ts` is the one Claude can run. When they disagree,
  * this one wins.
  */
@@ -34,7 +36,22 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1600, height: 1000 } },
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1600, height: 1000 },
+        /*
+         * Headless by default: a headed run raises a window and steals focus
+         * on every click, which makes the suite unusable while working.
+         * `make e2e-headed` sets E2E_HEADED=1 to watch it.
+         *
+         * ⚠️ `channel: 'chromium'` is load-bearing. Without it, headless
+         * selects `chrome-headless-shell` -- a separate stripped-down binary,
+         * not the browser a headed run drives. This suite measures CSS anchor
+         * positioning, so it must run on the real thing.
+         */
+        channel: 'chromium',
+        headless: !process.env.E2E_HEADED,
+      },
     },
   ],
   webServer: {

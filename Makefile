@@ -240,6 +240,12 @@ probe-check:  ## Is the debug browser up and reachable?
 e2e:  ## Run the placement tests against a fresh production build (Siggie, CI)
 	npx playwright test
 
+# Headed steals focus on every click. Use it to WATCH a placement, not to get a
+# verdict -- `make e2e` is the verdict, and both drive the same browser binary.
+.PHONY: e2e-headed
+e2e-headed:  ## Same as `make e2e`, but with a visible browser window
+	E2E_HEADED=1 npx playwright test
+
 .PHONY: e2e-ui
 e2e-ui:  ## Same, in Playwright's UI mode -- step through and watch it place
 	npx playwright test --ui
