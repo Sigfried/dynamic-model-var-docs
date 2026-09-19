@@ -14,7 +14,7 @@
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { autoWidth, fitToRoom, navMinWidth, placedSide, popoverPosition } from '../help/HelpLayer';
+import { autoWidth, navMinWidth, popoverPosition } from '../help/HelpLayer';
 
 const VW = 1400;
 const VH = 900;
@@ -453,66 +453,5 @@ describe('the popover prefers the axis the diagram does not grow along', () => {
   it('still takes a plain pixel OffsetX', () => {
     const s = popoverPosition(true, undefined, { px: 260 }, 320, null);
     expect(s.marginLeft).toBe('260px');
-  });
-});
-
-/**
- * How tall an anchored popover may be, which is the fix for `popover-placement`.
- *
- * ⚠️ These cannot observe where the popover LANDS -- jsdom implements no CSS
- * anchor positioning, and asserting on CSS source is exactly the gap that let
- * three wrong fixes ship (WORKLOG 2026-09-18). They pin the ARITHMETIC only;
- * that it actually keeps the popover on its authored side is
- * `e2e/placement.spec.ts`, in a real browser.
- */
-describe('fitToRoom', () => {
-  /** The anchor used throughout: 100px tall, its bottom 500px down a 900px viewport. */
-  const anchor = new DOMRect(300, 400, 200, 100);
-
-  it('bounds a popover below its anchor to the room below, less both margins', () => {
-    // 900 - 500 = 400 of room, less the 12px margin at each end.
-    expect(fitToRoom(anchor, 'bottom', VH)).toBe(400 - 24);
-  });
-
-  it('bounds a popover above its anchor to the room above', () => {
-    expect(fitToRoom(anchor, 'top', VH)).toBe(400 - 24);
-  });
-
-  it('bounds a popover beside its anchor to the viewport, not to the anchor', () => {
-    /*
-     * `left`/`right` span the anchor's block axis, so the room is the full
-     * viewport height either way -- bounding those to the anchor's own row
-     * would squeeze a popover that has the whole screen to grow into.
-     */
-    expect(fitToRoom(anchor, 'right', VH)).toBe(VH - 24);
-    expect(fitToRoom(anchor, 'left', VH)).toBe(VH - 24);
-  });
-
-  it('never returns less than a readable floor', () => {
-    /*
-     * An anchor hard against the bottom edge leaves no room at all. Collapsing
-     * the popover to a sliver is worse than letting it overflow, which Siggie
-     * allowed (2026-09-18) so long as the nav row stays reachable.
-     */
-    const atFold = new DOMRect(300, VH - 10, 200, 10);
-    expect(fitToRoom(atFold, 'bottom', VH)).toBe(160);
-  });
-
-  it('never exceeds the viewport, even with unlimited room', () => {
-    const tall = new DOMRect(300, 0, 200, 0);
-    expect(fitToRoom(tall, 'bottom', VH)).toBe(VH - 24);
-  });
-});
-
-describe('placedSide', () => {
-  it('uses the authored side when there is one', () => {
-    expect(placedSide('top')).toBe('top');
-    // An authored side beats the growth-axis preference (Siggie, 2026-08-28).
-    expect(placedSide('top', 'below')).toBe('top');
-  });
-
-  it('falls back to the same growth-axis rule popoverPosition applies', () => {
-    expect(placedSide(undefined, 'below')).toBe('bottom');
-    expect(placedSide(undefined)).toBe('right');
   });
 });

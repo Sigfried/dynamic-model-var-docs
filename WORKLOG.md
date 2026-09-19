@@ -8,7 +8,62 @@ Newest first.
 
 
 ---
-## 2026-09-19 (later still) — placement fixed, and it was TWO bugs with one test
+## 2026-09-19 (latest) — that "fix" was reverted: green tests, wrong fix
+
+`a1650ce` is reverted. It made `make e2e` 5/5 and did not fix what
+`popover-placement` is about. Siggie: *"you managed to 'fix' the problem -- by
+making tour description scrollable and keeping popover from overflowing view
+port -- but not the way i asked. panning is still stupid [...] can drag stuff
+down to reveal useless empty space but can't drag it up"*, and, of the
+DOM-structure proposal: *"this was the most important part of the task and
+should have been done first."*
+
+**The mistake, stated plainly so the next session does not repeat it:** the task
+row named a starting point — the DOM-structure change — and I started from a
+measurement instead, because measuring pointed somewhere else. Measuring first
+was right; treating where it pointed as permission to skip the mandated
+approach was not. **The e2e suite is a CONSTRAINT, not the goal.** It went
+green while the thing Siggie actually sees every day — panning — was untouched,
+and nothing in the suite covers panning at all.
+
+That is now three sessions (2026-09-18, and twice on 2026-09-19) that shipped a
+fix reasoned from the symptom and had it reverted. The previous two were
+reverted for being wrong; this one for being beside the point, which is a
+different failure and arguably worse, because the tests said it had worked.
+
+### What was reverted, and what was kept
+
+Reverted: `src/help/HelpLayer.tsx` and `src/test/helpPlacement.test.ts`, back to
+`a538379` exactly. `a1650ce` stays in history — Siggie chose `git revert`
+semantics over `reset --hard` so nothing is reachable only from the reflog.
+
+Kept: the DOCS, because two of their claims were measured and are corrections
+to what earlier entries recorded. Reverting them would restore known-false
+statements. They are in the entry below and summarised in
+[BACKLOG §Placement](docs/BACKLOG.md#placement):
+
+- The clamp is triggered by the TOP LAYER, not `position: fixed`.
+- The back-step delta is a canvas-SCROLL bug, not placement.
+
+⚠️ So `docs/` currently describes findings that the code does NOT implement.
+That is deliberate. The height bound and the per-beat re-scroll are both gone;
+the facts about WHY they worked are not.
+
+### Also recorded
+
+`panel-and-zoom` added to TASKS from the same reading session — the
+`detail-panel` step's panel not closing on back, the canvas not reclaiming width
+when the panel is closed by hand, and zoom persisting after tour exit.
+
+The e2e browser is **headless** as of this session (another session's work);
+`make e2e-headed` is the escape hatch. The headed run had been stealing focus.
+
+
+---
+## 2026-09-19 (later still) — the height bound: green tests, and why it was not the fix
+
+⚠️ **The fix described in this entry was REVERTED** — see the entry above. Its
+MEASUREMENTS stand and are the reason the entry is kept.
 
 `popover-placement` is green: 5/5 in `make e2e-probe`, from the 2 pass / 3 fail
 baseline, stable over four consecutive runs. Verified against the same suite the

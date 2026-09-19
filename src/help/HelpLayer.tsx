@@ -379,38 +379,6 @@ export default function HelpLayer() {
   const scrolled = useRef(false);
   useEffect(() => { scrolled.current = false; }, [activeId, anchor]);
 
-  /*
-   * Re-show the anchor when the BEAT changes but the anchor does not.
-   *
-   * ⚠️ This is the half of `popover-placement` that produced Siggie's actual
-   * complaint -- "stepping backwards/forwards from various states" -- and it is
-   * NOT a placement bug, which is why every fix aimed at placement left the
-   * 146.5px delta untouched. Measured 2026-09-19: beat 3 of `rows-and-dots` has
-   * its anchor at page offset 467.5 whichever way you arrive, but at viewport
-   * top 308.5 forwards and 162.0 backwards, because the canvas `scrollTop` is
-   * 159 vs 305.5. The popover sat correctly 12px below its anchor BOTH times.
-   * What differed was the view: beat 4's `Action:` scrolls the canvas, and
-   * stepping back to beat 3 left it there.
-   *
-   * The tagging effect below scrolls when an anchor first RESOLVES, which is
-   * the right rule for a new element and cannot serve this case: successive
-   * beats of one step often name the same element, so nothing it watches
-   * changes and its `el === tagged` short-circuit returns before the scroll.
-   * Meanwhile a beat's `Action:` relayouts the canvas under the reader.
-   *
-   * `block: 'nearest'` deliberately, where the first scroll uses `'center'`: an
-   * anchor already comfortably on screen should not be yanked to the middle
-   * between two beats of the same step, only brought back when it has drifted
-   * off. Returning to a beat therefore lands the reader where they were the
-   * first time.
-   */
-  useEffect(() => {
-    if (!position?.address) return;
-    const el = document.querySelector(`[${ANCHOR_ATTR}]`);
-    if (!el) return;
-    el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-  }, [position?.address]);
-
   /* A dragged popover goes back to its anchor when the step or entry changes.
    * Keyed on the STEP, not on `anchor` like the scroll above: a relayout can
    * hand back a new anchor object for the same step, and snapping the popover
@@ -521,63 +489,6 @@ export default function HelpLayer() {
       setAnchorSide(undefined);
     };
   }, [activeId, anchor, elementFor]);
-
-  /*
-   * KEEP THE POPOVER UNDER THE HEIGHT THAT MAKES THE BROWSER MOVE IT.
-   *
-   * The bug `popover-placement` is open against: a top-layer popover too tall
-   * for the cell `position-area` chose gets shifted back inside the viewport,
-   * so an authored `Position: bottom` lands above its anchor. `fitToRoom` says
-   * how tall it may be; this measures the anchor and applies it.
-   *
-   * Written straight onto the element rather than returned through
-   * `popoverPosition` into the inline `style`, because it depends on a
-   * MEASUREMENT of an element that does not exist when the step opens -- the
-   * same reason `anchorSide` is published from the tagging effect above and not
-   * computed in a memo. Going through React state would re-render the popover
-   * on every measurement and measure the result again.
-   *
-   * ⚠️ Re-measured on resize and on canvas relayout, not just when the step
-   * changes. A bound computed once is exactly the stale-placement failure this
-   * is fixing: the same beat reached by stepping BACK had the anchor in a
-   * different place, and nothing re-asked.
-   */
-  useLayoutEffect(() => {
-    const el = popRef.current;
-    if (!el) return;
-    /*
-     * Unanchored and dragged popovers are placed by the inline style from
-     * `popoverPosition`, which sets its own `maxHeight` against the viewport.
-     * Leaving a stale anchored bound on the element would fight it.
-     */
-    if (!anchored || drag.offset) { el.style.removeProperty('max-height'); return; }
-    const fit = () => {
-      const a = document.querySelector(`[${ANCHOR_ATTR}]`)?.getBoundingClientRect();
-      if (!a) { el.style.removeProperty('max-height'); return; }
-      const side = placedSide(inTour ? position?.position : undefined, anchorSide);
-      el.style.maxHeight = `${fitToRoom(a, side, window.innerHeight)}px`;
-    };
-    fit();
-    /*
-     * `ResizeObserver` on the canvas as well as `resize` on the window: the
-     * anchor moves when the diagram relayouts under a step (a `Change:` adding
-     * a box), which no window event announces.
-     */
-    /* Guarded: jsdom defines no `ResizeObserver`, and the package must not
-       assume a browser API exists. Without it the whole tour went red in
-       `tourStack.integration` -- the same failure mode a host-named mount
-       element produced on 2026-09-19. The window `resize` listener still
-       covers the case that matters most off a real canvas. */
-    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit);
-    const canvas = document.querySelector('[data-graph-direction]');
-    if (canvas && ro) ro.observe(canvas);
-    window.addEventListener('resize', fit);
-    return () => {
-      ro?.disconnect();
-      window.removeEventListener('resize', fit);
-      el.style.removeProperty('max-height');
-    };
-  }, [anchored, anchorSide, drag.offset, inTour, position]);
 
   /*
    * The `Spotlight:` element, tagged `data-help-spotlight` the same way the
@@ -1388,73 +1299,6 @@ export function popoverPosition(
     width: W,
     ...offsetStyle(offsetX),
   } as React.CSSProperties;
-}
-
-/**
- * Which side the popover will actually be placed on -- the authored `Position:`
- * when there is one, and otherwise the same growth-axis preference
- * `popoverPosition` applies. Kept beside it so the two cannot drift: `fitToRoom`
- * has to bound the axis the popover is actually placed along, and reading that
- * back off the `position-area` string would be a second spelling of this rule.
- */
-export function placedSide(side: PopoverSide | undefined, growth?: 'below'): PopoverSide {
-  return side ?? (growth === 'below' ? 'bottom' : 'right');
-}
-
-/**
- * The popover's own margin, which sits between it and its anchor on whichever
- * side it lands, and again between it and the viewport edge. `help.css` states
- * it once as `margin: 12px`; the room arithmetic has to subtract BOTH of them,
- * and getting that wrong is a 2px error that reads as "still clipped".
- */
-const POPOVER_MARGIN = 12;
-
-/**
- * How tall the popover may be and still FIT on the side it was placed on.
- *
- * ⚠️ **This is the fix for `popover-placement`, and the mechanism is not what
- * the earlier sessions recorded.** A popover in the TOP LAYER that does not fit
- * in the cell `position-area` chose is shifted back inside the viewport by the
- * browser, which is what put an authored `Position: bottom` ~199px ABOVE its
- * anchor. Measured 2026-09-19 in a standalone repro: the same box at
- * `position: fixed` but NOT in the top layer never slid, at any height, so
- * `position: fixed` on its own was never the cause.
- *
- * The clamp cannot be turned off, so the popover is kept under the height that
- * triggers it. Bounded, it stays on its authored side at every height measured
- * (300 / 600 / 900px of content into ~290px of room), and its body scrolls --
- * `.help-popover-body` already has `overflow-y: auto` and the nav row already
- * holds its place, so the back/next row stays reachable, which is the
- * constraint `position: absolute` violated and was reverted for.
- *
- * ⚠️ It must be computed HERE and not in CSS: `anchor()` is valid only in inset
- * properties, never in sizing ones, so `max-height: calc(100vh - anchor(bottom))`
- * does not resolve. Measured, not authored, is also what makes it survive
- * back-stepping and user actions -- the same anchor in a different layout gets a
- * different bound, where the old code measured nothing and inherited whatever
- * placement state the element was left in.
- *
- * `FLOOR` keeps a popover against the bottom edge readable rather than
- * collapsing it to a sliver; below that there is no good answer and the popover
- * is allowed to overflow, which Siggie permitted (2026-09-18) as long as it
- * stays reachable.
- */
-export function fitToRoom(anchor: DOMRect, side: PopoverSide, vh: number): number {
-  const FLOOR = 160;
-  const room = {
-    bottom: vh - anchor.bottom,
-    top: anchor.top,
-    right: vh,
-    left: vh,
-  }[side];
-  /*
-   * Only the BLOCK axis is bounded. A popover placed left or right spans the
-   * anchor's block axis (`span-block-end`) and is bounded by the viewport, not
-   * by the anchor -- its room is the full height either way, so the viewport
-   * bound below is the whole answer for those sides.
-   */
-  const viewportBound = vh - 2 * POPOVER_MARGIN;
-  return Math.max(FLOOR, Math.min(room - 2 * POPOVER_MARGIN, viewportBound));
 }
 
 /**

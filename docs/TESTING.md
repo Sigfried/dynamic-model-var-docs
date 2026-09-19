@@ -65,11 +65,17 @@ in [`playwright.config.ts`](../playwright.config.ts) keeps headless on real
 Chrome rather than the stripped-down `chrome-headless-shell`. Reach for
 `make e2e-headed` to watch a placement happen, not for a verdict.
 
-⚠️ **All five should pass.** They pin the two faults behind
-`popover-placement`, fixed 2026-09-19 — an authored `Position:` is obeyed at any
-height, the nav row stays reachable, and a beat lands in the same place arrived
-at forwards and backwards. [BACKLOG §Placement](BACKLOG.md#placement) says what
-keeps each true. Do not "fix" a failure by weakening the assertion.
+⚠️ **Three of these are expected to fail: the suite is 2 pass / 3 fail.** They
+pin the open `popover-placement` bug — an authored `Position:` obeyed at any
+height, the popover not covering its own anchor, and a beat landing in the same
+place arrived at forwards and backwards. **Beat 3 and nav-row reachability
+pass**, and a fix must not turn those red, which is what `position: absolute`
+did. Do not "fix" a failure by weakening the assertion.
+
+[BACKLOG §Placement](BACKLOG.md#placement) has what is measured and what a fix
+must respect. ⚠️ Making these green is not on its own the task — a height bound
+did exactly that on 2026-09-19 and was reverted for not being the fix that was
+asked for (`a1650ce`).
 
 ⚠️ Beat 4 of `rows-and-dots` carries a duplicated block as a deliberate fixture
 making the popover tall. Removing it makes these pass trivially.
