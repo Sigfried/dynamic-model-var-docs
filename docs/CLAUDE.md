@@ -143,6 +143,9 @@ if (!element) {
   resolved to something ancient again — check `node --version` before reaching
   for a version pin.
 - **Never run `npm run dev`** — Siggie keeps the app running themselves.
+- **Session start, if the work touches popover placement:** ask Siggie to run
+  `make probe-browser` and leave it up. That is the whole setup — it is what
+  lets Claude run `make e2e-probe`. Nothing else needs starting.
 - **Verify with `npm run build`** (~2s). `npx tsc --noEmit` is too weak and has
   let breakage through; `npm run typecheck` is `tsc -b --noEmit`, which caught
   four real errors in one session that the bare form did not, and 46 hidden ones
