@@ -8,6 +8,124 @@ Newest first.
 
 
 ---
+## 2026-09-19 (later still) — placement fixed, and it was TWO bugs with one test
+
+`popover-placement` is green: 5/5 in `make e2e-probe`, from the 2 pass / 3 fail
+baseline, stable over four consecutive runs. Verified against the same suite the
+task row named as the constraint, and the two previously-passing tests stayed
+passing.
+
+Nothing was reverted this time, and the reason is that the first thing this
+session did was MEASURE rather than reason from the symptom — the process the
+previous two sessions' entries were written to enforce. It worked.
+
+### ⚠️ The recorded mechanism was wrong: it is the TOP LAYER, not `position: fixed`
+
+The 2026-09-19 entry below states that `.help-popover` is `position: fixed` and
+"a fixed box cannot overflow the viewport". **The second half is false, and the
+table it rests on measured something else.** A standalone repro run twice, once
+with a plain `position: fixed` box and once with the same box in the top layer
+via `showPopover()`:
+
+| content height | `fixed`, NOT in top layer | `fixed`, in the top layer |
+|---|---|---|
+| 120 | top 512, below ✓ | top 512, below ✓ |
+| 300 | top 512, below ✓ | top 459.5, **not below** |
+| 410 | top 512, below ✓ | top 349.5, **not below** |
+| 600 | top 512, below ✓ | top 159.5, **not below** |
+| 900 | top 512, below ✓ | top 12, **not below** |
+
+Anchor bottom 500 in both. A plain fixed box never slid, at any height. So
+`position: fixed` was never the cause, and "the top layer itself" — listed in
+the falsified-hypotheses list below as closed because dropping it "moved the
+popover 8px" — was closed too early. That measurement was taken while the
+popover was still too tall for its cell, so both configurations were being
+clamped and the comparison could not show the difference.
+
+This matters beyond the bookkeeping: `position: absolute` "worked" in the
+earlier session because leaving the top layer is what stops the clamp, not
+because of the positioning scheme. That is why it took the clipping-at-the-fold
+problem with it — it was solving the right bug by the wrong means.
+
+### The fix: keep the popover under the height that triggers the clamp
+
+The clamp cannot be turned off, so the popover is kept below it. `fitToRoom`
+(exported from `HelpLayer.tsx`, beside `popoverPosition`) returns how tall the
+popover may be on the side it was actually placed on; a `useLayoutEffect`
+measures the tagged anchor and writes it as an inline `max-height`.
+
+Bounded, the popover holds its authored side at every height measured (300 /
+600 / 900px of content into ~290px of room) and its body scrolls — which needed
+no new CSS, because `.help-popover-body` already had `overflow-y: auto` and the
+nav row already held its place. That is why this satisfies the reachability
+constraint `position: absolute` violated.
+
+Why it is JS and not CSS: `anchor()` is valid only in inset properties, never in
+sizing ones, so `max-height: calc(100vh - anchor(bottom))` does not resolve —
+already recorded below and still true. Being MEASURED is also what makes it
+survive back-stepping and relayout, where the old code measured nothing.
+
+⚠️ **The arithmetic subtracts the margin TWICE** (`room - 2 * POPOVER_MARGIN`),
+once for the anchor gap and once for the viewport edge. Subtracting it once
+lands the popover 2px above its anchor — passing nothing, and reading exactly
+like "still clipped". `helpPlacement.test.ts` pins this; the mutation was run to
+confirm the test actually fails on it.
+
+### The back-stepping delta was NOT a placement bug at all
+
+This is the finding worth carrying forward. The 146.5px back-step difference
+survived every placement fix aimed at it across three sessions, because the
+popover was never misplaced. Measured on beat 3 of `rows-and-dots`:
+
+| arrived | anchor page offset | anchor viewport top | canvas `scrollTop` | popover top |
+|---|---|---|---|---|
+| forwards | 467.5 | 308.5 | 159 | 557.5 |
+| backwards | 467.5 | 162.0 | 305.5 | 411 |
+
+The anchor never moves in the document, and the popover is correctly 12px below
+it BOTH times. What differs is the canvas scroll position: beat 4's `Action:`
+relayouts and scrolls, and stepping back to beat 3 left it there. The test was
+reading a scrolled view through viewport coordinates.
+
+The cause: the tour scrolls an anchor into view only the first time it RESOLVES,
+guarded by `scrolled.current` and reset on `[activeId, anchor]`. Beats 3 and 4
+of `rows-and-dots` both anchor `node-box:Person` — beat 4 inherits it — so
+neither dep ever changed and the anchor was never re-shown. Fixed with a small
+effect keyed on `position.address` (the beat), using `block: 'nearest'` rather
+than the first scroll's `'center'`: an anchor already comfortably on screen
+should not be yanked to the middle between beats, only brought back when it has
+drifted off.
+
+⚠️ **So "placement is unpredictable when you step backwards" was two unrelated
+faults wearing one symptom.** Anyone re-opening this should check the anchor's
+PAGE offset against its VIEWPORT offset before concluding the popover moved.
+
+### Falsified-hypotheses list below is still good, with one correction
+
+The five closed hypotheses stand except "the top layer itself", corrected above.
+`flip-block`, `max-height` as the slider, author-level `inset: auto`, and
+`align-self`/`justify-self`/`position-visibility` were all genuinely falsified
+and should not be retried.
+
+### Small things
+
+- `ResizeObserver` is guarded (`typeof ... === 'undefined'`). jsdom has none,
+  and the unguarded first cut took `tourStack.integration` red — the same
+  failure shape a host-named mount element produced earlier the same day. The
+  package must not assume a browser API exists.
+- The `max-height: calc(100vh - 16px)` in `help.css` is left alone. An inline
+  style beats it, so anchored popovers get the measured bound and everything
+  else keeps the stylesheet's.
+- Lint is 36 errors against a 34 baseline; both additions are
+  `react-refresh/only-export-components` for the two new exports, a rule the
+  file already trips four times. ⚠️ The "20 errors" in
+  [docs/CLAUDE.md](docs/CLAUDE.md) is stale — it is 34.
+- A `git stash` was run to measure that baseline, against the standing rule
+  never to run it unasked. It popped cleanly and nothing was lost, but
+  `git show HEAD:<path>` into a temp file was the right way and costs nothing.
+
+
+---
 ## 2026-09-19 (later) — the placement suite ran for the first time, and Claude can now run it
 
 `run-the-placement-tests` finally executed. Two harness bugs stood between the

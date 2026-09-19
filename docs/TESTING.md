@@ -56,10 +56,14 @@ make e2e-ui             # step through it visually
 make e2e-report         # open the report from the last `make e2e` run
 ```
 
-⚠️ **Three of these tests are expected to fail.** They pin the open
-`popover-placement` bug — [BACKLOG §Placement](BACKLOG.md#placement) has the
-numbers and the two that must keep passing. Do not "fix" them by weakening the
-assertion.
+⚠️ **All five should pass.** They pin the two faults behind
+`popover-placement`, fixed 2026-09-19 — an authored `Position:` is obeyed at any
+height, the nav row stays reachable, and a beat lands in the same place arrived
+at forwards and backwards. [BACKLOG §Placement](BACKLOG.md#placement) says what
+keeps each true. Do not "fix" a failure by weakening the assertion.
+
+⚠️ Beat 4 of `rows-and-dots` carries a duplicated block as a deliberate fixture
+making the popover tall. Removing it makes these pass trivially.
 
 Writing one: [§Placement in a real browser](#placement-in-a-real-browser-playwright).
 

@@ -93,31 +93,45 @@ theorise from the code; `?dbg=1` logs each convergence's routed approaches.
 
 ### Placement
 
-> **`make e2e` measures this** ([TESTING.md](TESTING.md#placement-in-a-real-browser-playwright)):
-> 2 pass, 3 fail. Beat 4 of `rows-and-dots` lands at top 300.3 against an anchor
-> bottom of 499.0 and covers its own anchor; the same beat lands 146.5px apart
-> forwards vs. back-stepped. **Beat 3 and nav-row reachability pass** — a fix
-> must not turn those red, which is what `position: absolute` did.
+> **FIXED 2026-09-19** — `make e2e` is 5/5. What the fix has to keep true is
+> below; the reasoning and the two corrected mechanisms are in
+> [WORKLOG](../WORKLOG.md).
 >
-> ⚠️ Beat 4's duplicated block is a deliberate fixture making the popover tall.
-> Remove it and those tests go green having fixed nothing; shrink the viewport
-> instead.
+> ⚠️ Beat 4 of `rows-and-dots` carries a duplicated block as a deliberate
+> fixture making the popover tall enough to trigger the clamp. Remove it and the
+> tests go green having proved nothing; shrink the viewport instead.
 
-**Overhaul anchor placement — it is effectively non-deterministic.** [sg]
-between screen size, box positions, width calculations or settings, and,
-worst, stepping backwards/forwards from various states, popover placement
-is weird and unpredictable. Every input is live at render time (measured
-anchor rect, measured text width, viewport), so the same step lands
-differently depending on how you arrived at it.
+**What keeps placement deterministic**, and what a change here must not break:
 
-We have been getting around bad placement with explicit `Position:`
-in the steps, but those can be overridden with the current placement
-logic and can result in bad placement due to user actions, back-stepping,
-screen resize, who knows what else.
+- **A top-layer popover that does not fit its `position-area` cell gets moved
+  back inside the viewport by the browser.** That clamp cannot be turned off, so
+  `fitToRoom` ([HelpLayer.tsx](../src/help/HelpLayer.tsx)) bounds the popover's
+  height to the room on the side it was placed on, and its body scrolls. It is
+  the TOP LAYER that triggers this, not `position: fixed` — a plain fixed box
+  never slid at any height.
+- **The bound is computed in JS, and must stay there.** `anchor()` is valid only
+  in inset properties, never in sizing ones, so
+  `max-height: calc(100vh - anchor(bottom))` does not resolve.
+- **The margin is subtracted twice** — the anchor gap and the viewport edge.
+  Once lands the popover 2px above its anchor.
+- **Each beat re-shows its anchor**, keyed on `position.address`. Successive
+  beats of one step often share an anchor, and a beat's `Action:` can scroll the
+  canvas under the reader.
+- **`position: absolute` is not the answer.** It stops the clamp by leaving the
+  top layer, and takes the popover's reachability with it: clipped at the fold
+  with back/next unreachable. Shipped and reverted 2026-09-19.
 
-Further complicating things is a hard-to-replicate bug where `Only:`
-and `Change:` don't work at all. These states may only arise during
-tour development.
+**Original report** [sg]: between screen size, box positions, width calculations
+or settings, and, worst, stepping backwards/forwards from various states,
+popover placement is weird and unpredictable.
+
+⚠️ **Still unverified by a reader.** The suite pins the two faults it caught;
+whether the tours now READ well through a back-step is `read-tours`.
+
+**Still open in this area:**
+
+A hard-to-replicate bug where `Only:` and `Change:` don't work at all. These
+states may only arise during tour development.
 
 The most likely culprit making all this stuff difficult is the complex
 logic that lets viewer actions persist during a tour
@@ -134,18 +148,22 @@ making it harder to deal with placement and my inclination is either
 to get rid of all of it and not allow user interaction during tours
 or to allow it but immediately wipe it out on forward/backward step.
 
-As to how we solve the problem (probably after dealing with tourStateStack
-issues): I don't know what rules the current placement and flip/fallback
-machinery follow, but I think what we could say is:
-- make sure the popover doesn't cover anything anchored or spotlighted
-- `Anchor: none` centers, but `Anchor: none` with `Spotlight:` should still
-  avoid the spotlighted elements
-- we just linked popover text size to zoom, which should help
+The rules Siggie wanted placement to follow, and where each stands:
+- **make sure the popover doesn't cover anything anchored or spotlighted** —
+  holds for the ANCHOR, and `e2e/placement.spec.ts` pins it. A spotlighted
+  element that is not the anchor is still not considered.
+- **`Anchor: none` centers, but `Anchor: none` with `Spotlight:` should still
+  avoid the spotlighted elements** — not done. The unanchored branch of
+  `popoverPosition` centres on the region and knows nothing about spotlights.
+- **popover text size linked to zoom** — shipped.
 
 #### Where the help elements live in the DOM
 
-[sg] Three structural changes, which may simplify the placement problem
-rather than just tidying it:
+⚠️ **Placement was fixed without this** (2026-09-19), so it is now a tidying
+task and not a prerequisite for anything. The measurements below still apply if
+it is attempted.
+
+[sg] Three structural changes:
 
 - **Name the container that holds the node boxes.** It is the
   `div.relative` carrying the zoom `transform` inside the `overflow-auto`
