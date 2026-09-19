@@ -25,7 +25,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { useHelp, ADDRESS_TOGGLE_ENABLED } from '../help/helpContext';
+import { useHelp } from '../help/helpContext';
 
 /** Matches RelationBar's CLOSE_DELAY_MS: the pointer has to cross a gap
  *  between trigger and panel, and between panel and submenu. */
@@ -78,7 +78,7 @@ const HELP_ENTRIES: ReadonlyArray<{ id: string; label: string }> = [
 export default function HelpMenu({
   onOpenLegend, onOpenCases, legendOpen, casesOpen, onClosePanels, anyPanelOpen,
 }: HelpMenuProps) {
-  const { showEntry, showAddresses, toggleAddresses } = useHelp();
+  const { showEntry, showAddresses, toggleAddresses, authoringAids } = useHelp();
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -184,10 +184,10 @@ export default function HelpMenu({
           {/*
             * TEMPORARY authoring aid (docs/TASKS.md item 3c). Every other item
             * in this menu is for a reader; this one is for whoever is editing
-            * help-content.md, which is why it is gated on
-            * `ADDRESS_TOGGLE_ENABLED` (`import.meta.env.DEV`) and sits below a
-            * separator rather than among the reference topics. The deployed
-            * build has no way to switch it on.
+            * help-content.md, which is why it is gated on `authoringAids`
+            * (the host passes `DEV_EXTRAS`) and sits below a separator rather
+            * than among the reference topics. The deployed build has no way
+            * to switch it on, and an e2e run does not get it either.
             *
             * Unlike every other item this one does NOT close the menu: you
             * turn ids on in order to look at a popover, and closing the menu
@@ -197,7 +197,7 @@ export default function HelpMenu({
             * Delete this block, and the rest of the toggle, once the five
             * tours are written.
             */}
-          {ADDRESS_TOGGLE_ENABLED && (
+          {authoringAids && (
             <>
               <Separator />
               <MenuItem onClick={toggleAddresses}>

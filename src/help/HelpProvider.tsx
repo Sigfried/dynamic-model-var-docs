@@ -34,7 +34,7 @@ import {
 } from './parseHelpContent';
 import type { HelpAnchor, HelpContent, TextResolver } from './parseHelpContent';
 import {
-  HelpContext, HELP_MODE_ENABLED, ADDRESS_TOGGLE_ENABLED,
+  HelpContext, HELP_MODE_ENABLED,
   type HelpApi, type WidgetRenderer,
 } from './helpContext';
 
@@ -101,9 +101,23 @@ function resolveText(
 
 export function HelpProvider({
   markdown, onPushChange, onPopChange, onJumpChanges, onTourStart, onTourEnd,
-  textResolvers, widgets, colors, centerOn, children,
+  textResolvers, widgets, colors, centerOn, authoringAids = false, children,
 }: {
   markdown: string;
+  /**
+   * Offer the authoring aids: the popover's content-file address and the Help
+   * menu item that toggles it.
+   *
+   * The HOST decides. dmvd passes `DEV_EXTRAS` (`src/devExtras.ts`), which is
+   * "dev build AND not an e2e run" — this package cannot compute that itself,
+   * and should not: it ships as an external dependency, and a test harness
+   * driving a dev server is exactly the case a bare `import.meta.env.DEV`
+   * gets wrong.
+   *
+   * Defaults to false, so a host that says nothing ships no authoring
+   * furniture. TEMPORARY, with the aids (docs/TASKS.md `address-readout`).
+   */
+  authoringAids?: boolean;
   /** Inline widgets for `![alt](widget:<name>:<arg>)` images in content. */
   widgets?: Record<string, WidgetRenderer>;
   /**
@@ -250,9 +264,8 @@ export function HelpProvider({
   const [activeId, setActiveId] = useState<string | null>(null);
 
   /*
-   * TEMPORARY authoring aid (docs/TASKS.md item 3c). See
-   * `ADDRESS_TOGGLE_ENABLED` in helpContext.ts for what this is and when to
-   * delete it.
+   * TEMPORARY authoring aid (docs/TASKS.md item 3c). Available only when the
+   * host passes `authoringAids`; see that prop.
    *
    * Persisted because editing help-content.md hot-reloads this provider, and a
    * flag that reset on every save would be off for most of an authoring
@@ -264,7 +277,7 @@ export function HelpProvider({
    * taking the app down for.
    */
   const [showAddresses, setShowAddresses] = useState(() => {
-    if (!ADDRESS_TOGGLE_ENABLED) return false;
+    if (!authoringAids) return false;
     try {
       if (new URLSearchParams(window.location.search).get('ids') === '1') return true;
       if (new URLSearchParams(window.location.search).get('ids') === '0') return false;
@@ -276,9 +289,13 @@ export function HelpProvider({
        */
       return window.localStorage.getItem(ADDRESS_KEY) !== '0';
     } catch {
-      return ADDRESS_TOGGLE_ENABLED;
+      return authoringAids;
     }
   });
+  /* `authoringAids` gates the live value, not just the initial one: the
+     initializer runs once, so a host that flipped the prop would otherwise
+     keep showing addresses. */
+  const addressesOn = authoringAids && showAddresses;
   const toggleAddresses = useCallback(() => {
     setShowAddresses(v => {
       const next = !v;
@@ -664,11 +681,11 @@ export function HelpProvider({
     ...(activeResolvers ? { textResolvers: activeResolvers } : {}),
     ...(widgets ? { widgets } : {}),
     ...(colors ? { colors } : {}),
-    showAddresses, toggleAddresses,
+    authoringAids, showAddresses: addressesOn, toggleAddresses,
     content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect,
   }), [helpMode, toggleHelpMode, exitHelpMode, tourIndex, startTour, endTour,
        nextStep, prevStep, goToStep, positions, stepCount, tours, tourName,
-       overviewOpen, activeResolvers, widgets, colors, showAddresses, toggleAddresses,
+       overviewOpen, activeResolvers, widgets, colors, authoringAids, addressesOn, toggleAddresses,
        content, activeId, showEntry, dismissEntry, resolveAnchor, centerRect]);
   /* `setRegistered` is a useState setter: React guarantees it stable, so it is
      deliberately absent from the dependency list above. */

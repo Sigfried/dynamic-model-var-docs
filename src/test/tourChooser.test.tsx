@@ -26,6 +26,11 @@ import { parseHelpContent, type TourMeta } from '../help/parseHelpContent';
 /** A help API with only the parts these components touch. */
 function api(over: Partial<HelpApi>): HelpApi {
   return {
+    /* The host offers the authoring aids; these tests are the host. Defaults
+       on here so the toggle tests see the item -- and because it is now a
+       value rather than a build-time constant, the absent case is testable
+       too (see "not offered when the host does not ask for them"). */
+    authoringAids: true,
     helpMode: false,
     toggleHelpMode: () => {},
     exitHelpMode: () => {},
@@ -211,15 +216,7 @@ describe('the Help menu', () => {
     expect(showEntry).toHaveBeenCalledWith('node-dismiss');
   });
 
-  /*
-   * TEMPORARY (docs/TASKS.md item 3c) — delete with the toggle.
-   *
-   * Vitest runs with `import.meta.env.DEV` true, which is what
-   * `ADDRESS_TOGGLE_ENABLED` reads, so the item is present here. That is also
-   * the limit of what this can pin: it cannot prove the item is ABSENT from a
-   * production build, because the flag is resolved at build time and this
-   * process is not that build.
-   */
+  /* TEMPORARY (docs/TASKS.md `address-readout`) — delete with the toggle. */
   test('the authoring toggle is offered, and flips the flag', () => {
     const toggleAddresses = vi.fn();
     openMenu({ tours: TOURS, toggleAddresses });
@@ -231,5 +228,15 @@ describe('the Help menu', () => {
     openMenu({ tours: TOURS, showAddresses: true });
     const item = screen.getByRole('button', { name: /show content ids/i });
     expect(item.textContent).toContain('\u2713');
+  });
+
+  /*
+   * The case a build-time constant could not pin. `authoringAids` is a prop
+   * the host passes, so a deployed build and an e2e run — both of which pass
+   * false — are testable right here rather than being taken on trust.
+   */
+  test('not offered when the host does not ask for them', () => {
+    openMenu({ tours: TOURS, authoringAids: false });
+    expect(screen.queryByRole('button', { name: /show content ids/i })).toBeNull();
   });
 });

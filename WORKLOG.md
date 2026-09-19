@@ -77,6 +77,25 @@ flag is always there in time, never persists, and a crashed run cannot leave a
 browser stuck. `elkTiming` moved onto it too; it had been writing a row per
 layout during test runs.
 
+⚠️ **The first cut had the help package importing a `devExtras` copy, which
+Siggie caught**: `src/help/` ships as an external package, so it cannot read
+this app's build environment — and `ADDRESS_TOGGLE_ENABLED = import.meta.env.DEV`
+had been doing exactly that since it was written, which is how the tag ended up
+on in e2e runs in the first place. Duplicating the module inside the package
+kept the violation and added a second (a test-harness global). Siggie:
+*"it should probably just have a TEST_MODE or something parameter that can be
+set by the host"*.
+
+So the package now takes `authoringAids` as a prop on `<HelpProvider>` and the
+constant is gone. Two consumers, two mechanisms: the package gets a prop, host
+code (`elkTiming`) imports `DEV_EXTRAS` directly, which is fine because it is
+the host. `src/help/` now imports nothing from outside itself and reads no
+environment at all — stricter than before this session.
+
+A test improved as a side effect: `tourChooser.test.tsx` said it could not pin
+the item's ABSENCE because the flag was resolved at build time. It is a value
+now, so the deployed/e2e case is a test rather than an assumption.
+
 A Vite env var was considered and does not work here: `import.meta.env.*` is
 baked in when the dev server starts, so it could not be set per run without
 restarting Siggie's server and killing the tag for their own browsing.

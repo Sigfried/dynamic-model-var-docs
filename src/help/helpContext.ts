@@ -5,7 +5,6 @@
  */
 
 import { createContext, useContext, type ReactNode } from 'react';
-import { DEV_EXTRAS } from './devExtras';
 import type { HelpAnchor, HelpContent, TextResolver, TourMeta, TourPosition } from './parseHelpContent';
 
 /**
@@ -31,25 +30,6 @@ export type WidgetRenderer = (arg: string) => ReactNode;
  * are worth doing, just not before the tour ships.
  */
 export const HELP_MODE_ENABLED = false;
-
-/**
- * TEMPORARY authoring aid (2026-09-07, docs/TASKS.md item 3c).
- *
- * Siggie: *"there needs to be an easy way to find a given tour step/beat as
- * shown in the app in the help-content."* With it on, every popover shows the
- * `###` slug it was authored under, click-to-copy.
- *
- * Gated on `DEV_EXTRAS` at its one entry point (the Help menu item in
- * `HelpMenu.tsx`), so the deployed build has no way to switch it on and the
- * viewer-facing menu does not carry an authoring switch. `?ids=1` seeds it in
- * dev too, for a link that arrives with ids already showing.
- *
- * ⚠️ `DEV_EXTRAS`, not `import.meta.env.DEV`: the tag adds 22.7px to a
- * popover's height, and the e2e suite drives the dev server.
- *
- * Delete this and everything referencing it once the five tours are written.
- */
-export const ADDRESS_TOGGLE_ENABLED = DEV_EXTRAS;
 
 export interface HelpApi {
   /**
@@ -143,8 +123,22 @@ export interface HelpApi {
   /** Total number of tour STEPS, for the `4.2 / 6` counter's denominator. */
   stepCount: number;
   /**
-   * Whether popovers show their content-file address. TEMPORARY — see
-   * `ADDRESS_TOGGLE_ENABLED`. Always false in a production build.
+   * Whether the host offers the authoring aids at all — today, the popover's
+   * content-file address and the menu item that toggles it.
+   *
+   * ⚠️ **The host decides this**, via `<HelpProvider authoringAids>`. This
+   * package must not read `import.meta.env.DEV`: it ships as an external
+   * dependency, so the consuming app's build environment is not its to
+   * inspect. "Dev build" is also the wrong question — an e2e run drives a dev
+   * server, and the address tag is 22.7px of popover height, enough to move a
+   * measurement.
+   *
+   * TEMPORARY, with the aids themselves (docs/TASKS.md `address-readout`).
+   */
+  authoringAids: boolean;
+  /**
+   * Whether popovers are currently showing their content-file address. False
+   * whenever `authoringAids` is. TEMPORARY.
    */
   showAddresses: boolean;
   /** Flip `showAddresses` and remember it. TEMPORARY. */

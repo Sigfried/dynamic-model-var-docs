@@ -20,9 +20,10 @@
  * Production is unaffected: `import.meta.env.DEV` is statically false there, so
  * this folds to `false` and the guarded code is dropped.
  *
- * ⚠️ `src/help/devExtras.ts` is a deliberate copy of this. The help package
- * imports nothing from outside itself, and a shared module would be the first
- * breach of that boundary; three lines duplicated is the cheaper price.
+ * ⚠️ **This is HOST code and the help package must not import it.** That
+ * package ships as an external dependency and cannot read this app's build
+ * environment; it takes `authoringAids` as a prop on `<HelpProvider>`, which
+ * is where this value goes in. See `HelpProviderProps.authoringAids`.
  */
 declare global {
   interface Window {

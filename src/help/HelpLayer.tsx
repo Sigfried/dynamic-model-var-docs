@@ -984,8 +984,8 @@ export default function HelpLayer() {
               TEMPORARY authoring aid (docs/TASKS.md item 3c) -- where this
               popover is WRITTEN, so an author who sees something wrong on
               screen can find the block that produced it. Off unless the Help
-              menu's `Show content ids` is on, and that item only exists in a
-              dev build (`ADDRESS_TOGGLE_ENABLED`).
+              menu's `Show content ids` is on, and that item only exists when
+              the host passes `authoringAids`.
 
               Outside a tour the address is just the entry's own id: a
               help-only entry is one `###` block with no beats.

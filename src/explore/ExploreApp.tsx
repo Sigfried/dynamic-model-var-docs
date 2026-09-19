@@ -26,6 +26,7 @@ import OwnershipLegend from './OwnershipLegend';
 import HelpMenu from './HelpMenu';
 import TourChooser from './TourChooser';
 import type { ExampleCase } from './exampleCases';
+import { DEV_EXTRAS } from '../devExtras';
 import { HelpProvider } from '../help/HelpProvider';
 import { useHelp, HELP_MODE_ENABLED } from '../help/helpContext';
 import { tourBySlug, positionOfStep } from '../help/parseHelpContent';
@@ -686,6 +687,11 @@ export default function ExploreApp() {
       markdown={helpMarkdown}
       widgets={helpWidgets}
       colors={helpColors}
+      /* The authoring aids are the HOST's call: `src/help/` ships as its own
+         package and cannot read this app's build environment. `DEV_EXTRAS` is
+         "dev build AND not an e2e run" — the address tag adds 22.7px to a
+         popover, which a placement test would otherwise measure. */
+      authoringAids={DEV_EXTRAS}
       onPushChange={pushTourChange}
       onPopChange={popTourChange}
       onJumpChanges={jumpTourChanges}
