@@ -166,6 +166,34 @@ sync-check:  ## Is upstream ahead? (no changes written)
 #
 # Leave it running in its own terminal for the session; Ctrl-C when done.
 #
+# ⚠️ MEASURING IS NOT ENOUGH; MEASURE THE SYMPTOM, NOT THE CHANGE. Both reverted
+# sessions had a browser and still shipped wrong fixes, because they measured a
+# number, attached a causal story to it, and implemented the story. The 19.6px
+# flip arithmetic of 2026-09-18 was measured correctly and explained nothing.
+#
+# So, in this order:
+#
+#   1. WRITE THE CHECK THAT DISCRIMINATES, before writing any fix: the thing
+#      that is false now and must be true after. For placement that is
+#      `popover.top >= anchor.bottom`, not "my attribute reached the DOM".
+#      "Did my change land" and "did the symptom go away" are different
+#      questions and only the second one matters.
+#   2. REPRODUCE IT STANDALONE FIRST. A ~20-line HTML file -- one anchored box,
+#      one popover, no app -- found the real cause in one pass after six probes
+#      against the running app had not. No canvas animation, no tour state, no
+#      top-layer interference, and it runs in a second.
+#   3. ONLY THEN probe the live app, to confirm it holds in the real thing.
+#
+# ⚠️ A PROBE THAT MUTATES THE LIVE POPOVER MAY BE MEASURING NOTHING. It is in
+# the top layer: inline styles written onto it from a probe did not change its
+# used insets (`inset-block-start` stayed `0px` through every trial, including
+# an explicit `top: anchor(bottom)`). Assert the mutation took effect before
+# trusting any comparison built on it.
+#
+# ⚠️ THE CANVAS IS STILL ANIMATING when a popover first opens -- the same probe
+# read the anchor's bottom at 599 and then 649 on consecutive runs. Wait for a
+# settle (~1.4s plus two rAFs) or fine-grained numbers are noise.
+#
 # ⚠️ IDENTIFY A BEAT BY READING THE PAGE, NOT BY COUNTING CLICKS. `?step=N`
 # opens a step on its DESCRIPTION, which is not a beat -- click once and you
 # are on beat 1. Counting the description as beat 1 put every number one too
@@ -195,3 +223,36 @@ probe-check:  ## Is the debug browser up and reachable?
 	@curl -sf http://127.0.0.1:$(CDP_PORT)/json/version \
 	  && echo "" && echo "OK: debug browser reachable on $(CDP_PORT)" \
 	  || (echo "NOT reachable on $(CDP_PORT). Run: make probe-browser"; exit 1)
+
+# --------------------------------------------------------------------------
+# placement tests (Playwright)
+# --------------------------------------------------------------------------
+#
+# ⚠️ RUN THESE YOURSELF. `playwright test` LAUNCHES a browser, and that is the
+# one thing the sandbox denies Claude (same Mach port refusal as above). Claude
+# can write these tests and can read their output once you paste it, but
+# `make e2e` from Claude fails at browser startup every time.
+#
+# Why they exist at all: jsdom implements NO CSS anchor positioning, so no
+# vitest in this repo can observe where a popover lands. Every placement
+# assertion in src/test/ checks stylesheet TEXT -- a claim about CSS source,
+# not geometry. Those stayed green through every placement bug we have had.
+#
+# These start their OWN server (`vite preview` on 4173) and never touch the dev
+# server on 5173.
+
+.PHONY: e2e
+e2e:  ## Run the Playwright placement tests (RUN THIS YOURSELF; Claude cannot)
+	npx playwright test
+
+.PHONY: e2e-ui
+e2e-ui:  ## Same, in Playwright's UI mode -- step through and watch it place
+	npx playwright test --ui
+
+.PHONY: e2e-report
+e2e-report:  ## Open the report from the last `make e2e` run
+	npx playwright show-report
+
+.PHONY: e2e-install
+e2e-install:  ## One-time: fetch the browser Playwright drives
+	npx playwright install chromium
