@@ -352,12 +352,49 @@ can drift from the real CSS. If the behaviour is decidable from data rather than
 pixels, test it there instead — [`relationPositions.test.ts`](../src/test/relationPositions.test.ts) covers what the menu
 *contains* with no layout at all, and only *where it opens* needed the stubs.
 
-**Known gap (2026-08-27).** Five other components measure layout and have no
-placement test between them: `FloatingBoxGroup`, `Tooltip`, `LayoutManager`,
-`LinkOverlay`, and `help/HelpLayer`. Any positioning bug in those is currently
-found by looking at the screen. Not a call to go write five test files — but if
+**Known gap (2026-08-27).** Four other components measure layout and have no
+placement test between them: `FloatingBoxGroup`, `Tooltip`, `LayoutManager`
+and `LinkOverlay`. Any positioning bug in those is currently found by looking
+at the screen. (`help/HelpLayer` was on this list until the browser suite
+below; stubbed geometry was never going to cover it, because what it gets
+wrong is CSS anchor positioning, which jsdom does not implement at all.) Not a call to go write five test files — but if
 one of them misbehaves, this section plus [`RelationBarPlacement.test.tsx`](../src/test/RelationBarPlacement.test.tsx) is
 the pattern to reach for rather than re-deriving it.
+
+---
+
+## Placement in a real browser (Playwright)
+
+**jsdom implements no CSS anchor positioning**, so no vitest here can observe
+where a popover lands. Every placement assertion in `src/test/` checks
+stylesheet TEXT — a claim about CSS source, not geometry — and those stayed
+green through every placement bug the popover has had.
+[`e2e/placement.spec.ts`](../e2e/placement.spec.ts) measures real rects instead.
+
+Two ways to run it, and they are not interchangeable:
+
+| | what it drives | who can run it |
+|---|---|---|
+| `make e2e` | its own **production** build on 4173, started and stopped by Playwright | Siggie, CI |
+| `make e2e-probe` | the **dev** server on 5173, in the browser `make probe-browser` started | Claude too |
+
+`make e2e` is the trustworthy one and is what a final claim rests on. Nothing
+needs starting for it. `make e2e-probe` exists because the sandbox denies
+Claude a browser *launch* but allows a localhost *connection*
+([`e2e/probe.fixture.ts`](../e2e/probe.fixture.ts) uses `connectOverCDP`); it
+sees uncommitted edits, which makes it good for iterating and unfit for a
+verdict. **When the two disagree, `make e2e` wins.**
+
+⚠️ **Identify a beat by `data-step-address`** (`rows-and-dots`,
+`rows-and-dots~4`), which every build renders. Not by the visible
+`.help-popover-address` tag: that is an authoring aid gated on
+`import.meta.env.DEV`, so it renders nothing in the build `make e2e` serves.
+Navigating by it failed all five tests on a null address before any of them
+measured anything.
+
+⚠️ **The canvas is still animating** when a popover opens — the same anchor
+read 599 and then 649 on consecutive runs. `settle()` waits it out; fine-grained
+numbers taken without it are noise.
 
 ---
 

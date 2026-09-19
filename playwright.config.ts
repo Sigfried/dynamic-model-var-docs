@@ -37,7 +37,18 @@ export default defineConfig({
   webServer: {
     command: 'npm run build && npx vite preview --port 4173 --strictPort',
     url: 'http://localhost:4173/dynamic-model-var-docs/',
-    reuseExistingServer: !process.env.CI,
+    /*
+     * ⚠️ NEVER reuse. `reuseExistingServer: !CI` was the default here and it
+     * silently serves a STALE BUNDLE: a `vite preview` left over from an
+     * earlier run is adopted as-is, so `npm run build` never reruns and every
+     * edit since that server started is invisible to the suite.
+     *
+     * That is not hypothetical -- it is what made the 2026-09-19 run fail on
+     * `never reached "rows-and-dots ▸3"` against a spec that had already been
+     * changed to `~3`. A test run that does not reflect the tree it was run
+     * against is worse than no run, so pay the ~2s rebuild every time.
+     */
+    reuseExistingServer: false,
     timeout: 180_000,
   },
 });

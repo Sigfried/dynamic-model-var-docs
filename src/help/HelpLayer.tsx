@@ -51,6 +51,7 @@ import {
   MARKDOWN_COMPONENTS, remarkPluginsFor, urlTransform, widgetImg,
 } from './markdownParts';
 import type { Offset, PopoverSide } from './parseHelpContent';
+import { stepAddressOf } from './parseHelpContent';
 import TourMap from './TourMap';
 import './help.css';
 
@@ -758,6 +759,16 @@ export default function HelpLayer() {
         ref={popRef}
         popover="manual"
         data-help-popover=""
+        /* Which authored position is on screen, for tests -- `rows-and-dots` or
+           `rows-and-dots~4`. Unlike the visible address tag below, this is in
+           every build: the tag is dev-only and is due to be deleted, and
+           `e2e/placement.spec.ts` cannot navigate by something a production
+           build does not render. See `stepAddressOf`. */
+        data-step-address={
+          inTour
+            ? (position ? stepAddressOf(position.entry.id, position.beatIndex) : undefined)
+            : entry?.id
+        }
         /* Scopes the anchor machinery in `help.css` -- `position-anchor` and
            `position-try-fallbacks` apply ONLY here. An unanchored step is placed
            by the inline style below, and a `--help-shift` fallback would beat

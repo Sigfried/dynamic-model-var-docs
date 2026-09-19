@@ -1112,6 +1112,26 @@ function addressOf(entryId: string, beatIndex: number): string {
 }
 
 /**
+ * The same address, spelled for a machine: `rows-and-dots` or
+ * `rows-and-dots~4`. Rendered as `data-step-address` on every popover, in
+ * EVERY build.
+ *
+ * Separate from `addressOf` because the two have different readers and so
+ * different constraints. The visible tag is an authoring aid, gated on
+ * `import.meta.env.DEV` and due to be deleted (`address-readout`); a test that
+ * navigated by it could not run against a production build, which is what
+ * `e2e/placement.spec.ts` discovered by failing all five tests on a null
+ * address. This one is ASCII -- no `\u25b8` to paste into a selector -- and is
+ * not gated.
+ *
+ * Derived from the same `entryId`/`beatIndex` rather than being a second
+ * string so the two renderings cannot drift apart.
+ */
+export function stepAddressOf(entryId: string, beatIndex: number): string {
+  return beatIndex < 0 ? entryId : `${entryId}~${beatIndex + 1}`;
+}
+
+/**
  * The markdown header that declares an entry, which is what the address tag
  * copies: a string that finds exactly one line in the content file.
  */

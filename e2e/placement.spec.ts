@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './probe.fixture';
 import { goToAddress, openStep, placement, settle } from './helpers/tour';
 
 /**
@@ -48,12 +48,12 @@ const expectBelow = (p: Awaited<ReturnType<typeof placement>>) => {
 test.describe('an authored Position: is obeyed', () => {
   test('beat 3 places below its anchor (the one that always worked)', async ({ page }) => {
     await openStep(page, TOUR, 3);
-    expectBelow(await goToAddress(page, 'rows-and-dots ▸3'));
+    expectBelow(await goToAddress(page, 'rows-and-dots~3'));
   });
 
   test('beat 4 places below its anchor even when it barely does not fit', async ({ page }) => {
     await openStep(page, TOUR, 3);
-    const p = await goToAddress(page, 'rows-and-dots ▸4');
+    const p = await goToAddress(page, 'rows-and-dots~4');
     // The regression: a ~520px popover into ~500px of room below the anchor.
     // Under `position: fixed` that shortfall slid it back over the anchor.
     expectBelow(p);
@@ -71,7 +71,7 @@ test.describe('an authored Position: is obeyed', () => {
    */
   test('the back/next row can always be reached', async ({ page }) => {
     await openStep(page, TOUR, 3);
-    await goToAddress(page, 'rows-and-dots ▸4');
+    await goToAddress(page, 'rows-and-dots~4');
     const reachable = await page.evaluate(() => {
       const nav = document.querySelector('.help-tour-nav');
       if (!nav) return { found: false, visible: false };
@@ -93,7 +93,7 @@ test.describe('an authored Position: is obeyed', () => {
 
   test('the popover never covers the element it is anchored to', async ({ page }) => {
     await openStep(page, TOUR, 3);
-    for (const beat of ['rows-and-dots ▸3', 'rows-and-dots ▸4']) {
+    for (const beat of ['rows-and-dots~3', 'rows-and-dots~4']) {
       const p = await goToAddress(page, beat);
       if (!p.anchor) continue;
       const overlaps =
@@ -112,11 +112,14 @@ test.describe('placement is stable across back-stepping', () => {
    */
   test('a beat lands in the same place arrived at forwards and backwards', async ({ page }) => {
     await openStep(page, TOUR, 3);
-    const first = await goToAddress(page, 'rows-and-dots ▸3');
+    const first = await goToAddress(page, 'rows-and-dots~3');
 
     await page.locator('.help-tour-next').first().click();
     await settle(page);
-    await page.locator('.help-tour-back').first().click();
+    // The back button carries no class -- `.help-tour-back` never existed and
+    // timed out on its first real run. Its title is the stable handle, and is
+    // user-facing rather than a hook added for the test.
+    await page.locator('.help-tour-nav button[title^="Previous"]').first().click();
     await settle(page);
 
     const again = await placement(page);

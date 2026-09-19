@@ -8,6 +8,107 @@ Newest first.
 
 
 ---
+## 2026-09-19 (later) — the placement suite ran for the first time, and Claude can now run it
+
+`run-the-placement-tests` finally executed. Two harness bugs stood between the
+suite and its first measurement; both were invisible until it ran, which is
+exactly what the task row predicted about a suite written and never executed.
+
+### Harness bug 1: navigating by a dev-only readout
+
+All five tests failed identically with `never reached "rows-and-dots ▸3"
+(stopped at "null")` — no test ever measured a popover. The helper navigated by
+`.help-popover-address`, which `AddressTag` renders only when
+`ADDRESS_TOGGLE_ENABLED` (`import.meta.env.DEV`) is on. `playwright.config.ts`
+serves a PRODUCTION build on 4173, where that is statically false, so the tag
+never rendered and `address()` returned null on every popover. `openStep` also
+never passed `?ids=1`, so it would have been off even in dev.
+
+Fix: `data-step-address` on the popover div, in every build, spelled
+`rows-and-dots~4` (ASCII, no `▸` to paste into a selector). Siggie's call,
+over the two alternatives offered — running the suite in dev mode, or adding a
+non-DEV escape hatch to the visible tag. It is better than both: it survives
+`address-readout` deleting the visible tag, which is an open task, and it works
+on the production build. `stepAddressOf` sits beside `addressOf` and derives
+from the same `entryId`/`beatIndex`, so the two spellings cannot drift.
+
+### Harness bug 2: a selector that never existed
+
+`.help-tour-back` is not in the codebase. The back button carries no class at
+all — `HelpLayer.tsx` identifies it by `title="Previous (← arrow key)"`. The
+test timed out for 30s waiting for it, which masked the finding below. Now
+selected by title, deliberately rather than by adding a class to production
+markup for a test's benefit.
+
+### Claude can run this suite after all
+
+The Makefile said `make e2e` is Siggie-only, and that is still true: the
+sandbox denies a browser LAUNCH. But it allows an ordinary localhost
+connection, and the probe-browser section already said so — the two facts were
+never put together. `make e2e-probe` (new) runs the same specs via
+`connectOverCDP` against the browser `make probe-browser` started.
+
+Dead end worth recording: the runner's own `use.connectOptions` cannot do this.
+It speaks the Playwright *server* protocol, not CDP; pointed at 9222 it fails
+the handshake with `404 Not Found`. Overriding the `browser` fixture
+(`e2e/probe.fixture.ts`, gated on `USE_PROBE_BROWSER`) is the supported route.
+
+⚠️ `make e2e-probe` measures the DEV server on 5173, including uncommitted
+edits. `make e2e` builds its own production bundle. **When they disagree,
+`make e2e` wins.**
+
+### `reuseExistingServer` was serving a stale bundle
+
+Siggie asked whether prod is really being tested, having watched the browser
+sit on 5173 and then fail on 4173. It is: a `vite preview` on 4173 was serving
+`main-BMEr_eWs.js`, the exact hashed production artifact `npm run build`
+emitted. But the question exposed a real bug next to it.
+
+`reuseExistingServer: !process.env.CI` meant a LOCAL run adopted any leftover
+`vite preview` on 4173 **without rebuilding**, so edits since that server
+started were invisible to the suite. That is what made the first run fail on
+`never reached "rows-and-dots ▸3"` against a spec already changed to `~3`. Now
+`false`: a ~2s rebuild every run, and `--strictPort` turns a leftover server
+into a loud failure instead of a silent stale pass.
+
+⚠️ **Probe `[::1]`, not `127.0.0.1`, when checking whether 4173 is up.** Vite
+binds `localhost`, which resolves to IPv6 here, so `curl 127.0.0.1:4173` says
+"connection refused" while the server is running fine. Three checks in this
+session concluded "nothing on 4173" from that, wrongly.
+
+### What the suite actually measured
+
+Three failures, all the open `popover-placement` bug, now measured rather than
+inferred from a screenshot:
+
+- **beat 4 flips off its authored side**: `Position: bottom`, popover top at
+  **344.5**, anchor bottom at **499.5** — 155px above where it was authored.
+- **beat 4 covers its own anchor** — the same fact from another angle.
+- **placement is not stable across back-stepping**: the same beat lands
+  **146.5px** apart depending on whether it was reached forwards or by
+  stepping back. This is Siggie's original complaint, and it had never been
+  measured; the bogus `.help-tour-back` selector was hiding it.
+
+Beat 3 passes, and so does back/next reachability — the constraint that
+`position: absolute` violated. So the suite now discriminates: a fix must turn
+the three red without turning those two green-to-red.
+
+### The tall popover is a deliberate fixture
+
+Beat 4 of `rows-and-dots` has its `#### Clicking the row has` block
+**duplicated verbatim**. Flagged as a possible accident; Siggie confirmed it is
+intentional — the duplication is what makes the popover tall enough to trigger
+the clamp, and it carries a `> repeating just to make the popover long for
+testing` note so it gets removed later.
+
+⚠️ So **the failing beat-4 tests depend on authored content staying long.**
+Delete that block and they go green without anything being fixed. If the
+fixture is removed before `popover-placement` is fixed, the suite needs another
+way to make a popover overflow — a smaller viewport in the config would do it
+without touching the tour.
+
+
+---
 ## 2026-09-19 — a second placement session, also reverted; what it measured is worth keeping
 
 **Everything this session changed to `src/` was reset out of `main`.** Two

@@ -33,3 +33,7 @@ temp
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Playwright run output
+test-results/
+playwright-report/

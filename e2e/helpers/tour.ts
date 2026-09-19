@@ -5,10 +5,16 @@ import type { Page } from '@playwright/test';
  *
  * ⚠️ IDENTIFY A BEAT BY READING THE PAGE. `?tour=&step=N` opens the step on its
  * DESCRIPTION, which is not a beat -- one click in and you are on beat 1. The
- * popover renders its own address in `.help-popover-address`: `rows-and-dots`
- * for the description, then `rows-and-dots ▸1`, `▸2`, ... for beats.
+ * popover carries its own address in `data-step-address`: `rows-and-dots` for
+ * the description, then `rows-and-dots~1`, `~2`, ... for beats.
  * `.help-tour-count` ("3 / 8") is the STEP counter and reads the same on every
  * beat of a step, so it cannot tell them apart.
+ *
+ * ⚠️ Read `data-step-address`, NOT the visible `.help-popover-address` tag.
+ * The tag is an authoring aid gated on `import.meta.env.DEV`, and this suite
+ * runs against `vite preview` -- a production build, where it renders nothing.
+ * Navigating by it failed all five tests with a null address before any of
+ * them measured a popover.
  *
  * Counting clicks is not wrong in itself, but it is not self-checking: a wrong
  * assumption about where a step starts survives every later step. Reading the
@@ -29,7 +35,7 @@ export interface Placement {
 /** Read the popover's address, or null when no popover is open. */
 export const address = (page: Page) =>
   page.evaluate(() =>
-    document.querySelector('.help-popover:popover-open .help-popover-address')?.textContent?.trim() ?? null);
+    document.querySelector('.help-popover:popover-open')?.getAttribute('data-step-address') ?? null);
 
 /** Measure the open popover and the element its `--help-anchor` resolved to. */
 export const placement = (page: Page): Promise<Placement> =>
@@ -51,7 +57,7 @@ export const placement = (page: Page): Promise<Placement> =>
     const rect = (r: DOMRect) =>
       ({ top: r.top, bottom: r.bottom, left: r.left, right: r.right, height: r.height, width: r.width });
     return {
-      address: pop.querySelector('.help-popover-address')?.textContent?.trim() ?? '',
+      address: pop.getAttribute('data-step-address') ?? '',
       anchored: pop.hasAttribute('data-anchored'),
       positionArea: cs.positionArea || cs.getPropertyValue('position-area'),
       popover: rect(p),

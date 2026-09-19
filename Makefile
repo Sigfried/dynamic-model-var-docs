@@ -256,3 +256,21 @@ e2e-report:  ## Open the report from the last `make e2e` run
 .PHONY: e2e-install
 e2e-install:  ## One-time: fetch the browser Playwright drives
 	npx playwright install chromium
+
+# Claude CAN run the suite this way. `playwright test` launching a browser is
+# what the sandbox denies; CONNECTING to one is an ordinary localhost
+# connection. So with `make probe-browser` and the dev server up, the same
+# specs run under Claude via `connectOverCDP` (see e2e/probe.fixture.ts).
+#
+# ⚠️ It measures the DEV server on 5173, including uncommitted edits -- good
+# for iterating, not a final verdict. `make e2e` builds its own production
+# bundle on 4173; when the two disagree, `make e2e` wins.
+#
+# ⚠️ Checking whether 4173 is up: probe `[::1]`, not `127.0.0.1`. Vite binds
+# `localhost`, which resolves to IPv6 here, so curl against 127.0.0.1 reports
+# "connection refused" for a server that is running perfectly well.
+.PHONY: e2e-probe
+e2e-probe:  ## Run the placement tests in the probe browser (Claude can run this)
+	@$(MAKE) --no-print-directory probe-check >/dev/null \
+	  || (echo "Start it first, in your own terminal: make probe-browser"; exit 1)
+	USE_PROBE_BROWSER=1 npx playwright test -c playwright.probe.config.ts
