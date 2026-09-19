@@ -132,6 +132,49 @@ machinery follow, but I think what we could say is:
   avoid the spotlighted elements
 - we just linked popover text size to zoom, which should help
 
+#### Where the help elements live in the DOM
+
+[sg] Three structural changes, which may simplify the placement problem
+rather than just tidying it:
+
+- **Name the container that holds the node boxes.** It is the
+  `div.relative` carrying the zoom `transform` inside the `overflow-auto`
+  scroller, in [OwnershipGraphView.tsx](../src/explore/OwnershipGraphView.tsx)
+  (`zp.wrapperRef`). Today nothing names it, so nothing can be told to go
+  there.
+- **Put the help stuff in its own container** — popover, spotlight rings,
+  hint dots in one div, for organization. Today they render loose wherever
+  `<HelpLayer/>` sits, which in dmvd means scattered inside the app's own
+  tree.
+- **Put that container inside the one with the node boxes**, so a popover
+  is a sibling of what it points at rather than floating in an outer box.
+
+The help package must not learn what a canvas is, so the host names the
+element and the package mounts there — the seam
+[`centerOn`](../src/help/HelpProvider.tsx) already demonstrates.
+
+⚠️ **Measured 2026-09-19, and worth knowing before trying this**, because
+the obvious version of it was built and did not fix the symptom:
+
+- A grouping div is free ONLY if it stays `position: static`. A positioned
+  ancestor becomes the containing block for an absolutely positioned
+  descendant, so a `relative` wrapper silently re-bases the popover on the
+  wrapper instead of on its anchor.
+- Mounting inside the canvas does NOT by itself make a tall popover
+  reachable. The scroll area is sized by the graph content, and a popover
+  that is absolutely positioned and in the top layer adds nothing to
+  `scrollHeight` — so it still gets clipped at the fold (132px at
+  1400x800, with the back/next row unreachable).
+- `anchor()` is valid only in inset properties, **not** in sizing ones, so
+  `max-height: calc(100vh - anchor(bottom))` does not resolve. Bounding the
+  popover to the room below its anchor has to be computed in JS.
+- `max-height: calc(100vh - 16px)` stops engaging once the popover is
+  anchor-positioned rather than viewport-positioned, which is how the
+  body's scroll safety net silently stopped working.
+
+A fuller account, including what was tried and reverted, is in
+[WORKLOG](../WORKLOG.md) under 2026-09-18/19.
+
 
 ### The fan from `ObservationSet.observations`
 

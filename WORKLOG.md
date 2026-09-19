@@ -8,6 +8,115 @@ Newest first.
 
 
 ---
+## 2026-09-19 — a second placement session, also reverted; what it measured is worth keeping
+
+**Everything this session changed to `src/` was reset out of `main`.** Two
+commits were made and then dropped with `git reset` (recoverable from the
+reflog as `8d6a478` and `be4c2f2`); the tree is back at `7510c06`. Siggie:
+*"it still looks the same."* What survives is the measurement, below, and the
+structural proposal now in [BACKLOG §Placement](docs/BACKLOG.md#placement).
+
+### The one thing that is solidly established
+
+⚠️ **`.help-popover` is `position: fixed`, and a fixed box cannot overflow the
+viewport** — the viewport IS its containing block. When the popover does not
+fit in the cell `position-area` chose, the browser shifts it back inside, which
+is what puts an authored `Position: bottom` above its anchor. Only a tall
+popover hits the clamp, which is why beat 3.4 of *Using the Explorer* failed
+and beat 3.3, identically authored, did not.
+
+Measured in a 20-line standalone repro — one anchored box, one popover, no
+tour, no fallbacks — with the anchor's bottom at 500 and 400px of room below:
+
+| popover height | `position: fixed` | `position: absolute` |
+|---|---|---|
+| 120 | top 512, below ✓ | top 512, below ✓ |
+| 300 | top 512, below ✓ | top 512, below ✓ |
+| 410 | top 476, **not below** | top 512, below ✓ (overflows) |
+| 600 | top 286, **not below** | top 512, below ✓ (overflows) |
+| 900 | top 12, **not below** | top 512, below ✓ (overflows) |
+
+⚠️ **But `absolute` alone is not the fix, and shipping it was wrong.** It made
+beat 3.4 obey its authored side and traded that for a popover clipped at the
+fold — 132px unreachable at 1400x800, with the back/next row off-screen — because
+`html, body, #root` are all `overflow: hidden`. Siggie's photographs of that are
+what stopped it. Mounting the layer inside the canvas (the `mountIn` commit) did
+not fix it either: the scroll area is sized by the graph content, and a
+top-layer absolutely positioned popover adds nothing to `scrollHeight`.
+
+**Siggie's read, and the reason for the reset:** *"i suspect that the reason the
+fix isn't currently working is because of positioning (absolute?) you made
+earlier in the session."* Taking the whole session out and restarting from the
+structural change is the call.
+
+### Falsified by measurement — do not retry any of these
+
+- **The `flip-block` fallback.** A fix for it was implemented (`data-authored-side`,
+  flips scoped to `:not([data-authored-side])`), shipped, and measured to change
+  nothing: `position-try-fallbacks: none` was confirmed in the computed style
+  with the popover still misplaced. The 19.6px arithmetic that motivated it was
+  correctly measured and explains nothing.
+- **`max-height`.** Measured at 984–1184px against a 520px popover. Never
+  clamping. 80bd24a's claim that it was is false.
+- **Author-level `inset: auto`.** Computed `inset` stays `0px`, from the UA
+  `[popover]` rule.
+- `align-self`, `justify-self`, `position-visibility`.
+- **The top layer itself.** Dropping it moved the popover 8px.
+
+### Facts that constrain any future fix
+
+- **`anchor()` is valid only in inset properties, not sizing ones**, so
+  `max-height: calc(100vh - anchor(bottom) - 24px)` does not resolve. Bounding
+  the popover to the room below its anchor has to be computed in JS, where
+  `popoverPosition` already sets `maxHeight` for the unanchored branch.
+- **`max-height: calc(100vh - 16px)` stops engaging** once the popover is
+  anchor-positioned rather than viewport-positioned. That is how the body's
+  scroll safety net silently stopped working, and it is why a popover that
+  overflows now has no internal scroll to fall back on.
+- **A grouping div around the help elements is free only while it is
+  `position: static`.** A positioned ancestor becomes the containing block for
+  an absolutely positioned descendant, which would re-base the popover on the
+  wrapper instead of on its anchor. Measured: a static wrapper moved placement
+  0px.
+- **A host-named mount element must fall back when absent.** Rendering nothing
+  removed the entire tour wherever the element was missing — including jsdom,
+  where dmvd's canvas is gated on a laid-out graph, which took four
+  `tourStack.integration` tests red. That failure was right.
+
+### Two probe traps that cost most of the session
+
+⚠️ **The popover is in the top layer, and inline styles written onto it from a
+probe do not change its used insets.** `inset-block-start` read `0px` through
+every trial, including an explicit `top: anchor(bottom)`. Several "trials" were
+measuring nothing before this was noticed. Verify a mutation landed before
+trusting the comparison.
+
+⚠️ **The canvas is still animating when the popover opens.** The same probe
+measured the anchor's bottom at 599 and then 649 on consecutive runs. Settle
+first, or fine-grained numbers are noise.
+
+⚠️ **A standalone repro was worth more than the running app.** Twenty lines of
+HTML reproduced the bug with no animation, no tour state and no top-layer
+interference, and answered in one pass what six probes against the live app had
+not.
+
+### Process
+
+Three hypotheses were diagnosed, implemented and shipped before being measured
+against the actual symptom, and each was wrong. The pattern to avoid is
+reasoning from a screenshot to a cause and then to a commit; the standalone
+repro is what broke it. Siggie's own question — *"what css property is forcing
+it not to overflow"* — named the mechanism in one step after four properties had
+been falsified one at a time.
+
+A Playwright suite (`e2e/placement.spec.ts`, its own `vite preview` on 4173, never
+5173) was written and went out with the reset. It was never executed: the sandbox
+denies Chromium's Mach port registration, so Claude cannot launch a browser, and
+`--list` only proves the specs parse. It is in the reflog at `8d6a478` if the
+next session wants it.
+
+
+---
 ## 2026-09-18 (later) — the popover placement fixes were reverted; measured, not argued
 
 Three commits earlier the same day (f721eae, 75d9759, 80bd24a) tried to make
