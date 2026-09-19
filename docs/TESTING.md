@@ -2,7 +2,85 @@
 
 > Testing philosophy, patterns, and how to write tests for this project.
 
-## Quick Start
+## Two suites, and only one of them needs you
+
+**Vitest** (`npm test`) is everything except popover placement. It runs in
+jsdom, needs nothing started, and Claude runs it freely.
+
+**Playwright** (`e2e/placement.spec.ts`) is popover placement only. It needs a
+real browser, because jsdom implements no CSS anchor positioning — a vitest
+placement test can only read the stylesheet, and those stayed green through
+every placement bug this app has had.
+
+The Playwright suite has two entry points. They are not interchangeable:
+
+| | `make e2e` | `make e2e-probe` |
+|---|---|---|
+| **Who runs it** | Siggie, CI | Claude, **or** Siggie |
+| **You must first** | nothing | `make probe-browser`, left running |
+| **What it tests** | a fresh **production** build on 4173 | the **dev** server on 5173 |
+| **Sees uncommitted edits** | no — it rebuilds from the tree | yes |
+| **Trust it for** | a verdict | iterating |
+
+When the two disagree, `make e2e` wins.
+
+### What Siggie actually does
+
+**Most sessions: nothing.** If the work does not touch popover placement, there
+is no setup and no browser.
+
+**If it does touch placement**, at the start of the session:
+
+```bash
+make probe-browser      # leave it running in its own terminal; Ctrl-C when done
+```
+
+That is the entire setup. It starts a Chrome with a debugging port; Claude
+connects to it and can then run `make e2e-probe` as often as it likes, without
+asking you again. **It does not open the app or run anything** — a blank
+browser window is what success looks like.
+
+Then, before trusting a result — a fix claimed to work, a commit, a deploy:
+
+```bash
+make e2e                # you run this; nothing needs to be started for it
+```
+
+### Why Claude cannot just run `make e2e`
+
+Claude's shell is sandboxed, and the sandbox denies Chromium's Mach port
+registration — so *launching* a browser fails, which is exactly what
+`playwright test` does. *Connecting* to a browser that is already running is an
+ordinary localhost connection, and that is allowed. Hence the split:
+`make probe-browser` is the launch (yours), `make e2e-probe` is the connection
+(Claude's).
+
+⚠️ **`make e2e-probe` does not replace `make e2e`.** It drives the dev server,
+so it measures whatever is in the working tree, including edits nobody has
+committed or reviewed.
+
+### First time only
+
+```bash
+make e2e-install        # fetches the browser Playwright drives
+```
+
+### When something fails
+
+```bash
+make e2e-ui             # step through it visually
+make e2e-report         # open the report from the last `make e2e` run
+```
+
+⚠️ **Three of these tests are expected to fail right now.** They pin the open
+`popover-placement` bug — see [BACKLOG §Placement](BACKLOG.md#placement) for
+the numbers and for the two that must keep passing. Do not "fix" them by
+weakening the assertion.
+
+Details — what the specs measure, how to identify a beat, the animation
+trap — are in [§Placement in a real browser](#placement-in-a-real-browser-playwright).
+
+## Quick Start (vitest)
 
 ```bash
 # Run tests in watch mode (recommended during development)
@@ -18,7 +96,7 @@ npm test -- adaptiveLayout --run
 npm test -- --reporter=verbose
 
 # Generate coverage report
-npm test:coverage
+npm run test:coverage
 ```
 
 ---
@@ -365,24 +443,20 @@ the pattern to reach for rather than re-deriving it.
 
 ## Placement in a real browser (Playwright)
 
-jsdom implements no CSS anchor positioning, so no vitest here can see where a
-popover lands — `src/test/` can only check stylesheet text.
-[`e2e/placement.spec.ts`](../e2e/placement.spec.ts) measures real rects.
-
-| | drives | who |
-|---|---|---|
-| `make e2e` | its own production build on 4173 | Siggie, CI — nothing to start |
-| `make e2e-probe` | the dev server on 5173 | Claude, **while `make probe-browser` runs** |
-
-`make e2e` is what a claim rests on; `e2e-probe` sees uncommitted edits. When
-they disagree, `make e2e` wins.
+How to run it is at the top of this file. Writing one:
 
 ⚠️ **Identify a beat by `data-step-address`** (`rows-and-dots~4`), not by the
 visible `.help-popover-address` tag — the tag is dev-only, so it is absent from
-the build `make e2e` serves.
+the build `make e2e` serves. `?tour=&step=N` opens a step on its description,
+which is not a beat; one click in and you are on beat 1.
 
 ⚠️ **The canvas is still animating** when a popover opens — one anchor read 599
 then 649 on consecutive runs. Use `settle()`.
+
+⚠️ **Measure the symptom, not the change.** Two sessions had a browser and
+still shipped wrong fixes, because they measured a number, attached a story to
+it, and implemented the story. Write the check that discriminates — the thing
+that is false now and must be true after — before writing any fix.
 
 ---
 
