@@ -687,10 +687,8 @@ export default function ExploreApp() {
       markdown={helpMarkdown}
       widgets={helpWidgets}
       colors={helpColors}
-      /* The authoring aids are the HOST's call: `src/help/` ships as its own
-         package and cannot read this app's build environment. `DEV_EXTRAS` is
-         "dev build AND not an e2e run" — the address tag adds 22.7px to a
-         popover, which a placement test would otherwise measure. */
+      /* The HOST's call: `src/help/` ships as its own package and cannot
+         read this app's build environment. See `DEV_EXTRAS`. */
       authoringAids={DEV_EXTRAS}
       onPushChange={pushTourChange}
       onPopChange={popTourChange}

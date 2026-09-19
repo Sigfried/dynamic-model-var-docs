@@ -5,10 +5,9 @@ import { chromium, test as base, type Page } from '@playwright/test';
  *
  * **1. Tell the app it is under test.** `addInitScript` runs before any app
  * code on every navigation, so `window.__E2E__` is set by the time
- * `DEV_EXTRAS` is read (`src/devExtras.ts`, and the help package's copy). Dev
- * affordances that would change what a test measures -- the popover's address
- * tag is 22.7px of height -- are off without a spec having to ask. A new one
- * is off by default too, which is the point.
+ * `DEV_EXTRAS` is read (`src/devExtras.ts`). Dev affordances that would change
+ * what a test measures are off without a spec having to ask, and a new one is
+ * off by default too, which is the point.
  *
  * This applies to BOTH configs. It is a no-op against the production build
  * `make e2e` serves, where the dev branches are already compiled out, but it

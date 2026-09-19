@@ -127,11 +127,9 @@ export interface HelpApi {
    * content-file address and the menu item that toggles it.
    *
    * ⚠️ **The host decides this**, via `<HelpProvider authoringAids>`. This
-   * package must not read `import.meta.env.DEV`: it ships as an external
-   * dependency, so the consuming app's build environment is not its to
-   * inspect. "Dev build" is also the wrong question — an e2e run drives a dev
-   * server, and the address tag is 22.7px of popover height, enough to move a
-   * measurement.
+   * package ships as an external dependency, so the consuming app's build
+   * environment is not its to read — and "is this a dev build" is the wrong
+   * question anyway, since the e2e suite drives a dev server.
    *
    * TEMPORARY, with the aids themselves (docs/TASKS.md `address-readout`).
    */

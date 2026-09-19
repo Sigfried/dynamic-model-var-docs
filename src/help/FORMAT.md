@@ -642,8 +642,8 @@ then count two bullets down.
 
 This is **dev-only, and on by default there**: toggle it with `Show content ids` at
 the bottom of the app's Help menu, or per-link with `?ids=1` / `?ids=0`. The
-menu item is gated on `DEV_EXTRAS`, so a deployed build has no way to show it
-and an e2e run does not get it (the tag is 22.7px of popover height). Both the tag
+menu item appears only when the host passes `authoringAids`, so a deployed
+build has no way to show it and an e2e run does not get it. Both the tag
 and the toggle are a temporary authoring aid (docs/TASKS.md item 3c) and are
 meant to be deleted once the tours are written.
 

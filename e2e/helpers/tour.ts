@@ -10,10 +10,9 @@ import type { Page } from '@playwright/test';
  * `.help-tour-count` ("3 / 8") is the STEP counter and reads the same on every
  * beat of a step, so it cannot tell them apart.
  *
- * ⚠️ `data-step-address`, NOT the visible `.help-popover-address` tag. The tag
- * is dev-only furniture, and `probe.fixture.ts` turns dev furniture off for
- * every run (`DEV_EXTRAS`) so the popover measures the same here as in
- * production -- the tag alone is 22.7px of height.
+ * ⚠️ `data-step-address`, NOT the visible `.help-popover-address` tag. The
+ * tag is authoring furniture, which `probe.fixture.ts` turns off for every
+ * run so the popover measures the same here as in production.
  *
  * Counting clicks is not wrong in itself, but it is not self-checking: a wrong
  * assumption about where a step starts survives every later step. Reading the

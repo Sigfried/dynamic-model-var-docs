@@ -7,80 +7,47 @@
 **Vitest** (`npm test`) is everything except popover placement. It runs in
 jsdom, needs nothing started, and Claude runs it freely.
 
-**Playwright** (`e2e/placement.spec.ts`) is popover placement only. It needs a
-real browser, because jsdom implements no CSS anchor positioning — a vitest
-placement test can only read the stylesheet, and those stayed green through
-every placement bug this app has had.
-
-The Playwright suite has two entry points. They are not interchangeable:
+**Playwright** ([`e2e/placement.spec.ts`](../e2e/placement.spec.ts)) is popover
+placement only. jsdom implements no CSS anchor positioning, so a vitest
+placement test can only read the stylesheet; this one measures real rects.
 
 | | `make e2e` | `make e2e-probe` |
 |---|---|---|
 | **Who runs it** | Siggie, CI | Claude, **or** Siggie |
 | **You must first** | nothing | `make probe-browser`, left running |
 | **What it tests** | a fresh **production** build on 4173 | the **dev** server on 5173 |
-| **Sees uncommitted edits** | no — it rebuilds from the tree | yes |
+| **Sees uncommitted edits** | no — it rebuilds | yes |
 | **Trust it for** | a verdict | iterating |
 
-When the two disagree, `make e2e` wins.
+When the two disagree, `make e2e` wins. Claude cannot run `make e2e`: the
+sandbox denies a browser *launch*, which is what `playwright test` does, and
+allows a *connection*, which is what `e2e-probe` makes.
 
 ### What Siggie actually does
 
-**Most sessions: nothing.** If the work does not touch popover placement, there
-is no setup and no browser.
-
-**If it does touch placement**, at the start of the session:
+**Most sessions: nothing.** No setup and no browser unless the work touches
+popover placement. When it does, at the start of the session:
 
 ```bash
-make probe-browser      # leave it running in its own terminal; Ctrl-C when done
+make probe-browser      # leave running in its own terminal; Ctrl-C when done
+make e2e-install        # first time only: fetches the browser
 ```
 
-That is the entire setup. It starts a Chrome with a debugging port; Claude
-connects to it and can then run `make e2e-probe` as often as it likes, without
-asking you again. **It does not open the app or run anything** — a blank
-browser window is what success looks like.
+**A blank browser window is what success looks like** — it opens nothing and
+runs nothing. Claude can then run `make e2e-probe` as often as it likes without
+asking again.
 
-Then, before trusting a result — a fix claimed to work, a commit, a deploy:
+Then run `make e2e` yourself before trusting a result — a fix claimed to work,
+a commit, a deploy. **Not after every change**: let Claude iterate on the
+probe, and confirm once at the end.
 
-```bash
-make e2e                # you run this; nothing needs to be started for it
-```
+The probe matches production because `probe.fixture.ts` sets `window.__E2E__`
+before any app code runs, and dev-only affordances are gated on `DEV_EXTRAS`
+([`src/devExtras.ts`](../src/devExtras.ts)). Nothing per-spec to remember.
 
-**You do not need `make e2e` after every code change.** Let Claude iterate with
-`make e2e-probe` and run `make e2e` once, at the end, to confirm.
-
-The probe matches production because the test harness tells the app it is under
-test: `probe.fixture.ts` sets `window.__E2E__` before any app code runs, and
-dev-only affordances are gated on `DEV_EXTRAS` rather than `import.meta.env.DEV`
-([`src/devExtras.ts`](../src/devExtras.ts)). Nothing per-spec to remember, and a
-dev affordance added later is off in tests by default.
-
-⚠️ **Gate any new dev-only behavior on `DEV_EXTRAS`.** `import.meta.env.DEV` is
-true under e2e too — the address tag was, and it silently added 22.7px to every
-popover the tests measured.
-
-Beyond that the help layer has no environment-gated code, and minification
-changes bytes rather than geometry — but "expected to agree" is not "checked",
-which is what the final `make e2e` is for.
-
-### Why Claude cannot just run `make e2e`
-
-Claude's shell is sandboxed, and the sandbox denies Chromium's Mach port
-registration — so *launching* a browser fails, which is exactly what
-`playwright test` does. *Connecting* to a browser that is already running is an
-ordinary localhost connection, and that is allowed. Hence the split:
-`make probe-browser` is the launch (yours), `make e2e-probe` is the connection
-(Claude's).
-
-⚠️ **`make e2e-probe` does not replace `make e2e`.** It drives the dev server,
-so it measures whatever is in the working tree, including edits nobody has
-committed or reviewed.
-
-### First time only
-
-```bash
-make e2e-install        # fetches the browser Playwright drives
-```
+⚠️ **Gate any new dev-only behavior on `DEV_EXTRAS`**, not
+`import.meta.env.DEV` — that is true under e2e too, so anything behind it
+changes what the tests see.
 
 ### When something fails
 
@@ -89,13 +56,12 @@ make e2e-ui             # step through it visually
 make e2e-report         # open the report from the last `make e2e` run
 ```
 
-⚠️ **Three of these tests are expected to fail right now.** They pin the open
-`popover-placement` bug — see [BACKLOG §Placement](BACKLOG.md#placement) for
-the numbers and for the two that must keep passing. Do not "fix" them by
-weakening the assertion.
+⚠️ **Three of these tests are expected to fail.** They pin the open
+`popover-placement` bug — [BACKLOG §Placement](BACKLOG.md#placement) has the
+numbers and the two that must keep passing. Do not "fix" them by weakening the
+assertion.
 
-Details — what the specs measure, how to identify a beat, the animation
-trap — are in [§Placement in a real browser](#placement-in-a-real-browser-playwright).
+Writing one: [§Placement in a real browser](#placement-in-a-real-browser-playwright).
 
 ## Quick Start (vitest)
 
