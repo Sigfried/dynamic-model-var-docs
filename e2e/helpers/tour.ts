@@ -10,11 +10,9 @@ import type { Page } from '@playwright/test';
  * `.help-tour-count` ("3 / 8") is the STEP counter and reads the same on every
  * beat of a step, so it cannot tell them apart.
  *
- * ⚠️ Read `data-step-address`, NOT the visible `.help-popover-address` tag.
- * The tag is an authoring aid gated on `import.meta.env.DEV`, and this suite
- * runs against `vite preview` -- a production build, where it renders nothing.
- * Navigating by it failed all five tests with a null address before any of
- * them measured a popover.
+ * ⚠️ `data-step-address`, NOT the visible `.help-popover-address` tag: the tag
+ * is gated on `import.meta.env.DEV` and renders nothing in the production
+ * build this suite serves.
  *
  * Counting clicks is not wrong in itself, but it is not self-checking: a wrong
  * assumption about where a step starts survives every later step. Reading the

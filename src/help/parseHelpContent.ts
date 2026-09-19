@@ -1116,13 +1116,11 @@ function addressOf(entryId: string, beatIndex: number): string {
  * `rows-and-dots~4`. Rendered as `data-step-address` on every popover, in
  * EVERY build.
  *
- * Separate from `addressOf` because the two have different readers and so
- * different constraints. The visible tag is an authoring aid, gated on
- * `import.meta.env.DEV` and due to be deleted (`address-readout`); a test that
- * navigated by it could not run against a production build, which is what
- * `e2e/placement.spec.ts` discovered by failing all five tests on a null
- * address. This one is ASCII -- no `\u25b8` to paste into a selector -- and is
- * not gated.
+ * Separate from `addressOf` because the readers differ: that one feeds the
+ * visible tag, which is dev-only and due to be deleted (`address-readout`).
+ * This one is ungated, so `e2e/placement.spec.ts` can navigate by it in a
+ * production build, and ASCII, so there is no `\u25b8` to paste into a
+ * selector.
  *
  * Derived from the same `entryId`/`beatIndex` rather than being a second
  * string so the two renderings cannot drift apart.

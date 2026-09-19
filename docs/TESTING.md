@@ -253,12 +253,12 @@ describe('MyComponent', () => {
 
 ## Gaps worth filling
 
-No end-to-end tests exist. Everything runs in jsdom, which has **no layout
-engine**, so nothing verifies that the diagram actually renders correctly in a
-browser — the edge-routing and merged-box tests assert on the view model and
-the computed ports, not on pixels. That is a deliberate trade (see *Testing code
-that measures layout* below), but it means a whole class of visual regression
-is uncaught.
+End-to-end coverage is one spec — popover placement (below). Everything else
+runs in jsdom, which has **no layout engine**, so nothing verifies that the
+diagram renders correctly in a browser: the edge-routing and merged-box tests
+assert on the view model and the computed ports, not on pixels. That is a
+deliberate trade (see *Testing code that measures layout* below), but it means
+a whole class of visual regression is uncaught.
 
 Also untested: state persistence round-trips (save → reload from URL → verify),
 and full navigation flows across panels.
@@ -365,36 +365,24 @@ the pattern to reach for rather than re-deriving it.
 
 ## Placement in a real browser (Playwright)
 
-**jsdom implements no CSS anchor positioning**, so no vitest here can observe
-where a popover lands. Every placement assertion in `src/test/` checks
-stylesheet TEXT — a claim about CSS source, not geometry — and those stayed
-green through every placement bug the popover has had.
-[`e2e/placement.spec.ts`](../e2e/placement.spec.ts) measures real rects instead.
+jsdom implements no CSS anchor positioning, so no vitest here can see where a
+popover lands — `src/test/` can only check stylesheet text.
+[`e2e/placement.spec.ts`](../e2e/placement.spec.ts) measures real rects.
 
-Two ways to run it, and they are not interchangeable:
-
-| | what it drives | who can run it |
+| | drives | who |
 |---|---|---|
-| `make e2e` | its own **production** build on 4173, started and stopped by Playwright | Siggie, CI |
-| `make e2e-probe` | the **dev** server on 5173, in the browser `make probe-browser` started | Claude too |
+| `make e2e` | its own production build on 4173 | Siggie, CI — nothing to start |
+| `make e2e-probe` | the dev server on 5173 | Claude, **while `make probe-browser` runs** |
 
-`make e2e` is the trustworthy one and is what a final claim rests on. Nothing
-needs starting for it. `make e2e-probe` exists because the sandbox denies
-Claude a browser *launch* but allows a localhost *connection*
-([`e2e/probe.fixture.ts`](../e2e/probe.fixture.ts) uses `connectOverCDP`); it
-sees uncommitted edits, which makes it good for iterating and unfit for a
-verdict. **When the two disagree, `make e2e` wins.**
+`make e2e` is what a claim rests on; `e2e-probe` sees uncommitted edits. When
+they disagree, `make e2e` wins.
 
-⚠️ **Identify a beat by `data-step-address`** (`rows-and-dots`,
-`rows-and-dots~4`), which every build renders. Not by the visible
-`.help-popover-address` tag: that is an authoring aid gated on
-`import.meta.env.DEV`, so it renders nothing in the build `make e2e` serves.
-Navigating by it failed all five tests on a null address before any of them
-measured anything.
+⚠️ **Identify a beat by `data-step-address`** (`rows-and-dots~4`), not by the
+visible `.help-popover-address` tag — the tag is dev-only, so it is absent from
+the build `make e2e` serves.
 
-⚠️ **The canvas is still animating** when a popover opens — the same anchor
-read 599 and then 649 on consecutive runs. `settle()` waits it out; fine-grained
-numbers taken without it are noise.
+⚠️ **The canvas is still animating** when a popover opens — one anchor read 599
+then 649 on consecutive runs. Use `settle()`.
 
 ---
 

@@ -8,16 +8,13 @@ import { defineConfig, devices } from '@playwright/test';
  * where three wrong fixes lived on 2026-09-18. These tests measure real rects
  * in a real browser.
  *
- * ⚠️ This config starts its OWN server on 4173 via `vite preview`. It must
- * never depend on the dev server Siggie keeps on 5173 -- that one is hand
- * started, is not always up, and Claude cannot kill an orphan of it.
+ * ⚠️ Starts its OWN server on 4173. It must never depend on the dev server
+ * Siggie keeps on 5173 -- that one is hand started and not always up.
  *
- * This is the TRUSTWORTHY way to run the suite -- a fresh production build,
- * nothing borrowed -- and it is Siggie's and CI's, because `playwright test`
- * LAUNCHES a browser and the sandbox denies Claude that (Mach port refusal;
- * see the Makefile). `playwright.probe.config.ts` runs the same specs in a
- * browser Siggie already started, which Claude can do; it drives the dev
- * server, so when the two disagree, THIS one wins.
+ * This is the trustworthy way to run the suite, and it is Siggie's and CI's:
+ * `playwright test` LAUNCHES a browser, which the sandbox denies Claude.
+ * `playwright.probe.config.ts` is the one Claude can run. When they disagree,
+ * this one wins.
  */
 export default defineConfig({
   testDir: './e2e',
@@ -38,17 +35,8 @@ export default defineConfig({
   webServer: {
     command: 'npm run build && npx vite preview --port 4173 --strictPort',
     url: 'http://localhost:4173/dynamic-model-var-docs/',
-    /*
-     * ⚠️ NEVER reuse. `reuseExistingServer: !CI` was the default here and it
-     * silently serves a STALE BUNDLE: a `vite preview` left over from an
-     * earlier run is adopted as-is, so `npm run build` never reruns and every
-     * edit since that server started is invisible to the suite.
-     *
-     * That is not hypothetical -- it is what made the 2026-09-19 run fail on
-     * `never reached "rows-and-dots ▸3"` against a spec that had already been
-     * changed to `~3`. A test run that does not reflect the tree it was run
-     * against is worse than no run, so pay the ~2s rebuild every time.
-     */
+    /* ⚠️ Never reuse: an adopted leftover server skips `npm run build`, so the
+       suite silently tests a stale bundle. Worth the ~2s rebuild. */
     reuseExistingServer: false,
     timeout: 180_000,
   },

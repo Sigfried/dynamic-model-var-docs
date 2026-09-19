@@ -13,7 +13,7 @@ Long reference sections are collapsed. Open the one you need.
 
 - **Frontend**: React 18 + TypeScript + Vite
 - **Styling**: Tailwind CSS
-- **Testing**: Vitest + React Testing Library (no end-to-end tests — see below)
+- **Testing**: Vitest + React Testing Library, plus one Playwright spec for popover placement
 - **Data**: LinkML schema (YAML) + TSV variable specifications
 - **Graph**: [graphology](https://graphology.github.io/), plus
   [`supergroup@2`](https://www.npmjs.com/package/supergroup) for the ownership DAG

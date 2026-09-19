@@ -116,9 +116,7 @@ test.describe('placement is stable across back-stepping', () => {
 
     await page.locator('.help-tour-next').first().click();
     await settle(page);
-    // The back button carries no class -- `.help-tour-back` never existed and
-    // timed out on its first real run. Its title is the stable handle, and is
-    // user-facing rather than a hook added for the test.
+    // The back button carries no class; its title is the handle.
     await page.locator('.help-tour-nav button[title^="Previous"]').first().click();
     await settle(page);
 

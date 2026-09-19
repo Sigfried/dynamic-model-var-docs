@@ -93,21 +93,15 @@ theorise from the code; `?dbg=1` logs each convergence's routed approaches.
 
 ### Placement
 
-> **There is now a suite that measures this.** `make e2e` (see
-> [TESTING.md §Placement in a real browser](TESTING.md#placement-in-a-real-browser-playwright))
-> ran for the first time on 2026-09-19 and turned three of Siggie's complaints
-> into numbers: beat 4 of `rows-and-dots` authors `Position: bottom` and lands
-> with its top at **344.5** against an anchor bottom of **499.5**; it covers its
-> own anchor; and the same beat lands **146.5px** apart depending on whether it
-> was reached forwards or by stepping back — the non-determinism described
-> below, finally pinned. Beat 3 and nav-row reachability PASS, so the suite
-> discriminates: a fix must turn the three red green **without** turning those
-> two red. That second one is the constraint `position: absolute` violated.
+> **`make e2e` measures this** ([TESTING.md](TESTING.md#placement-in-a-real-browser-playwright)):
+> 2 pass, 3 fail. Beat 4 of `rows-and-dots` lands at top 344.5 against an anchor
+> bottom of 499.5 and covers its own anchor; the same beat lands 146.5px apart
+> forwards vs. back-stepped. **Beat 3 and nav-row reachability pass** — a fix
+> must not turn those red, which is what `position: absolute` did.
 >
-> ⚠️ The tall popover is a deliberate fixture — beat 4's duplicated
-> `#### Clicking the row has` block, which carries a note saying so. Remove it
-> and the beat-4 tests go green having fixed nothing; shrink the viewport in the
-> config instead.
+> ⚠️ Beat 4's duplicated block is a deliberate fixture making the popover tall.
+> Remove it and those tests go green having fixed nothing; shrink the viewport
+> instead.
 
 **Overhaul anchor placement — it is effectively non-deterministic.** [sg]
 between screen size, box positions, width calculations or settings, and,

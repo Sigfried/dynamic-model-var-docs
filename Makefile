@@ -228,27 +228,13 @@ probe-check:  ## Is the debug browser up and reachable?
 # placement tests (Playwright)
 # --------------------------------------------------------------------------
 #
-# Why they exist at all: jsdom implements NO CSS anchor positioning, so no
-# vitest in this repo can observe where a popover lands. Every placement
-# assertion in src/test/ checks stylesheet TEXT -- a claim about CSS source,
-# not geometry. Those stayed green through every placement bug we have had.
+# jsdom implements NO CSS anchor positioning, so no vitest here can observe
+# where a popover lands. These measure real rects.
 #
-# TWO WAYS TO RUN THEM, and they are not interchangeable:
-#
-#   make e2e        Siggie, CI. Builds and serves its own PRODUCTION bundle on
-#                   4173, started and stopped by Playwright -- nothing for you
-#                   to launch. The trustworthy one; a final claim rests on it.
-#
-#   make e2e-probe  Claude too. Same specs, driven over CDP in the browser
-#                   `make probe-browser` started, against the DEV server on
-#                   5173. Sees uncommitted edits, which makes it right for
-#                   iterating and wrong for a verdict.
-#
-# When the two disagree, `make e2e` wins.
-#
-# `make e2e` LAUNCHES a browser, which the sandbox denies Claude (same Mach
-# port refusal as above). CONNECTING to one is an ordinary localhost
-# connection and is allowed -- that gap is the whole of why `e2e-probe` exists.
+# `make e2e` is the trustworthy one: its own production build, nothing to
+# start. `make e2e-probe` runs the same specs over CDP against the dev server,
+# and is the one Claude can run -- but only while `make probe-browser` is up.
+# See docs/TESTING.md.
 
 .PHONY: e2e
 e2e:  ## Run the placement tests against a fresh production build (Siggie, CI)
@@ -266,20 +252,11 @@ e2e-report:  ## Open the report from the last `make e2e` run
 e2e-install:  ## One-time: fetch the browser Playwright drives
 	npx playwright install chromium
 
-# Claude CAN run the suite this way. `playwright test` launching a browser is
-# what the sandbox denies; CONNECTING to one is an ordinary localhost
-# connection. So with `make probe-browser` and the dev server up, the same
-# specs run under Claude via `connectOverCDP` (see e2e/probe.fixture.ts).
-#
-# ⚠️ It measures the DEV server on 5173, including uncommitted edits -- good
-# for iterating, not a final verdict. `make e2e` builds its own production
-# bundle on 4173; when the two disagree, `make e2e` wins.
-#
-# ⚠️ Checking whether 4173 is up: probe `[::1]`, not `127.0.0.1`. Vite binds
-# `localhost`, which resolves to IPv6 here, so curl against 127.0.0.1 reports
-# "connection refused" for a server that is running perfectly well.
+# ⚠️ To check whether 4173 is up, curl `[::1]`, not `127.0.0.1`. Vite binds
+# `localhost`, which resolves to IPv6 here, so 127.0.0.1 reports "connection
+# refused" for a server that is running fine.
 .PHONY: e2e-probe
-e2e-probe:  ## Run the placement tests in the probe browser (Claude can run this)
+e2e-probe:  ## Placement tests in the probe browser (needs `make probe-browser`)
 	@$(MAKE) --no-print-directory probe-check >/dev/null \
 	  || (echo "Start it first, in your own terminal: make probe-browser"; exit 1)
 	USE_PROBE_BROWSER=1 npx playwright test -c playwright.probe.config.ts
