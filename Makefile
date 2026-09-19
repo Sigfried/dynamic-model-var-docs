@@ -202,7 +202,11 @@ sync-check:  ## Is upstream ahead? (no changes written)
 # the beats. `.help-tour-count` ("3 / 8") is the STEP counter and reads the
 # same on every beat of a step.
 
-CHROME_PROFILE ?= $(TMPDIR)cdp-profile
+# `$(TMPDIR:%/=%)` strips a trailing slash if there is one. macOS sets TMPDIR
+# WITH one and some sandboxes set it without, and plain `$(TMPDIR)cdp-profile`
+# silently wrote the profile NEXT TO the temp dir ("/tmp/foocdp-profile") in the
+# second case rather than inside it.
+CHROME_PROFILE ?= $(TMPDIR:%/=%)/cdp-profile
 CDP_PORT       ?= 9222
 
 .PHONY: probe-browser
@@ -216,6 +220,29 @@ probe-browser:  ## Start Chrome with a debug port (Siggie starts it; Claude conn
 	 echo ""; \
 	 "$$BIN" --remote-debugging-port=$(CDP_PORT) \
 	         --user-data-dir="$(CHROME_PROFILE)" \
+	         --no-first-run --no-default-browser-check
+
+# Same browser, same port, no window -- so `make e2e-probe` stops stealing
+# focus while Claude iterates. This is the REAL Chrome with its window
+# suppressed, NOT `chrome-headless-shell` (the stripped-down binary Playwright
+# would pick for a plain `headless: true` launch). It still serves CDP, so
+# `e2e-probe` connects to it unchanged.
+#
+# Its own profile dir: Chrome refuses a second instance on a profile already in
+# use, so this cannot share $(CHROME_PROFILE) with a visible probe browser.
+# Run one or the other -- they would collide on $(CDP_PORT) anyway.
+.PHONY: probe-browser-headless
+probe-browser-headless:  ## Same, with no visible window (Claude iterates without stealing focus)
+	@BIN=$$(node -e "console.log(require('playwright').chromium.executablePath())"); \
+	 echo "Chrome:  $$BIN (headless)"; \
+	 echo "Port:    $(CDP_PORT)"; \
+	 echo "Profile: $(CHROME_PROFILE)-headless"; \
+	 echo ""; \
+	 echo "Leave this running. Ctrl-C to stop. Nothing will appear on screen."; \
+	 echo ""; \
+	 "$$BIN" --headless \
+	         --remote-debugging-port=$(CDP_PORT) \
+	         --user-data-dir="$(CHROME_PROFILE)-headless" \
 	         --no-first-run --no-default-browser-check
 
 .PHONY: probe-check
