@@ -65,10 +65,26 @@ dev; `make e2e-probe` drives the dev server, so every number it produced came
 from a popover **22.7px taller** than production's (measured: 563.9 with the
 tag, 541.2 without, and the top edge moves by the same amount).
 
-`openStep` now passes `?ids=0`. The reported top for beat 4 moved 344.5 → 300.3,
-so the earlier figures in this file and in BACKLOG were wrong by that much and
-have been corrected. The back-step delta is 146.5px either way — it is the same
-popover measured twice, so height cancels.
+First fix was `?ids=0` in `openStep`. Siggie rejected it as too narrow — it
+only protects specs that remember to pass it, and only covers this one
+affordance: *"the point of this suggestion is so if we ever add any other
+behavior on dev, it automatically gets turned off for e2e"*. Replaced by
+`DEV_EXTRAS` (`src/devExtras.ts`, plus a deliberate copy inside the help
+package, which imports nothing from outside itself): dev-only code gates on
+that instead of `import.meta.env.DEV`, and `probe.fixture.ts` sets
+`window.__E2E__` via `addInitScript` — which runs before any app code, so the
+flag is always there in time, never persists, and a crashed run cannot leave a
+browser stuck. `elkTiming` moved onto it too; it had been writing a row per
+layout during test runs.
+
+A Vite env var was considered and does not work here: `import.meta.env.*` is
+baked in when the dev server starts, so it could not be set per run without
+restarting Siggie's server and killing the tag for their own browsing.
+
+The reported top for beat 4 moved 344.5 → 300.3, so the earlier figures in this
+file and in BACKLOG were wrong by that much and have been corrected. The
+back-step delta is 146.5px either way — it is the same popover measured twice,
+so height cancels.
 
 ⚠️ This falsifies a claim committed earlier the same day: that dev and prod
 agree for placement because the tests "no longer touch" `ADDRESS_TOGGLE_ENABLED`.

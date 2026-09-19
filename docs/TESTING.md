@@ -49,13 +49,19 @@ make e2e                # you run this; nothing needs to be started for it
 **You do not need `make e2e` after every code change.** Let Claude iterate with
 `make e2e-probe` and run `make e2e` once, at the end, to confirm.
 
-⚠️ **The probe only matches production because `openStep` passes `?ids=0`.**
-The address tag is on by default in dev and makes the popover **22.7px
-taller**; production cannot render it at all. Any new spec must open the app
-the same way, or it measures a popover that does not exist outside dev. Beyond
-that the help layer has no environment-gated code, and minification changes
-bytes rather than geometry — but "expected to agree" is not "checked", which is
-what the final `make e2e` is for.
+The probe matches production because the test harness tells the app it is under
+test: `probe.fixture.ts` sets `window.__E2E__` before any app code runs, and
+dev-only affordances are gated on `DEV_EXTRAS` rather than `import.meta.env.DEV`
+([`src/devExtras.ts`](../src/devExtras.ts)). Nothing per-spec to remember, and a
+dev affordance added later is off in tests by default.
+
+⚠️ **Gate any new dev-only behavior on `DEV_EXTRAS`.** `import.meta.env.DEV` is
+true under e2e too — the address tag was, and it silently added 22.7px to every
+popover the tests measured.
+
+Beyond that the help layer has no environment-gated code, and minification
+changes bytes rather than geometry — but "expected to agree" is not "checked",
+which is what the final `make e2e` is for.
 
 ### Why Claude cannot just run `make e2e`
 

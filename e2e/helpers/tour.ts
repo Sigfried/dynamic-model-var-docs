@@ -10,9 +10,10 @@ import type { Page } from '@playwright/test';
  * `.help-tour-count` ("3 / 8") is the STEP counter and reads the same on every
  * beat of a step, so it cannot tell them apart.
  *
- * ⚠️ `data-step-address`, NOT the visible `.help-popover-address` tag: the tag
- * is gated on `import.meta.env.DEV` and renders nothing in the production
- * build this suite serves.
+ * ⚠️ `data-step-address`, NOT the visible `.help-popover-address` tag. The tag
+ * is dev-only furniture, and `probe.fixture.ts` turns dev furniture off for
+ * every run (`DEV_EXTRAS`) so the popover measures the same here as in
+ * production -- the tag alone is 22.7px of height.
  *
  * Counting clicks is not wrong in itself, but it is not self-checking: a wrong
  * assumption about where a step starts survives every later step. Reading the
@@ -64,16 +65,8 @@ export const placement = (page: Page): Promise<Placement> =>
   });
 
 /** Open a tour step and wait for its popover. */
-/**
- * ⚠️ `ids=0` is load-bearing, not tidiness. The address tag is ON by default in
- * dev, and it makes the popover **22.7px taller** (measured: 563.9 with it,
- * 541.2 without, and the top edge moves by the same amount). Without this, the
- * probe config measures a popover production does not have, and its numbers
- * drift from `make e2e` -- which serves a production build where the tag
- * cannot render at all.
- */
 export async function openStep(page: Page, tour: string, step: number) {
-  await page.goto(`?tour=${tour}&step=${step}&ids=0`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`?tour=${tour}&step=${step}`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.help-popover:popover-open', { timeout: 20_000 });
   await settle(page);
 }

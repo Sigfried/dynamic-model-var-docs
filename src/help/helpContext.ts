@@ -5,6 +5,7 @@
  */
 
 import { createContext, useContext, type ReactNode } from 'react';
+import { DEV_EXTRAS } from './devExtras';
 import type { HelpAnchor, HelpContent, TextResolver, TourMeta, TourPosition } from './parseHelpContent';
 
 /**
@@ -38,14 +39,17 @@ export const HELP_MODE_ENABLED = false;
  * shown in the app in the help-content."* With it on, every popover shows the
  * `###` slug it was authored under, click-to-copy.
  *
- * Gated on `import.meta.env.DEV` at its one entry point (the Help menu item in
+ * Gated on `DEV_EXTRAS` at its one entry point (the Help menu item in
  * `HelpMenu.tsx`), so the deployed build has no way to switch it on and the
  * viewer-facing menu does not carry an authoring switch. `?ids=1` seeds it in
  * dev too, for a link that arrives with ids already showing.
  *
+ * ⚠️ `DEV_EXTRAS`, not `import.meta.env.DEV`: the tag adds 22.7px to a
+ * popover's height, and the e2e suite drives the dev server.
+ *
  * Delete this and everything referencing it once the five tours are written.
  */
-export const ADDRESS_TOGGLE_ENABLED = import.meta.env.DEV;
+export const ADDRESS_TOGGLE_ENABLED = DEV_EXTRAS;
 
 export interface HelpApi {
   /**
