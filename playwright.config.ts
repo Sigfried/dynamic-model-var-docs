@@ -21,7 +21,12 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? 'github' : 'list',
+  /* `list` prints to the terminal as it goes; `html` is what `make e2e-report`
+     opens afterwards. `open: 'never'` keeps a failing run from launching a
+     browser on its own. */
+  reporter: process.env.CI
+    ? 'github'
+    : [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: 'http://localhost:4173/dynamic-model-var-docs/',
     trace: 'on-first-retry',

@@ -46,6 +46,14 @@ Then, before trusting a result — a fix claimed to work, a commit, a deploy:
 make e2e                # you run this; nothing needs to be started for it
 ```
 
+**You do not need `make e2e` after every code change.** Let Claude iterate with
+`make e2e-probe` and run `make e2e` once, at the end, to confirm. The two have
+agreed on every number so far, and for placement they are expected to: the only
+environment-gated code in the help layer is `ADDRESS_TOGGLE_ENABLED`, which the
+tests no longer touch, and minification changes bytes rather than geometry.
+That is a reason to iterate on the probe, not a reason to skip the final
+`make e2e` — "expected to agree" is not the same as "checked".
+
 ### Why Claude cannot just run `make e2e`
 
 Claude's shell is sandboxed, and the sandbox denies Chromium's Mach port
