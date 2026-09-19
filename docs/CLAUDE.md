@@ -11,6 +11,9 @@
 > cleanup. THIS file adds only what is specific to this repo. Where both speak,
 > global wins unless a rule here says otherwise explicitly.
 >
+> If you did a cleanup pass and doc files end up longer, you almost
+> certainly did it wrong.
+>
 > For architecture and data flow, see [ARCHITECTURE.md](ARCHITECTURE.md).
 > For tasks, see [TASKS.md](TASKS.md) and [BACKLOG.md](BACKLOG.md).
 

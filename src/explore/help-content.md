@@ -689,6 +689,7 @@ introduced and then use one word.
        - Ticked CauseOfDeath in the panel
        - Moved the row to the top of the Person attributes, and
        - Made the dot to the left of the attribute solid
+       > repeating just to make the popover long for testing
        #### Clicking the row has
        - Added CauseOfDeath to the canvas
        - Drawn a forward-pointing arrow {{edge:own-fwd}}
