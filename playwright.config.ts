@@ -12,11 +12,12 @@ import { defineConfig, devices } from '@playwright/test';
  * never depend on the dev server Siggie keeps on 5173 -- that one is hand
  * started, is not always up, and Claude cannot kill an orphan of it.
  *
- * ⚠️ Claude cannot RUN this suite: Bash runs under a Seatbelt sandbox that
- * denies Chromium's Mach port registration, so Playwright cannot launch a
- * browser (see the Makefile). Claude probes by connecting to a browser Siggie
- * started. This suite is for Siggie and for CI, and `make probe-*` is the
- * interactive equivalent.
+ * This is the TRUSTWORTHY way to run the suite -- a fresh production build,
+ * nothing borrowed -- and it is Siggie's and CI's, because `playwright test`
+ * LAUNCHES a browser and the sandbox denies Claude that (Mach port refusal;
+ * see the Makefile). `playwright.probe.config.ts` runs the same specs in a
+ * browser Siggie already started, which Claude can do; it drives the dev
+ * server, so when the two disagree, THIS one wins.
  */
 export default defineConfig({
   testDir: './e2e',

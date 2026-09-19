@@ -206,7 +206,7 @@ CHROME_PROFILE ?= $(TMPDIR)cdp-profile
 CDP_PORT       ?= 9222
 
 .PHONY: probe-browser
-probe-browser:  ## Start Chrome with a debug port for probes (RUN THIS YOURSELF; Claude cannot)
+probe-browser:  ## Start Chrome with a debug port (Siggie starts it; Claude connects to it)
 	@BIN=$$(node -e "console.log(require('playwright').chromium.executablePath())"); \
 	 echo "Chrome:  $$BIN"; \
 	 echo "Port:    $(CDP_PORT)"; \
@@ -228,21 +228,30 @@ probe-check:  ## Is the debug browser up and reachable?
 # placement tests (Playwright)
 # --------------------------------------------------------------------------
 #
-# ⚠️ RUN THESE YOURSELF. `playwright test` LAUNCHES a browser, and that is the
-# one thing the sandbox denies Claude (same Mach port refusal as above). Claude
-# can write these tests and can read their output once you paste it, but
-# `make e2e` from Claude fails at browser startup every time.
-#
 # Why they exist at all: jsdom implements NO CSS anchor positioning, so no
 # vitest in this repo can observe where a popover lands. Every placement
 # assertion in src/test/ checks stylesheet TEXT -- a claim about CSS source,
 # not geometry. Those stayed green through every placement bug we have had.
 #
-# These start their OWN server (`vite preview` on 4173) and never touch the dev
-# server on 5173.
+# TWO WAYS TO RUN THEM, and they are not interchangeable:
+#
+#   make e2e        Siggie, CI. Builds and serves its own PRODUCTION bundle on
+#                   4173, started and stopped by Playwright -- nothing for you
+#                   to launch. The trustworthy one; a final claim rests on it.
+#
+#   make e2e-probe  Claude too. Same specs, driven over CDP in the browser
+#                   `make probe-browser` started, against the DEV server on
+#                   5173. Sees uncommitted edits, which makes it right for
+#                   iterating and wrong for a verdict.
+#
+# When the two disagree, `make e2e` wins.
+#
+# `make e2e` LAUNCHES a browser, which the sandbox denies Claude (same Mach
+# port refusal as above). CONNECTING to one is an ordinary localhost
+# connection and is allowed -- that gap is the whole of why `e2e-probe` exists.
 
 .PHONY: e2e
-e2e:  ## Run the Playwright placement tests (RUN THIS YOURSELF; Claude cannot)
+e2e:  ## Run the placement tests against a fresh production build (Siggie, CI)
 	npx playwright test
 
 .PHONY: e2e-ui

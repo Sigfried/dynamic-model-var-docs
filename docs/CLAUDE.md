@@ -154,7 +154,11 @@ if (!element) {
 - **Lint baseline is 20 errors**, all pre-existing. Compare against the baseline
   rather than expecting zero.
 - **jsdom does not do layout** — see [TESTING.md](TESTING.md) before writing a
-  test that measures element positions.
+  test that measures element positions. For the popover specifically, jsdom
+  implements no CSS anchor positioning at all, so only the browser suite can
+  see where it lands: **`make e2e-probe` runs it and Claude can run that one**,
+  given `make probe-browser`
+  ([TESTING.md §Placement in a real browser](TESTING.md#placement-in-a-real-browser-playwright)).
 - **NEVER `git add -A`, `git add .`, or `git commit -a`.** Stage explicit paths.
   One such mistake put ~1128 lines of two sessions' implementation inside
   `b17db08`, a commit whose message claims it is docs-only.

@@ -646,6 +646,13 @@ the bottom of the app's Help menu, or with `?ids=1`. The menu item is gated on
 and the toggle are a temporary authoring aid (docs/TASKS.md item 3c) and are
 meant to be deleted once the tours are written.
 
+**The same address, for a machine: `data-step-address` on the popover**, spelled
+`relationship-kinds` and `relationship-kinds~2`. It is ungated, so it is there
+in every build, and it is what the browser placement tests navigate by
+(`e2e/placement.spec.ts`). ⚠️ **It does not go when the visible tag goes** —
+the tag being dev-only is precisely why a test could not use it. `stepAddressOf`
+derives both from the same inputs, so the two spellings cannot drift.
+
 > ⚠️ **Two entries with the same `### ` id is a silent bug**, and now a wrong
 > address as well. Entries are stored in a Map keyed by id, so the second one
 > OVERWRITES the first — its popover, its menu item and every `Anchor:` aimed
