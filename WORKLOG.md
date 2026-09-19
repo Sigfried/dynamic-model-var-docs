@@ -57,6 +57,29 @@ the handshake with `404 Not Found`. Overriding the `browser` fixture
 edits. `make e2e` builds its own production bundle. **When they disagree,
 `make e2e` wins.**
 
+### The probe was measuring a popover production does not have
+
+Siggie, watching the probe runs: *"the address line did appear in all the tests
+you just did."* Correct, and it mattered. The address tag is ON by default in
+dev; `make e2e-probe` drives the dev server, so every number it produced came
+from a popover **22.7px taller** than production's (measured: 563.9 with the
+tag, 541.2 without, and the top edge moves by the same amount).
+
+`openStep` now passes `?ids=0`. The reported top for beat 4 moved 344.5 → 300.3,
+so the earlier figures in this file and in BACKLOG were wrong by that much and
+have been corrected. The back-step delta is 146.5px either way — it is the same
+popover measured twice, so height cancels.
+
+⚠️ This falsifies a claim committed earlier the same day: that dev and prod
+agree for placement because the tests "no longer touch" `ADDRESS_TOGGLE_ENABLED`.
+They do not READ it, but it changes the geometry they measure. The two suites
+agreed on pass/fail only because the failure is ~199px and survives a 22.7px
+shift; a borderline case would have diverged with nothing to explain it.
+
+`?ids=0` is a URL param read in a `useState` initializer and never persisted —
+only the menu item writes to localStorage — so a probe run does not change
+Siggie's own setting.
+
 ### `reuseExistingServer` was serving a stale bundle
 
 Siggie asked whether prod is really being tested, having watched the browser
@@ -82,7 +105,7 @@ Three failures, all the open `popover-placement` bug, now measured rather than
 inferred from a screenshot:
 
 - **beat 4 flips off its authored side**: `Position: bottom`, popover top at
-  **344.5**, anchor bottom at **499.5** — 155px above where it was authored.
+  **300.3**, anchor bottom at **499.0** — ~199px above where it was authored.
 - **beat 4 covers its own anchor** — the same fact from another angle.
 - **placement is not stable across back-stepping**: the same beat lands
   **146.5px** apart depending on whether it was reached forwards or by

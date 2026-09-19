@@ -94,8 +94,8 @@ theorise from the code; `?dbg=1` logs each convergence's routed approaches.
 ### Placement
 
 > **`make e2e` measures this** ([TESTING.md](TESTING.md#placement-in-a-real-browser-playwright)):
-> 2 pass, 3 fail. Beat 4 of `rows-and-dots` lands at top 344.5 against an anchor
-> bottom of 499.5 and covers its own anchor; the same beat lands 146.5px apart
+> 2 pass, 3 fail. Beat 4 of `rows-and-dots` lands at top 300.3 against an anchor
+> bottom of 499.0 and covers its own anchor; the same beat lands 146.5px apart
 > forwards vs. back-stepped. **Beat 3 and nav-row reachability pass** — a fix
 > must not turn those red, which is what `position: absolute` did.
 >

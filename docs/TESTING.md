@@ -47,12 +47,15 @@ make e2e                # you run this; nothing needs to be started for it
 ```
 
 **You do not need `make e2e` after every code change.** Let Claude iterate with
-`make e2e-probe` and run `make e2e` once, at the end, to confirm. The two have
-agreed on every number so far, and for placement they are expected to: the only
-environment-gated code in the help layer is `ADDRESS_TOGGLE_ENABLED`, which the
-tests no longer touch, and minification changes bytes rather than geometry.
-That is a reason to iterate on the probe, not a reason to skip the final
-`make e2e` — "expected to agree" is not the same as "checked".
+`make e2e-probe` and run `make e2e` once, at the end, to confirm.
+
+⚠️ **The probe only matches production because `openStep` passes `?ids=0`.**
+The address tag is on by default in dev and makes the popover **22.7px
+taller**; production cannot render it at all. Any new spec must open the app
+the same way, or it measures a popover that does not exist outside dev. Beyond
+that the help layer has no environment-gated code, and minification changes
+bytes rather than geometry — but "expected to agree" is not "checked", which is
+what the final `make e2e` is for.
 
 ### Why Claude cannot just run `make e2e`
 

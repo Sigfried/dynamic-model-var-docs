@@ -64,8 +64,16 @@ export const placement = (page: Page): Promise<Placement> =>
   });
 
 /** Open a tour step and wait for its popover. */
+/**
+ * ⚠️ `ids=0` is load-bearing, not tidiness. The address tag is ON by default in
+ * dev, and it makes the popover **22.7px taller** (measured: 563.9 with it,
+ * 541.2 without, and the top edge moves by the same amount). Without this, the
+ * probe config measures a popover production does not have, and its numbers
+ * drift from `make e2e` -- which serves a production build where the tag
+ * cannot render at all.
+ */
 export async function openStep(page: Page, tour: string, step: number) {
-  await page.goto(`?tour=${tour}&step=${step}`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`?tour=${tour}&step=${step}&ids=0`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.help-popover:popover-open', { timeout: 20_000 });
   await settle(page);
 }
