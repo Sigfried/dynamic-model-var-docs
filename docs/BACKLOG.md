@@ -93,139 +93,108 @@ theorise from the code; `?dbg=1` logs each convergence's routed approaches.
 
 ### Placement
 
-> **OPEN.** `make e2e` is 2 pass / 3 fail, and the two PASSING tests are the
-> constraint a fix must respect. Run it before and after any change.
->
-> ⚠️ **Start from [§Where the help elements live in the DOM](#where-the-help-elements-live-in-the-dom) below**, not
-> from a CSS property and not from whatever makes the suite green. THREE
-> sessions have now shipped a fix reasoned from the symptom; all three were
-> reverted. The most recent (`a1650ce`, 2026-09-19) turned the suite 5/5 by
-> bounding the popover's height, and Siggie's verdict was that it fixed the
-> tests without fixing the problem: **panning is still wrong — content can be
-> dragged down into empty space but not up.**
->
-> ⚠️ Beat 4 of `rows-and-dots` carries a duplicated block as a deliberate
-> fixture making the popover tall enough to trigger the clamp. Remove it and the
-> tests go green having proved nothing; shrink the viewport instead.
+**Put the help elements in the same coordinate system as the node boxes.**
+Popovers are positioned by machinery entirely unlike the boxes they point at —
+the boxes are absolutely positioned children of a zoomed, scrollable container;
+the popover is a top-layer `position: fixed` element tied to its anchor by CSS
+anchor positioning. Everything below follows from closing that gap.
 
-**What is measured and settled**, so no one re-derives it:
+#### The conjecture this plan rests on
 
-- **It is the TOP LAYER that clamps a too-tall popover back inside the
-  viewport, NOT `position: fixed`.** Measured in a standalone repro: a plain
-  fixed box placed correctly at every height 120–900px; the same box in the top
-  layer via `showPopover()` slid off its authored side above ~300px. ⚠️ This
-  corrects what earlier entries recorded, and it means "the top layer itself"
-  was closed as falsified too early — that comparison was made while both
-  configurations were still over-tall.
-- **`position: absolute` is not the answer.** It stops the clamp by leaving the
-  top layer, and takes the popover's reachability with it: clipped at the fold
-  with back/next unreachable. Shipped and reverted 2026-09-19.
-- **A height bound makes all five tests pass and is not the fix** (`a1650ce`,
-  reverted). Keeping it in mind is useful; reaching for it first is what went
-  wrong.
-- **`anchor()` is valid only in inset properties, never in sizing ones**, so
-  `max-height: calc(100vh - anchor(bottom))` does not resolve. Any height
-  arithmetic has to be in JS.
-- **The back-step delta is NOT a placement bug.** Measured on beat 3 of
-  `rows-and-dots`: the anchor sits at page offset 467.5 whichever way you
-  arrive, and the popover is correctly 12px below it both times — but the canvas
-  `scrollTop` is 159 forwards and 305.5 backwards, so the same beat is 146.5px
-  apart in viewport coordinates. The cause is that a beat re-shows its anchor
-  only when the ANCHOR VALUE changes, and consecutive beats often share one
-  (beats 3 and 4 both anchor `node-box:Person`), while beat 4's `Action:`
-  scrolls the canvas. ⚠️ Check an anchor's PAGE offset against its VIEWPORT
-  offset before concluding the popover moved.
+[sg] We always had panning when content zoomed out bigger than the viewport. The
+extra space to pan into **during fit-to-view** was added for one reason: to see
+the tops of popovers that overflowed at the top. That extra space is why
+fit-to-view scrolls at all, and the scroller div probably exists to serve the
+same kludge.
 
-**Original report** [sg]: between screen size, box positions, width calculations
-or settings, and, worst, stepping backwards/forwards from various states,
-popover placement is weird and unpredictable.
+So: if the help elements move inside the same container as the node boxes and
+use similar positioning, then at fit-to-view they stay within the viewport, and
+at closer zoom they are reachable by ordinary panning. The extra space, and
+maybe the scroller, can then go.
 
-⚠️ **Panning is part of this, and no test covers it.** Siggie, 2026-09-19, on
-the reverted attempt: *"panning is still stupid [...] can drag stuff down to
-reveal useless empty space but can't drag it up, which is not necessary but
-would be reasonable if i wanted to center the stuff."* The canvas scrolls only
-into content, so when a popover or a box sits near the bottom there is no way to
-bring it up into view. A fix that satisfies the suite and leaves this is not a
-fix — that is exactly how `a1650ce` went wrong.
+This is one job, not four. The panning complaint, the popover placement bug, the
+popovers' separate zoom handling and the DOM structure are the same problem seen
+from different sides.
 
-**Still open in this area:**
+#### What to build
 
-A hard-to-replicate bug where `Only:` and `Change:` don't work at all. These
-states may only arise during tour development.
+**1. Two sibling divs inside the zoom transform.** Node boxes in one, help
+elements (popover, spotlight rings, hint dots) in the other, help div with the
+higher `z-index`. Both scale and pan with the diagram.
 
-The most likely culprit making all this stuff difficult is the complex
-logic that lets viewer actions persist during a tour
-(`held`/`tempHeld`/`region`/suppression in
-[tourStateStack.ts](../src/explore/tourStateStack.ts), ~430 lines and the
-subtlest code in the app) and let a tour own the canvas outright.
+**2. Leave the top layer.** It is not needed once the popover is a sibling of
+what it points at, and it actively fights this design: a top-layer element does
+not scale with an ancestor's transform and does not scroll with its container.
+The one thing it bought — escaping `overflow: hidden` ancestors — is behaviour
+this plan deliberately gives up, because clipping to the canvas becomes correct
+once the popover lives there.
 
-It may be worth knowing whether that logic can cause tour change/only
-problems or weird placement even if the user doesn't make changes.
-If not then we could fix the placement issues before addressing it
-and I just make sure not to make user changes while we're working on
-placement problems. In either case, I'm pretty sure that logic is
-making it harder to deal with placement and my inclination is either
-to get rid of all of it and not allow user interaction during tours
-or to allow it but immediately wipe it out on forward/backward step.
+**3. Drop the popovers' own zoom handling.** Popover text size was linked to
+zoom because a popover drew in a comparatively huge font when the boxes were
+zoomed out. Inside the transform it scales with them for free.
 
-The rules Siggie wanted placement to follow, and where each stands:
-- **make sure the popover doesn't cover anything anchored or spotlighted** —
-  holds for the ANCHOR, and `e2e/placement.spec.ts` pins it. A spotlighted
-  element that is not the anchor is still not considered.
-- **`Anchor: none` centers, but `Anchor: none` with `Spotlight:` should still
-  avoid the spotlighted elements** — not done. The unanchored branch of
-  `popoverPosition` centres on the region and knows nothing about spotlights.
-- **popover text size linked to zoom** — shipped.
+**4. The mount container is per-popover, not per application.** `relation-bar`
+is inside a node box and so inside the canvas; `entity-row` is on a panel and is
+not. A popover must mount in a container that CONTAINS ITS TARGET.
 
-#### Where the help elements live in the DOM
+The shape that keeps the package ignorant of what a canvas is: the host
+registers candidate mount points, and the package walks up from the anchor
+element to the nearest registered ancestor. The package only knows "mount points
+exist, find the enclosing one". `Anchor: none` has no target to walk up from and
+needs a default — viewport-level, as now.
 
-⚠️ **START HERE.** This is the part of `popover-placement` Siggie has asked for
-three times and that no session has done: *"this was the most important part of
-the task and should have been done first."* The measurements at the end of this
-subsection are what the one attempt established — read them, they rule out the
-obvious version.
+⚠️ This may strain the rule that the help package knows nothing about host code.
+**Siggie's call: see whether it can be made to work first, and worry about
+separation of concerns after.**
 
-[sg] Three structural changes, which may simplify the placement problem rather
-than just tidying it:
+**5. Spotlights are unaffected.** A ring is positioned ON its target wherever
+that target lives, rather than being a box that has to share a coordinate system
+with it. So a list spanning canvas and panel —
+`Spotlight: slot-row:Person.cause_of_death, entity-row:CauseOfDeath, node-box:CauseOfDeath`
+— should just work, whichever container the popover mounted in.
 
-- **Name the container that holds the node boxes.** It is the
-  `div.relative` carrying the zoom `transform` inside the `overflow-auto`
-  scroller, in [OwnershipGraphView.tsx](../src/explore/OwnershipGraphView.tsx)
-  (`zp.wrapperRef`). Today nothing names it, so nothing can be told to go
-  there.
-- **Put the help stuff in its own container** — popover, spotlight rings,
-  hint dots in one div, for organization. Today they render loose wherever
-  `<HelpLayer/>` sits, which in dmvd means scattered inside the app's own
-  tree.
-- **Put that container inside the one with the node boxes**, so a popover
-  is a sibling of what it points at rather than floating in an outer box.
+#### How you know it worked
 
-The help package must not learn what a canvas is, so the host names the
-element and the package mounts there — the seam
-[`centerOn`](../src/help/HelpProvider.tsx) already demonstrates.
+Not "the e2e suite is green". A height bound made it 5/5 on 2026-09-19 and was
+reverted for fixing nothing (`a1650ce`).
 
-⚠️ **Measured 2026-09-19, and worth knowing before trying this**, because
-the obvious version of it was built and did not fix the symptom:
+- **Panning**: at fit-to-view there is nothing to pan into; zoomed closer,
+  panning reaches everything. Today content can be dragged DOWN into empty space
+  but not UP.
+- **The zoom-linked font code is deleted**, not kept.
+- **`make e2e` still 2 pass → 5 pass**, with the two that already pass still
+  passing. It is the floor, not the goal.
+- The tours read correctly stepping forwards AND backwards.
 
-- A grouping div is free ONLY if it stays `position: static`. A positioned
-  ancestor becomes the containing block for an absolutely positioned
-  descendant, so a `relative` wrapper silently re-bases the popover on the
-  wrapper instead of on its anchor.
-- Mounting inside the canvas does NOT by itself make a tall popover
-  reachable. The scroll area is sized by the graph content, and a popover
-  that is absolutely positioned and in the top layer adds nothing to
-  `scrollHeight` — so it still gets clipped at the fold (132px at
-  1400x800, with the back/next row unreachable).
-- `anchor()` is valid only in inset properties, **not** in sizing ones, so
-  `max-height: calc(100vh - anchor(bottom))` does not resolve. Bounding the
-  popover to the room below its anchor has to be computed in JS.
-- `max-height: calc(100vh - 16px)` stops engaging once the popover is
-  anchor-positioned rather than viewport-positioned, which is how the
-  body's scroll safety net silently stopped working.
+#### ⚠️ Only if you get stuck — history, do not read first
 
-A fuller account, including what was tried and reverted, is in
-[WORKLOG](../WORKLOG.md) under 2026-09-18/19.
+Three sessions (2026-09-18, twice 2026-09-19) shipped a placement fix reasoned
+from the symptom; all three were reverted. The full account is in
+[WORKLOG](../WORKLOG.md). Four things they measured that may save time IF this
+plan runs into trouble — none of it should shape the design:
 
+- **The top-layer clamp.** A too-tall popover in the top layer is shifted back
+  inside the viewport by the browser; that is what put an authored
+  `Position: bottom` ~199px above its anchor. It is the TOP LAYER that does
+  this, not `position: fixed` — a plain fixed box placed correctly at every
+  height 120–900px in a standalone repro. Leaving the top layer removes the
+  clamp, which is one more reason step 2 is safe.
+- **`anchor()` is valid only in inset properties, never sizing ones**, so
+  `max-height: calc(100vh - anchor(bottom))` does not resolve.
+- **A beat landing differently depending on how you ARRIVED at it was a
+  canvas-SCROLL difference, not placement.** Measured on beat 3 of
+  `rows-and-dots` before the restructure: the anchor sat at page offset 467.5
+  either way and the popover was +12.0px below it either way, but `scrollTop`
+  was 159 forwards vs 305 backwards — a 146px difference in viewport
+  coordinates. Cause: a beat re-shows its anchor only when the ANCHOR VALUE
+  changes, and beats 3 and 4 both anchor `node-box:Person` while beat 4's
+  `Action:` scrolls the canvas. This may not survive as a distinct fact once the
+  coordinate systems are merged.
+- **A positioned ancestor becomes the containing block for an absolutely
+  positioned descendant.** Recorded once as "a grouping div is free only while
+  `position: static`" — that generalisation assumed the popover stays
+  top-layer and anchor-positioned. Under this plan re-basing on the wrapper is
+  the POINT.
 
 ### The fan from `ObservationSet.observations`
 

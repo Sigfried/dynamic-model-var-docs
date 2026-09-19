@@ -69,13 +69,13 @@ Chrome rather than the stripped-down `chrome-headless-shell`. Reach for
 pin the open `popover-placement` bug — an authored `Position:` obeyed at any
 height, the popover not covering its own anchor, and a beat landing in the same
 place arrived at forwards and backwards. **Beat 3 and nav-row reachability
-pass**, and a fix must not turn those red, which is what `position: absolute`
-did. Do not "fix" a failure by weakening the assertion.
+pass**, and a fix must not turn those red. Do not "fix" a failure by weakening
+the assertion.
 
-[BACKLOG §Placement](BACKLOG.md#placement) has what is measured and what a fix
-must respect. ⚠️ Making these green is not on its own the task — a height bound
-did exactly that on 2026-09-19 and was reverted for not being the fix that was
-asked for (`a1650ce`).
+⚠️ **Green is the floor, not the goal.** A height bound made all five pass on
+2026-09-19 and was reverted for fixing nothing the task was about (`a1650ce`).
+[BACKLOG §Placement](BACKLOG.md#placement) is the plan and says how you know it
+worked — panning, and deleting the zoom-linked font code.
 
 ⚠️ Beat 4 of `rows-and-dots` carries a duplicated block as a deliberate fixture
 making the popover tall. Removing it makes these pass trivially.

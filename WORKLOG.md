@@ -8,7 +8,109 @@ Newest first.
 
 
 ---
-## 2026-09-19 (latest) — that "fix" was reverted: green tests, wrong fix
+## 2026-09-19 (design) — the placement plan, talked through before anyone codes
+
+No code. [BACKLOG §Placement](docs/BACKLOG.md#placement) was rewritten wholesale
+from this conversation and the old text deleted, deliberately, so a fresh
+session reads the plan rather than three sessions of dead ends. What follows is
+the reasoning behind the plan, not a second copy of it.
+
+### Siggie's conjecture, which reframed the whole thing
+
+The complaint had been "placement is unpredictable" plus, separately, "panning
+is stupid". Siggie's recollection ties them together: the extra space to pan
+into at fit-to-view was added **so the tops of overflowing popovers could be
+reached**, that space is why fit-to-view scrolls at all, and the scroller div
+probably exists to serve the same kludge.
+
+That inverts the diagnosis. The useless empty space is not a panning bug; it is
+a SYMPTOM of popovers living in a different coordinate system from the boxes.
+Merge the coordinate systems and the kludge becomes deletable — and then
+fit-to-view needs no scroll, while closer zoom gets panning for free because the
+content really is bigger than the viewport.
+
+⚠️ Recorded in BACKLOG as recollection, to be confirmed against `zoomToFit`
+before anything is deleted. Siggie's recall on this codebase has been reliable,
+but this plan leans on it hard enough that it should be checked, not assumed.
+
+### Why nobody had tried this
+
+Every session, mine included, treated the popover's positioning scheme — top
+layer, `position-area`, CSS anchor positioning — as the fixed background and
+asked which knob to turn inside it. Nobody asked why the popover is positioned
+differently from the thing it points at. Two coordinate systems tied together by
+anchor positioning is the machinery that kept producing surprises.
+
+### Decisions, with the reasoning that is not in BACKLOG
+
+- **Leaving the top layer is safe, and the top layer was never load-bearing
+  here.** Siggie: *"we shouldn't need it. would it fight the design we're trying
+  to[?]"* It would: a top-layer element neither scales with an ancestor's
+  transform nor scrolls with its container, which are exactly the two properties
+  this plan wants. The one thing it bought — escaping `overflow: hidden`
+  ancestors — is behaviour being given up on purpose, since clipping to the
+  canvas is correct once the popover lives in the canvas.
+- **Per-popover mount container, not per application.** This came from asking
+  what happens to anchors outside the canvas. `relation-bar` turned out to be
+  INSIDE a node box, so inside the canvas; `entity-row` is on a panel and is
+  not. Siggie: *"the parameter for where help content goes will need to be per
+  popover rather than per application."* The walk-up-from-the-anchor shape is
+  how that stays expressible without the package learning what a canvas is.
+- **Spotlights need no such treatment.** A ring is positioned ON its target
+  wherever it lives, rather than being a box that must share a coordinate system
+  with it — so a spotlight list spanning canvas and panel keeps working whatever
+  container the popover mounted in. Different mechanism, different constraint.
+- **Separation of concerns is parked, not waived.** Siggie: *"this may create a
+  problem with keeping help package code completely unrelated to host code, but
+  i'd like to see if we can fix the problem before worrying about separation of
+  concerns."*
+- **Dropping the popovers' zoom handling is the ACCEPTANCE CHECK, not a
+  side-benefit.** If the popover really is in the boxes' coordinate system it
+  scales with them and that code is dead. If it has to stay, the restructure did
+  not land.
+
+### What was cut from BACKLOG, and why
+
+Siggie, on the facts I proposed keeping: *"i don't understand any of the keep
+items and think they will complicate things."* Right — most of them were about
+tuning machinery this plan removes. The falsified-hypotheses list
+(`flip-block`, `max-height`, author-level `inset: auto`, `align-self` and the
+rest) is gone from BACKLOG entirely; it is in the 2026-09-18/19 entries below if
+a fallback to that machinery is ever a deliberate choice.
+
+Four facts survive, behind a "only if you get stuck" heading that says not to
+read it first.
+
+Two things I had wanted in the MAIN plan and was talked out of, correctly:
+
+- **The beat-4 duplicated block being a test fixture.** I argued someone would
+  tidy it away. Siggie: *"i put explicit text in the description to prevent that
+  mistake"* — and there it is at `help-content.md:692`, a `>` note inside the
+  content, visible to anyone editing it. It did not need saying twice.
+- **The back-step/scroll finding.** Siggie asked for evidence rather than taking
+  the claim: *"i don't even know where that came from. can you show me a place
+  in a tour where this occurs and let me see evidence?"* Re-probed on the
+  reverted tree, beat 3 of `rows-and-dots`:
+
+  | arrived | anchor page offset | anchor viewport top | canvas scrollTop | popover top | popover − anchor.bottom |
+  |---|---|---|---|---|---|
+  | forwards | 467.5 | 308.5 | 159 | 557.5 | +12.0 |
+  | backwards | 467.5 | 162.5 | 305 | 411.5 | +12.0 |
+
+  The anchor does not move in the document and the popover holds its authored
+  12px gap both ways; `557.5 − 411.5 = 146` is the scroll difference exactly.
+  But my claim that this "will look like a placement regression during the
+  restructure" was a PREDICTION, not a measurement, and merging the coordinate
+  systems may dissolve the distinction. So it went to the holding area too. To
+  see it by hand: open the tour at step 3, next three times, note where Person
+  sits, next once more, then back.
+
+### Process note
+
+The useful move was Siggie asking for evidence on a claim I had stated twice as
+established. It was true, but the part I had bolted onto it was not, and neither
+of us would have caught that without the probe. Second time this session that
+"measure it" beat "restate it".
 
 `a1650ce` is reverted. It made `make e2e` 5/5 and did not fix what
 `popover-placement` is about. Siggie: *"you managed to 'fix' the problem -- by
