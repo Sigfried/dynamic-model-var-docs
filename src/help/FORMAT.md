@@ -640,9 +640,10 @@ matches exactly one line: a bare `relationship-kinds` also hits every prose
 mention of it, and one carrying the beat ordinal matches nothing. So: paste,
 then count two bullets down.
 
-This is **off by default and dev-only**: turn it on with `Show content ids` at
-the bottom of the app's Help menu, or with `?ids=1`. The menu item is gated on
-`import.meta.env.DEV`, so a deployed build has no way to show it. Both the tag
+This is **dev-only, and on by default there**: toggle it with `Show content ids` at
+the bottom of the app's Help menu, or per-link with `?ids=1` / `?ids=0`. The
+menu item is gated on `import.meta.env.DEV`, so a deployed build has no way to
+show it. Both the tag
 and the toggle are a temporary authoring aid (docs/TASKS.md item 3c) and are
 meant to be deleted once the tours are written.
 
