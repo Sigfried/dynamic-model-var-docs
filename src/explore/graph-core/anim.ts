@@ -88,7 +88,15 @@ export const HOVER_MS = 120;
  * Siggie, 2026-09-09, on a fast machine: *"the times are still short enough
  * that i barely see the computing layout overlay, but maybe worthwhile for
  * slower machines."* So: silent for the common fast case, visible when a
- * machine or a graph is actually slow. Revisit against temp/elk-timings.jsonl.
+ * machine or a graph is actually slow.
+ *
+ * ⚠️ This number has only ever been checked on Siggie's machine. The one
+ * measurement behind it (2026-09-09, 347 runs: p50 153ms, p90 322ms) was
+ * taken there, and the instrumentation that produced it was deleted
+ * 2026-09-19 -- `temp/elk-timings.jsonl` is gone and nothing regenerates it.
+ * Siggie: *"maybe we need to test someday when people with slower computers
+ * use the app."* If that day comes, this constant and the overlay it gates are
+ * the thing to re-measure, and the recorder is in git history.
  */
 export const SPINNER_DELAY_MS = 200;
 

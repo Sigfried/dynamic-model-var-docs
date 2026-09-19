@@ -115,6 +115,20 @@ shift; a borderline case would have diverged with nothing to explain it.
 only the menu item writes to localStorage — so a probe run does not change
 Siggie's own setting.
 
+### ELK timing instrumentation deleted
+
+`elkTimingPlugin.ts`, `elkTiming.ts` and the `recordElkTiming` call are gone,
+along with the `vite.config.ts` plugin entry. The `elk-worker` task had said to
+fix the warm-worker bug FIRST and delete the instrumentation after; Siggie
+chose to delete now, having never prioritised the fix.
+
+⚠️ The consequence, recorded in the task row rather than lost: the warm-worker
+fix would now ship **unmeasured**, and `SPINNER_DELAY_MS = 200` rests on one
+2026-09-09 sample from Siggie's machine. Siggie: *"maybe we need to test
+someday when people with slower computers use the app. i don't know. don't
+want to think about it now."* Parked in `anim.ts` beside the constant, where
+anyone touching the spinner delay will see it. The recorder is in git history.
+
 ### `reuseExistingServer` was serving a stale bundle
 
 Siggie asked whether prod is really being tested, having watched the browser
