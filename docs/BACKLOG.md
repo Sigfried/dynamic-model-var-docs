@@ -91,6 +91,48 @@ theorise from the code; `?dbg=1` logs each convergence's routed approaches.
 
 ## Diagram and layout
 
+### Placement
+
+**Overhaul anchor placement — it is effectively non-deterministic.** [sg]
+between screen size, box positions, width calculations or settings, and,
+worst, stepping backwards/forwards from various states, popover placement
+is weird and unpredictable. Every input is live at render time (measured
+anchor rect, measured text width, viewport), so the same step lands
+differently depending on how you arrived at it.
+
+We have been getting around bad placement with explicit `Position:`
+in the steps, but those can be overridden with the current placement
+logic and can result in bad placement due to user actions, back-stepping,
+screen resize, who knows what else.
+
+Further complicating things is a hard-to-replicate bug where `Only:`
+and `Change:` don't work at all. These states may only arise during
+tour development.
+
+The most likely culprit making all this stuff difficult is the complex
+logic that lets viewer actions persist during a tour
+(`held`/`tempHeld`/`region`/suppression in
+[tourStateStack.ts](../src/explore/tourStateStack.ts), ~430 lines and the
+subtlest code in the app) and let a tour own the canvas outright.
+
+It may be worth knowing whether that logic can cause tour change/only
+problems or weird placement even if the user doesn't make changes.
+If not then we could fix the placement issues before addressing it
+and I just make sure not to make user changes while we're working on
+placement problems. In either case, I'm pretty sure that logic is
+making it harder to deal with placement and my inclination is either
+to get rid of all of it and not allow user interaction during tours
+or to allow it but immediately wipe it out on forward/backward step.
+
+As to how we solve the problem (probably after dealing with tourStateStack
+issues): I don't know what rules the current placement and flip/fallback
+machinery follow, but I think what we could say is:
+- make sure the popover doesn't cover anything anchored or spotlighted
+- `Anchor: none` centers, but `Anchor: none` with `Spotlight:` should still
+  avoid the spotlighted elements
+- we just linked popover text size to zoom, which should help
+
+
 ### The fan from `ObservationSet.observations`
 
 **The source-row half shipped 2026-08-31 (`4bd5755`).** Each
