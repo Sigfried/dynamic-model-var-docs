@@ -65,17 +65,23 @@ in [`playwright.config.ts`](../playwright.config.ts) keeps headless on real
 Chrome rather than the stripped-down `chrome-headless-shell`. Reach for
 `make e2e-headed` to watch a placement happen, not for a verdict.
 
-⚠️ **Three of these are expected to fail: the suite is 2 pass / 3 fail.** They
-pin the open `popover-placement` bug — an authored `Position:` obeyed at any
-height, the popover not covering its own anchor, and a beat landing in the same
-place arrived at forwards and backwards. **Beat 3 and nav-row reachability
-pass**, and a fix must not turn those red. Do not "fix" a failure by weakening
-the assertion.
+**The suite is 5/5**, since `popover-placement` shipped on 2026-09-19. Each
+test is a property Siggie asked for in words — an authored `Position:` obeyed
+at any height, the popover not covering its own anchor, the nav row always
+reachable, a beat landing in the same place arrived at forwards and backwards.
+Do not "fix" a failure by weakening an assertion.
 
-⚠️ **Green is the floor, not the goal.** A height bound made all five pass on
-2026-09-19 and was reverted for fixing nothing the task was about (`a1650ce`).
-[BACKLOG §Placement](BACKLOG.md#placement) is the plan and says how you know it
-worked — panning, and deleting the zoom-linked font code.
+⚠️ **Green is the floor, not the goal**, and this suite has been green for the
+wrong reason before: a height bound made it 5/5 on 2026-09-19 and was reverted
+for fixing nothing the task was about (`a1650ce`). The other half of the
+verdict is not testable here — whether panning behaves and the tours read
+correctly in both directions.
+
+⚠️ **The back-step test compares CANVAS coordinates, not viewport ones.** The
+popover scrolls with the canvas now, so its viewport rect moves when the canvas
+scrolls even though placement did not change — the viewport comparison this
+replaced was measuring the scroll, which is why it stayed red through three
+fixes aimed at the wrong thing.
 
 ⚠️ Beat 4 of `rows-and-dots` carries a duplicated block as a deliberate fixture
 making the popover tall. Removing it makes these pass trivially.

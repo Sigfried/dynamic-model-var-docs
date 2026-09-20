@@ -8,9 +8,119 @@ Newest first.
 
 
 ---
+## 2026-09-19 (evening) — `popover-placement` SHIPPED, and what the bug really was
+
+The plan in BACKLOG §Placement (since deleted, the work being done — the
+section's reasoning is this entry and the one below) was followed and
+works: 5/5 in `make e2e-probe`, from the 2 pass / 3 fail baseline. But the
+CAUSE of the misplacement was none of the things four sessions had proposed,
+including the one written into the plan, and the difference matters because the
+wrong cause is what made this take four sessions.
+
+### The actual cause: the wrapper had no room to place into
+
+`position-area` places the popover WITHIN ITS CONTAINING BLOCK. Once the
+popover became a child of the zoom wrapper, and the wrapper is sized exactly to
+the content box (`setContentSize`), a popover anchored on the lowest box had
+nothing below it — so `block-end` BOTTOM-ALIGNED it to the wrapper's edge and it
+landed on the box it was pointing at. That is the whole bug.
+
+The tell, and it is unmistakable once measured: place a probe box with
+`position-area: block-end` at two different heights and the BOTTOM stays fixed
+while the top moves. A box being pushed up by a boundary, not a flip.
+
+`HELP_ROOM` (800px, `useZoomPan.ts`) is the fix. The WRAPPER grows, never the
+content — `sizeRef` keeps the content size, so `zoomToFit` and the spacer are
+untouched, and `transform-origin: 0 0` means the growth is bottom/right only
+and no box moves. Verified by enlarging the wrapper live: the popover went from
+234.5 to 511.5 against an anchor bottom of 499.5, and the anchor did not move.
+
+### Three causes that were proposed and are wrong, all measured
+
+Recorded because each one cost a session, and two of them are still written
+into comments elsewhere as though settled.
+
+- **`position: fixed` / the top-layer clamp.** `a1650ce` established that the
+  clamp is the TOP LAYER, not `position: fixed`, and that is right. But leaving
+  the top layer did not fix the placement — the symptom survived it intact.
+  The clamp was real and was never what these tests were failing on.
+- **The node boxes' `x`/`y` transform.** I reasoned that `position-area` builds
+  its grid from the anchor's pre-transform LAYOUT box, which for a
+  framer-motion box is 0,0, and that this was why every popover landed at the
+  canvas origin. Plausible, and wrong: switching the boxes to animated
+  `left`/`top` changed none of the numbers (`position-area` still gave 477.5
+  against an anchor bottom of 499.5). Reverted. The layout box was never being
+  read stale — `paintedRelTop == layoutRelTop == 40` with the transform gone,
+  and the misplacement was identical.
+- **The intermediate help div.** A first attempt mounted the popover in an
+  `absolute inset-0` overlay div, a sibling of the boxes. That DOES break
+  anchoring outright — an anchor is only acceptable if it is in the popover's
+  containing block, and the boxes are not inside the overlay, so every
+  `anchor()` silently resolved to zero. Measured: an identical probe box
+  resolved `anchor(bottom)` correctly when appended to the wrapper and to the
+  div's own origin when appended to the overlay. **Mount in the wrapper
+  itself.** `mountPoints.ts` therefore registers a SCOPE (what encloses the
+  anchors) rather than a target — registering the overlay as both resolved
+  nothing at all.
+
+### Process note, because I got this wrong the expensive way
+
+I proposed the transform cause to Siggie as measured when it was inferred — I
+had measured that `anchor()` and `position-area` disagreed, and then supplied a
+mechanism for the disagreement that I had not tested. Siggie dismissed the
+question rather than picking an option, which was right: both options I offered
+were built on that unverified mechanism. The probe that settled it (vary the
+box's height, watch which edge stays pinned) took thirty seconds and should
+have come first. Same lesson as the 2026-09-18 entry below, and CLAUDE.md
+§Measure before diagnosing already says it.
+
+### The back-step test was measuring the scroll, and now cannot
+
+The 146px delta was never placement — WORKLOG 2026-09-19 (below) established
+that from page offsets. Now that the popover is IN the canvas there is a direct
+measurement instead of an inference: arriving at the same beat forwards and
+backwards gives `offsetTop` 289 both ways, the 12px anchor gap both ways, and
+`scrollTop` 159 vs 473 — and 657.5 − 343.5 = 314 is exactly that scroll
+difference. `placement.spec.ts` now compares CANVAS coordinates (`canvas` in
+the `Placement` helper) plus the gap to the anchor, which is what the test was
+always trying to say.
+
+### Siggie's conjecture, confirmed, and the slack halved
+
+The extra pannable space at fit-to-view WAS partly for popovers: `PAN_SLACK`'s
+own comment cites "anything floated over the canvas". That half is now
+unnecessary. The other half is real and is why it is not zero — a box dragged
+off the top must be recoverable (Siggie, 2026-09-09). So `PAN_SLACK` went
+0.5 → 0.25 rather than away. Measured at fit-to-view with `sel=Person`: empty
+space above/below went from 473/559 to 237/159.
+
+⚠️ `HELP_ROOM` is inside the scroll area, so it is pannable emptiness too.
+Keep it near the tallest popover's height (~670px for `why`); rounding it up
+for comfort buys back the thing this entry just removed.
+
+### The scrim had to change, and it is the host that dims now
+
+Dropping the top layer had one consequence nobody predicted: the spotlight's
+`0 0 0 9999px` scrim used to be unable to touch the popover, because the top
+layer outranks every z-index. As an ordinary sibling the popover sits under the
+ring and got greyed out — Siggie sent a screenshot of a dimmed popover.
+
+Siggie: *"try just dimming the unselected node boxes instead of the whole
+viewport"*. So the package's scrim colour became a knob (`--help-scrim`, set to
+`transparent` by dmvd) and the host dims its own boxes.
+
+⚠️ **The dimming cannot live in `helpTheme.css`**, and this was tried first and
+measured to fail: node boxes are `motion.div`s whose `animate={{opacity}}`
+writes an INLINE opacity, which beats any stylesheet rule — every box sat at 1.
+It has to fold into the same inline opacity, next to `CONTEXT_OPACITY`. The
+seam survives: `OwnershipGraphView` reads `data-help-scrim` and the package's
+own anchor/spotlight tags off the DOM, and imports nothing from `src/help/`.
+
+
+---
 ## 2026-09-19 (design) — the placement plan, talked through before anyone codes
 
-No code. [BACKLOG §Placement](docs/BACKLOG.md#placement) was rewritten wholesale
+No code. BACKLOG §Placement was rewritten wholesale
 from this conversation and the old text deleted, deliberately, so a fresh
 session reads the plan rather than three sessions of dead ends. What follows is
 the reasoning behind the plan, not a second copy of it.
@@ -142,7 +252,7 @@ semantics over `reset --hard` so nothing is reachable only from the reflog.
 Kept: the DOCS, because two of their claims were measured and are corrections
 to what earlier entries recorded. Reverting them would restore known-false
 statements. They are in the entry below and summarised in
-[BACKLOG §Placement](docs/BACKLOG.md#placement):
+BACKLOG §Placement:
 
 - The clamp is triggered by the TOP LAYER, not `position: fixed`.
 - The back-step delta is a canvas-SCROLL bug, not placement.
@@ -462,7 +572,7 @@ without touching the tour.
 commits were made and then dropped with `git reset` (recoverable from the
 reflog as `8d6a478` and `be4c2f2`); the tree is back at `7510c06`. Siggie:
 *"it still looks the same."* What survives is the measurement, below, and the
-structural proposal now in [BACKLOG §Placement](docs/BACKLOG.md#placement).
+structural proposal now in BACKLOG §Placement.
 
 ### The one thing that is solidly established
 
