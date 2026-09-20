@@ -61,6 +61,7 @@ import {
   groupSiblings, isMergedId, mergedIdFor, siblingColor, withChildHeaders,
 } from './siblingMerge';
 import type { MergedMember, SiblingColor } from './siblingMerge';
+import { registerMountPoint } from '../help/mountPoints';
 import { childHeaderTag, nodeBoxAnchor, relationBarAnchor, slotRowAnchor } from './helpAnchors';
 import { RelationBar, type RelationRowVM } from './RelationBar';
 import {
@@ -77,6 +78,16 @@ const NODE_W = 240;
 const HEADER_H = 30;
 /** A context box (dashed, not selected) is dimmed to this. */
 const CONTEXT_OPACITY = 0.6;
+/**
+ * How far a tour step fades the boxes it is NOT pointing at.
+ *
+ * Lower than `CONTEXT_OPACITY`, which is a standing property of a box, while
+ * this is a momentary "look over here" — and the two compose, so a context box
+ * that is also unlit reads as the most recessive thing on the canvas. Still
+ * legible rather than hidden: the surrounding diagram is the context the step
+ * is usually talking about.
+ */
+const TOUR_DIM_OPACITY = 0.3;
 const ROW_H = 20;
 /**
  * How many attribute rows a COLLAPSED box shows before it offers a footer.
@@ -1490,6 +1501,31 @@ export default function OwnershipGraphView({
   const geom = latest?.layout ?? null;
 
   const zp = useZoomPan();
+  /*
+   * Where a help popover anchored inside this canvas MOUNTS: the zoom
+   * WRAPPER, the same element the node boxes are children of. A popover
+   * pointing at a box is then a sibling of that box, in one coordinate
+   * system, scaling and panning with it — which is the whole of
+   * docs/BACKLOG.md §Placement. Registering it is the host's entire side of
+   * the seam: the package walks up from the anchor element to find it, so
+   * nothing is passed as a prop and nothing in `src/help/` learns what a
+   * canvas is.
+   *
+   * ⚠️ THE WRAPPER ITSELF, not an overlay div inside it, and this is not a
+   * matter of taste. An anchor is only acceptable to an anchor-positioned box
+   * if it is in that box's CONTAINING BLOCK — so an intermediate
+   * `absolute inset-0` help div, which the node boxes are NOT inside, makes
+   * every anchor unacceptable and every `anchor()` silently resolve to zero.
+   * Measured 2026-09-19: an identical probe box resolved `anchor(bottom)` to
+   * the anchor's real edge when appended to the wrapper and to the div's own
+   * origin when appended to the overlay. The popover sat at the canvas's
+   * top-left corner and no authored `Position:` had any effect.
+   */
+  useEffect(
+    () => registerMountPoint(zp.wrapperRef.current),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- zp refs are stable
+    [],
+  );
   const contentW = (geom?.width ?? 0) + PAD * 2;
   const contentH = (geom?.height ?? 0) + PAD * 2;
   useEffect(() => {
@@ -1570,6 +1606,54 @@ export default function OwnershipGraphView({
     const t = setTimeout(() => setEdgesSettled(true), wait);
     return () => clearTimeout(t);
   }, [layout, geom]);
+
+  /*
+   * WHICH BOXES A TOUR STEP IS POINTING AT, so the others can be dimmed.
+   *
+   * Siggie, 2026-09-19, on the help package's default scrim landing over the
+   * popover once the popover moved into the canvas: *"try just dimming the
+   * unselected node boxes instead of the whole viewport"*. dmvd can be precise
+   * about that where the package cannot, because a node box is a thing it
+   * knows about.
+   *
+   * Read from the DOM rather than passed down, and that is the same seam every
+   * other help integration here uses: `src/help/` tags whichever elements the
+   * step resolved to (`data-help-anchor`, `data-help-spotlight`) and publishes
+   * `data-help-scrim` on the documentElement while a step is actually dimming
+   * — `Highlight: ring` and `none` set nothing, so honouring the field costs
+   * nothing here. Nothing is imported from the package and no prop crosses.
+   *
+   * It has to end up in the INLINE opacity rather than in a stylesheet rule:
+   * the boxes are `motion.div`s whose `animate={{opacity}}` writes inline, and
+   * inline beats a class. A `helpTheme.css` rule was tried first and measured
+   * to lose (every box stayed at 1).
+   */
+  const [dimmed, setDimmed] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    const sync = () => {
+      if (!document.documentElement.hasAttribute('data-help-scrim')) {
+        setDimmed(d => (d === null ? d : null));
+        return;
+      }
+      const lit = new Set<string>();
+      for (const el of document.querySelectorAll('[data-help-anchor], [data-help-spotlight]')) {
+        // The tagged element may BE the box or be a row inside it; a merged
+        // box whose child row is ringed must not be dimmed.
+        const box = el.closest('[data-node-id]')?.getAttribute('data-node-id');
+        if (box) lit.add(box);
+      }
+      // Nothing in the canvas is lit -- the step is pointing at a panel, say.
+      // Dimming every box then says nothing and only makes the canvas murky.
+      setDimmed(lit.size ? lit : null);
+    };
+    sync();
+    const obs = new MutationObserver(sync);
+    obs.observe(document.documentElement, {
+      attributes: true, attributeFilter: ['data-help-scrim', 'data-help-anchor', 'data-help-spotlight'],
+      childList: true, subtree: true,
+    });
+    return () => obs.disconnect();
+  }, []);
 
   const placedRef = useRef<Map<string, PlacedNode>>(new Map());
   // Set when a drag actually moved something, so the click that ends the drag
@@ -2409,7 +2493,14 @@ export default function OwnershipGraphView({
                       initial={{ opacity: 0, x, y }}
                       // Context boxes are dimmed by design; the target has to
                       // say so, because an inline opacity beats the class.
-                      animate={{ opacity: context ? CONTEXT_OPACITY : 1, x, y }}
+                      // A tour step dims every box it is NOT pointing at, by
+                      // the same route and for the same reason -- see `dimmed`.
+                      animate={{
+                        opacity: dimmed && !dimmed.has(n.id)
+                          ? TOUR_DIM_OPACITY
+                          : context ? CONTEXT_OPACITY : 1,
+                        x, y,
+                      }}
                       exit={{ opacity: 0, transition: { duration: sec(fadeMs()) } }}
                       transition={{
                         x: move,

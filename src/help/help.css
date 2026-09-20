@@ -150,7 +150,10 @@ body.help-mode {
   border: 2px solid #0284c7;
   border-radius: 6px;
   pointer-events: none;
-  box-shadow: 0 0 0 3px rgb(2 132 199 / 25%), 0 0 0 9999px rgb(15 23 42 / 12%);
+  /* `--help-scrim`: the package default, overridable to `transparent` by a
+     host that dims its own content instead. See the note below this rule. */
+  --help-scrim: rgb(15 23 42 / 12%);
+  box-shadow: 0 0 0 3px rgb(2 132 199 / 25%), 0 0 0 9999px var(--help-scrim);
   transition: left 160ms ease, top 160ms ease, width 160ms ease, height 160ms ease;
 }
 
@@ -185,8 +188,40 @@ body.help-mode {
   box-shadow: 0 0 0 3px rgb(2 132 199 / 25%);
 }
 
-/* The popover itself. `position: fixed` + the Popover API's top layer, so no
-   z-index or overflow:hidden ancestor can clip it. */
+/* THE SCRIM'S COLOUR IS A KNOB, so a host that dims its own elements can turn
+   it off and keep the ring.
+
+   The `0 0 0 9999px` scrim dims a rectangle of the viewport with a hole at the
+   anchor, which is the only thing a package that knows nothing about the host's
+   content can do. A host that knows what its content IS can do better — dim the
+   six node boxes rather than the screen — and then two dimmings would stack.
+
+   It also stopped being free. While the popover was in the top layer it
+   outranked every z-index and the scrim could never touch it; as an ordinary
+   sibling inside the canvas it sits under the ring's z-index and the scrim
+   greys out the text the reader is there to read (Siggie, 2026-09-19).
+
+   Opting out is one declaration in the host's sheet, next to where it says what
+   its own dimming looks like:
+
+     .help-spotlight { --help-scrim: transparent; }   <- in the host's CSS
+
+   `:root[data-help-scrim]` is the companion: HelpLayer sets that attribute
+   while a scrim is up, so the host can scope its OWN dimming to the same
+   moments without knowing anything about rings. */
+
+/* The popover itself.
+
+   `position: absolute`, NOT `fixed`, and not in the top layer. It mounts
+   inside whatever container holds the element it points at (see
+   `mountPoints.ts`), so it shares that container's coordinate system: inside
+   the canvas it scales with the zoom transform and scrolls with the canvas,
+   which is the whole of docs/BACKLOG.md §Placement. Absolute resolves against
+   the nearest positioned ancestor, which is the mount point.
+
+   A host that registers no mount point gets `position: fixed` back — the
+   `:not([data-help-mount] *)` rule below — since with nothing to be absolute
+   INSIDE, viewport coordinates are the only meaning left. */
 .help-popover {
   /* THE PACKAGE'S DEFAULT SIZE, and the hook a host resizes it through.
      Every size inside the popover is `em` off this, so overriding it in the
@@ -212,7 +247,15 @@ body.help-mode {
      `.help-popover-alert-once`. Each is commented at its rule. */
   --help-font-size: 13px;
 
-  position: fixed;
+  position: absolute;
+
+  /* Over the content it is mounted among — it is a sibling of that content
+     now, not an overlay above it, so it needs to say so. High enough to clear
+     a host's own layering without reaching for the 2147483000 the top-layer
+     era used. `pointer-events: auto` in case the host's mount point is an
+     overlay that switched them off; the popover has buttons. */
+  z-index: 100;
+  pointer-events: auto;
 
   /* Lets a child raise the width past the inline `width` the layer sets.
      `min-width` resolves OVER `width`, so `min-content` here means "at least
@@ -234,10 +277,18 @@ body.help-mode {
 
 
   /* Never taller than the viewport; the BODY scrolls inside it (see the
-     `:popover-open` rule below). Unconditional, so no placement can be missing
+     `[data-open]` rule below). Unconditional, so no placement can be missing
      it — which is the failure mode this guards (Siggie, 2026-09-08: "popover
-     getting cut off again"). */
-  max-height: calc(100vh - 16px);
+     getting cut off again").
+
+     ⚠️ `--help-vh`, not `100vh`, and the difference is the zoom. Inside the
+     canvas the popover is in CONTENT coordinates, which the wrapper's
+     `scale()` multiplies on the way to the screen — so a bare `100vh` here
+     would let a popover at zoom 0.5 be twice the viewport tall on screen.
+     `--help-vh` is `100vh` divided by the zoom, i.e. the viewport's height
+     expressed in the coordinates this box is actually laid out in. The
+     `, 1` fallback is the body-level case, where the two are the same. */
+  max-height: calc(var(--help-vh, 100vh) - 16px);
 
   padding: 12px 14px;
   border: 1px solid #cbd5e1;
@@ -251,18 +302,31 @@ body.help-mode {
   flex-direction: column;
 }
 
-/* The `display` MUST stay scoped to `:popover-open`.
-   The UA stylesheet hides a closed popover with
-   `[popover]:not(:popover-open) { display: none }`, and an author `display`
-   on the bare class beats it — so a plain `.help-popover { display: flex }`
-   leaves the shell PAINTED at all times. Since the shell renders
-   unconditionally and its contents are gated on `entry`, that showed as an
-   empty bordered rectangle over the canvas on every page load, before any
-   entry existed (Siggie, 2026-08-29: "what's that rectangle doing there?").
+/* The `display` MUST stay scoped to the open state — now `[data-open]`, set by
+   HelpLayer, where it was `:popover-open` while this was a top-layer popover.
+
+   The shell renders unconditionally and its contents are gated on `entry`, so
+   a `display: flex` on the bare class paints an empty bordered rectangle over
+   the canvas on every page load, before any entry exists (Siggie, 2026-08-29:
+   "what's that rectangle doing there?"). The UA stylesheet used to hide the
+   closed state for us; nothing does now, so the `display: none` below is
+   explicit and the scoping matters MORE than it did, not less.
 
    Column so a popover taller than the viewport scrolls its BODY and keeps the
    nav row (back / next / ✕) reachable, rather than pushing it off the bottom.
    `maxHeight` is set inline by `popoverPosition`. */
+.help-popover {
+  display: none;
+}
+
+/* NO MOUNT POINT: the host registered none, or the step's anchor did not
+   resolve, so the popover is a child of the layer at body level. There is
+   nothing for `absolute` to resolve against but the page, and viewport
+   coordinates are what `popoverPosition`'s unanchored branch computes — so
+   `fixed` is still right there, and only there. */
+.help-popover:not([data-help-scope] *) {
+  position: fixed;
+}
 /* Last-resort fallback: an anchor with no room on any of the four sides.
    SPANS the whole viewport across the anchor rather than picking a side, so the
    popover still sits in the anchor's row/column and the anchor stays visible
@@ -327,7 +391,7 @@ body.help-mode {
                           --help-shift, --help-shift-start;
 }
 
-.help-popover:popover-open {
+.help-popover[data-open] {
   display: flex;
 }
 

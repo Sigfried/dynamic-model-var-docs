@@ -9,40 +9,62 @@
  * imports this), so equal-specificity rules here win.
  */
 
-/* The tour map is listed beside the popover, not nested in it: it is a
-   `fixed` sibling panel, so it cannot inherit a property set on
-   `.help-popover`. Both surfaces are the same package's UI and want to move
-   together under one knob, so both are named here. */
-.help-popover,
-.help-map {
-  /* Base size for the whole popover. Everything inside is `em` off this, so
-     one value moves prose, title, action band, alert, context and tour nav
-     together. Package default is 13px; see the comment on `.help-popover` in
-     `../help/help.css` for the em-nesting caveat if you touch the children.
+/* Base size for both of the package's reading surfaces. Everything inside is
+   `em` off this, so one value moves prose, title, action band, alert, context
+   and tour nav together. Package default is 13px; see the comment on
+   `.help-popover` in `../help/help.css` for the em-nesting caveat if you touch
+   the children.
 
-     TRACKS THE CANVAS ZOOM, and this is the whole reason the value is not a
-     constant. A diagram box's attribute text is 11px in CANVAS coordinates,
-     so it is `11px * zoom` on screen; the popover is `fixed` and in the top
-     layer, so it scales with nothing. At 1:1 that is 16px against 11px and
-     reads correctly, but the canvas auto-fits, and at the zoom six boxes need
-     the rows shrink to a few px while the popover stays 16 — the step becomes
-     a slab covering the diagram it is describing (Siggie, 2026-09-18: "they
-     all fit but the popover is huge. let's keep the existing size difference
-     ratio for default").
+   16px is the size Siggie picked at 1:1 against a box's 11px attribute rows.
+   It is a CONSTANT, and that is the point: the popover is mounted inside the
+   canvas's zoom transform, so it scales with the boxes on its own and holds
+   that ratio at every zoom with nothing to compute.
 
-     So: hold the RATIO Siggie picked at 1:1 rather than the size. 16/11 of
-     the on-screen attribute size, which is `11px * var(--graph-zoom)`,
-     reduces to `16px * zoom`. `--graph-zoom` is published by `useZoomPan` on
-     the documentElement.
-
-     ⚠️ CLAMPED, because the ratio alone is not a design. Below ~11px the
-     popover's own prose stops being readable, and the reader is reading the
-     popover even when the diagram is tiny; above the authored 16px there is
-     no reason to grow just because someone zoomed in past 1:1. The floor is
-     the binding end in practice — `useZoomPan`'s min zoom is 0.2, which
-     unclamped would give a 3px popover.
-
-     The fallback `1` in `var()` matters: nothing has published a zoom before
-     the first frame, and a popover opened then must not collapse to 0. */
-  --help-font-size: clamp(11px, calc(16px * var(--graph-zoom, 1)), 16px);
+   It used to be `clamp(11px, calc(16px * var(--graph-zoom, 1)), 16px)` —
+   tracking the zoom by hand, because a top-layer `fixed` popover scaled with
+   nothing and became a slab covering the diagram it described. That whole
+   mechanism is what moving into the transform removes; see docs/BACKLOG.md
+   §Placement, where deleting it is the acceptance check rather than a
+   side-benefit. */
+.help-popover {
+  --help-font-size: 16px;
 }
+
+/* The tour map is NOT in the canvas: it is a `fixed` sibling panel listed
+   beside the popover, so it neither inherits from `.help-popover` nor scales
+   with the diagram. It gets the same number, held separately on purpose —
+   the popover's 16px is now a canvas-coordinate size and the map's is a
+   screen one, and they only look like the same declaration. */
+.help-map {
+  --help-font-size: 16px;
+}
+
+/* DIMMING: the node boxes, not the viewport.
+ *
+ * The package's default is a `0 0 0 9999px` scrim on the spotlight ring —
+ * a dimmed rectangle of screen with a hole at the anchor. That is the most a
+ * package can do without knowing what the host's content is, and while the
+ * popover lived in the browser's top layer it was also free, because the top
+ * layer outranks every z-index and the popover was never dimmed by it.
+ *
+ * The popover is now a sibling of the node boxes inside the canvas
+ * (docs/BACKLOG.md §Placement), so the ring's z-index puts that scrim over the
+ * text the reader is trying to read — Siggie, 2026-09-19, with a screenshot,
+ * asking for the unselected BOXES to be dimmed instead.
+ *
+ * dmvd can do that precisely, because a node box is a thing it knows about and
+ * `data-help-anchor` / `data-help-spotlight` are already written on whichever
+ * boxes the step is pointing at. So: drop the package scrim, and fade every
+ * node box that is not one of them.
+ */
+.help-spotlight {
+  --help-scrim: transparent;
+}
+
+/* ⚠️ The dimming itself is NOT here, and cannot be. Node boxes are
+ * `motion.div`s whose `animate={{opacity}}` writes an inline opacity, and
+ * inline beats a stylesheet rule — a selector here was tried first and
+ * measured to lose, with every box sitting at 1. It lives in
+ * `OwnershipGraphView.tsx` (`dimmed`, `TOUR_DIM_OPACITY`), which reads
+ * `data-help-scrim` and the package's own anchor/spotlight tags off the DOM.
+ */

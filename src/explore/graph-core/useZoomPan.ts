@@ -42,10 +42,37 @@ import { animMs } from './anim';
 
 /**
  * Room to pan beyond the content, as a fraction of the container's size on
- * EACH side. Half a viewport: enough to clear anything floated over the
- * canvas, without the scrollable area dwarfing the diagram.
+ * EACH side.
+ *
+ * HALVED to 0.25 on 2026-09-19, when the popover moved inside the canvas.
+ * Siggie's conjecture, which the placement plan rests on: the extra space to
+ * pan into at fit-to-view was added *so the tops of overflowing popovers could
+ * be reached*, and that is why a fitted diagram scrolls at all. Confirmed in
+ * the comment below, which cites "anything floated over the canvas" — the
+ * popover — as half its purpose. That half is now unnecessary: a popover is in
+ * the canvas and bounded by `--help-vh`, so it cannot overflow the viewport
+ * and be unreachable.
+ *
+ * What the slack still buys is the OTHER half, and it is why this is not zero:
+ * a box dragged past the content's edge must be draggable back (Siggie,
+ * 2026-09-09: *"if i drag a box off the screen to the top i can never get it
+ * back again"*). A quarter-viewport is room to recover a dragged box without a
+ * fitted diagram floating in the middle of a scroll area twice its size.
  */
-export const PAN_SLACK = 0.5;
+export const PAN_SLACK = 0.25;
+
+/**
+ * Room added to the WRAPPER (not the content) for an anchored tour popover to
+ * be placed in. See `setContentSize` for why it is needed.
+ *
+ * 800px is a little more than the tallest popover the tours produce (the
+ * `why` step, ~670px) — enough that one anchored on the lowest or rightmost
+ * box still has its authored side available. It is NOT free: the wrapper is
+ * inside the scroll area, so every pixel here is pannable emptiness at
+ * fit-to-view, which is the thing Siggie objected to. Keep it near the
+ * popover's height rather than rounding it up for comfort.
+ */
+const HELP_ROOM = 800;
 
 export interface ZoomPan {
   /** Attach to the overflow-auto scroll container. */
@@ -144,17 +171,27 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
       wrapper.style.transition = ms ? `transform ${ms}ms` : '';
       wrapper.style.transform = `scale(${zoomRef.current})`;
       /*
-       * Publish the zoom so CSS outside the transform can track it. The tour
-       * popover is the consumer: it is `fixed`, so it does not scale with the
-       * canvas, and at a fit-to-screen zoom the boxes shrink while it does
-       * not -- which is how a step that reads fine over one box becomes a
-       * slab covering six (Siggie, 2026-09-18). See `--help-font-size` in
-       * `helpTheme.css` for what is done with it.
+       * Publish the zoom, and the viewport height expressed in the CONTENT
+       * coordinates the wrapper's descendants are laid out in.
        *
-       * On the documentElement rather than the wrapper, because the consumer
-       * is not a descendant of the wrapper -- a popover is in the TOP LAYER.
+       * The tour popover is the consumer, and what it needs changed when it
+       * moved inside this transform. It used to be `fixed` and top-layer, so
+       * it scaled with nothing and needed `--graph-zoom` to size its FONT
+       * against boxes that did scale. Now it scales with them for free, and
+       * that font code is deleted (docs/BACKLOG.md §Placement, step 3).
+       *
+       * What it still cannot express for itself is the VIEWPORT: `100vh`
+       * inside a scaled box means 100vh of screen applied to unscaled
+       * content, so a `max-height: 100vh` at zoom 0.5 is two viewports tall
+       * on screen. `--help-vh` is that height pre-divided by the zoom.
+       *
+       * On the wrapper, not the documentElement: these are facts about this
+       * canvas's coordinate system, and they inherit to exactly the subtree
+       * that is in it. `--graph-zoom` stays on documentElement as well, since
+       * it is a general fact about the canvas and cheap to publish.
        */
       document.documentElement.style.setProperty('--graph-zoom', String(zoomRef.current));
+      wrapper.style.setProperty('--help-vh', `${window.innerHeight / zoomRef.current}px`);
     });
 
     if (spacerTimerRef.current) {
@@ -194,8 +231,23 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
       // changes only when ELK produces a differently-sized graph. Never
       // transitioned: that is the drawing surface resizing, not a zoom, and
       // animating it would clip or reveal boxes mid-flight.
-      wrapper.style.width = `${width}px`;
-      wrapper.style.height = `${height}px`;
+      //
+      // PLUS `HELP_ROOM`, which is not drawing surface: it is somewhere for an
+      // anchored tour popover to be PLACED. The popover is a child of this
+      // wrapper now (docs/BACKLOG.md §Placement), and CSS anchor positioning
+      // places it within its containing block -- so a wrapper sized exactly to
+      // the content leaves a box anchored on the lowest node nowhere to go
+      // below it, and `position-area: block-end` bottom-aligns it to the
+      // wrapper's edge instead, landing it ON the box it points at.
+      //
+      // Measured 2026-09-19: with the wrapper at the content height the
+      // popover sat at 234.5 against an anchor bottom of 499.5; widened, it
+      // moved to 511.5, correctly below. Growth is bottom/right only
+      // (`transform-origin: 0 0`), so no box moves and no fit changes --
+      // `sizeRef` deliberately keeps the CONTENT size, which is what
+      // `zoomToFit` and the spacer measure.
+      wrapper.style.width = `${width + HELP_ROOM}px`;
+      wrapper.style.height = `${height + HELP_ROOM}px`;
       wrapper.style.transformOrigin = '0 0';
       wrapper.style.transform = `scale(${zoomRef.current})`;
     }
@@ -232,6 +284,24 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
       }
     });
   }, [setZoom, slack]);
+
+  /*
+   * `--help-vh` tracks the WINDOW as well as the zoom, so a resize that does
+   * not change the zoom still has to republish it. Without this a popover
+   * keeps the height bound from whatever the window was when the zoom last
+   * moved, which on a shrink lets it run off the bottom.
+   */
+  useEffect(() => {
+    const republish = () => {
+      const wrapper = wrapperRef.current;
+      if (wrapper) {
+        wrapper.style.setProperty('--help-vh', `${window.innerHeight / zoomRef.current}px`);
+      }
+    };
+    republish();
+    window.addEventListener('resize', republish);
+    return () => window.removeEventListener('resize', republish);
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;

@@ -39,8 +39,10 @@
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Markdown from 'react-markdown';
 import { useHelp } from './helpContext';
+import { mountFor } from './mountPoints';
 import { useDragged } from './useDragged';
 /* The markdown pipeline lives in `HelpMarkdown` so components outside the help
    system can call it on their own strings (TASKS `markdown-everywhere`). The
@@ -131,6 +133,18 @@ const HINT_MAX = 40;
  * line omits its `>` would leave that line behind. The spec tells authors to
  * prefix every line, and the test pins that.
  */
+/**
+ * Render `node` inside `mount`, or in place when there is none.
+ *
+ * A portal rather than moving the whole layer, because only the POPOVER wants
+ * the canvas's coordinate system. The rings and hint dots are positioned ON
+ * their targets by `anchor()` and need no shared container -- see
+ * `mountPoints.ts`, and step 5 of docs/BACKLOG.md §Placement.
+ */
+function mountInto(mount: HTMLElement | null, node: React.ReactNode): React.ReactNode {
+  return mount ? createPortal(node, mount) : node;
+}
+
 export function stripAlerts(block: string): string {
   return block
     .split('\n')
@@ -324,6 +338,14 @@ export default function HelpLayer() {
   /** Preferred side for an anchored popover: `'below'` in an LR diagram, where
    *  the graph grows rightwards. Published by the tagging effect. */
   const [anchorSide, setAnchorSide] = useState<'below' | undefined>(undefined);
+  /**
+   * The registered mount point enclosing this step's anchor, or null for
+   * body-level. Resolved by the tagging effect rather than by a memo for the
+   * same reason `anchorSide` is: the anchor element often does not exist when
+   * the step opens, and a memo keyed on the step answers too early and caches
+   * the wrong container. See `mountPoints.ts`.
+   */
+  const [mount, setMount] = useState<HTMLElement | null>(null);
   /** A hovered entry is transient; a clicked one stays until dismissed. */
   const [pinned, setPinned] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
@@ -425,7 +447,7 @@ export default function HelpLayer() {
    * the difference from a poll that had to run whether or not anything moved.
    */
   useLayoutEffect(() => {
-    if (!activeId) { setAnchored(false); setAnchorSide(undefined); return; }
+    if (!activeId) { setAnchored(false); setAnchorSide(undefined); setMount(null); return; }
     let tagged: Element | null = null;
     const sync = () => {
       const el = elementFor(anchor);
@@ -446,6 +468,13 @@ export default function HelpLayer() {
        */
       setAnchorSide(el?.closest('[data-graph-direction]')
         ?.getAttribute('data-graph-direction') === 'RIGHT' ? 'below' : undefined);
+      /*
+       * WHERE THE POPOVER MOUNTS, resolved from the same element and at the
+       * same moment as the side it prefers. Null means body-level, which is
+       * what an unresolved anchor and a host with no registered mount points
+       * both get.
+       */
+      setMount(mountFor(el));
       if (!el) return;
       el.setAttribute(ANCHOR_ATTR, '');
       /*
@@ -487,6 +516,7 @@ export default function HelpLayer() {
       tagged?.removeAttribute(ANCHOR_ATTR);
       setAnchored(false);
       setAnchorSide(undefined);
+      setMount(null);
     };
   }, [activeId, anchor, elementFor]);
 
@@ -600,25 +630,24 @@ export default function HelpLayer() {
   const popoverKey = inTour ? (position?.address ?? 'tour') : (activeId ?? 'none');
 
   /*
-   * Popover API: showPopover puts it in the top layer, above every z-index and
-   * overflow:hidden ancestor.
+   * IS THE POPOVER SHOWN. Plain state, rendered as a `[data-open]` attribute
+   * that `help.css` keys `display` off.
+   *
+   * This used to be the Popover API -- `popover="manual"` plus
+   * `showPopover()`, for the top layer. The top layer is gone: it put the
+   * popover in a different coordinate system from the box it points at,
+   * neither scaling with the canvas's transform nor scrolling with it, which
+   * is the whole of docs/BACKLOG.md §Placement. What the top layer bought was
+   * escaping `overflow: hidden` ancestors, and that is behaviour this design
+   * gives up on purpose: clipping to the canvas is CORRECT once the popover
+   * lives in the canvas.
    *
    * Shown whenever there is an entry to show, NOT only when its anchor
    * resolved. `Anchor: none` is a deliberate authoring choice -- step 1 uses
    * it -- and gating on a resolved anchor made those steps show nothing. An
    * unresolved anchor centres the popover instead; see `popoverPosition`.
    */
-  useEffect(() => {
-    const el = popRef.current;
-    if (!el) return;
-    if (entry && ready) {
-      if (!el.matches(':popover-open')) el.showPopover();
-    } else if (el.matches(':popover-open')) {
-      el.hidePopover();
-    }
-    // `popoverKey`: a remounted element starts closed, even when the entry is
-    // the same one (a beat within a step), so it has to be shown again.
-  }, [entry, ready, popoverKey]);
+  const open = !!entry && ready;
 
   // Leaving help mode, or starting a tour, drops any pin -- otherwise a
   // previously pinned popover outlives the mode that produced it.
@@ -692,6 +721,29 @@ export default function HelpLayer() {
     return () => tagged.forEach(el => el.removeAttribute(HINT_ATTR));
   }, [hints, content, elementFor]);
 
+  /*
+   * IS A SCRIM UP, published on the document so a host can dim its OWN
+   * elements instead of being dimmed by ours.
+   *
+   * The package's default scrim is a `0 0 0 9999px` shadow on the ring, which
+   * dims a rectangle of the viewport with a hole at the anchor. That was
+   * unimprovable while the popover was in the top layer, because the top layer
+   * outranks every z-index and so the popover was never dimmed by it. Inside
+   * the canvas the popover is an ordinary sibling, and the ring's z-index put
+   * the scrim over the thing the reader is trying to read (Siggie, 2026-09-19,
+   * with a screenshot).
+   *
+   * A host that styles off this attribute gets to dim exactly what it means --
+   * for dmvd, the node boxes that are not spotlit -- and the package's own
+   * scrim then stays out of the way. See `helpTheme.css`.
+   */
+  const scrimUp = (spotlit || anchored) && !!activeId && highlight === 'dim';
+  useLayoutEffect(() => {
+    if (!scrimUp) return;
+    document.documentElement.setAttribute('data-help-scrim', '');
+    return () => document.documentElement.removeAttribute('data-help-scrim');
+  }, [scrimUp]);
+
   return (
     <>
       {/*
@@ -754,10 +806,11 @@ export default function HelpLayer() {
       })}
 
 
+      {mountInto(mount,
       <div
         key={popoverKey}
         ref={popRef}
-        popover="manual"
+        data-open={open ? '' : undefined}
         data-help-popover=""
         /* Which authored position is on screen, for tests -- `rows-and-dots` or
            `rows-and-dots~4`. Unlike the visible address tag below, this is in
@@ -1001,7 +1054,7 @@ export default function HelpLayer() {
             )}
           </>
         )}
-      </div>
+      </div>)}
       {/* Rendered beside the popover rather than inside it: it is a panel, and
           nesting it in the card is exactly the cramped thing it exists to
           avoid. Only in a tour — outside one there is no outline to show. */}
