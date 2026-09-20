@@ -11,7 +11,7 @@
  * 2026-09-11: "that one seems much better".
  *
  * Attributes are a short whitelist — `size`, `color`, `bg`, `opacity`,
- * `nowrap`, `center` (block form only) — mapped to one CSS declaration each. Anything else, and any value
+ * `nowrap`, `sup`, `center` (block form only) — mapped to one CSS declaration each. Anything else, and any value
  * with characters outside the plain CSS value set, is dropped, so the content
  * file cannot become a general CSS surface. A directive of another name is
  * rendered as plain content, so a typo loses the styling and not the text.
@@ -24,6 +24,16 @@ const PROPS: Record<string, (v: string) => string> = {
   opacity: v => `opacity:${v}`,
   nowrap: () => 'white-space:nowrap',
   center: () => 'text-align:center',
+  /*
+   * A footnote marker: `an ownership:s[*]{sup} relationship`, and the same
+   * `:s[*]{sup}` opening the note itself.
+   *
+   * Bold is part of the attribute rather than something the author adds around
+   * it (`**:s[*]{sup}**`), because a superscript `*` at .75em is easy to miss
+   * and a marker nobody notices is not a marker — Siggie, 2026-09-20.
+   * `line-height:0` keeps the raised glyph from stretching its line.
+   */
+  sup: () => 'vertical-align:super;font-size:.75em;font-weight:700;line-height:0',
 };
 
 /**

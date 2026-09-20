@@ -327,6 +327,7 @@ their own is a block (a `<div>` around everything between). Attributes are
  | `bg`      | `background-color`                                                                                  |
  | `opacity` | `opacity`                                                                                           |
  | `nowrap`  | `white-space: nowrap`                                                                               |
+ | `sup`     | a **footnote marker**: raised, smaller and bold. Bold is part of the attribute, because a superscript `*` at .75em is otherwise easy to miss. Write the same `:s[*]{sup}` at the marker and at the head of the note |
  | `center`  | `text-align: center` — **block form only**; on `:s[…]` it is dropped, since an inline span has no line of its own to centre within, and forcing one would stop the span sharing a line with other text |
 
 **`color` and `bg` take a name from the host's palette as well as a CSS
@@ -344,6 +345,15 @@ registers these in `src/explore/helpTextResolvers.tsx`:
 
 ```markdown
 An :s[owner]{color=own-fwd} declares the slot; the :s[owned]{color=own-bkwd} thing stores the key.
+```
+
+**A footnote** is two `:s[*]{sup}` and a sized note; there is no numbering
+machinery, so pick a marker (`*`, `†`) and repeat it:
+
+```markdown
+conveying an ownership:s[*]{sup} relationship.
+
+:s[*]{sup}:s[Also called containment, composition, 'has-a', or `has-part`/`part-of`.]{size=.7em}
 ```
 
 That list is the whole of it, on purpose: any other attribute, and any value

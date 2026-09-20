@@ -968,8 +968,6 @@ introduced and then use one word.
 - **Description:** How to read a line's direction, why boxes land where they do, and the rule the Explorer decides it by
 
 <!--
-I've moved this section to the top just while i'm working actively on it.
-
 The structure, which the steps below now follow:
 - read a line's direction off the canvas, and the loop case -- which-way, loops
   (both moved here 2026-09-17 from the folded-in "Reading the diagram" tour;
@@ -997,16 +995,28 @@ If a label changes there, change it here. Do not hand-type a count.
 - **Title:** Which way an arrow points
 - **Tour:** Ownership
 - **Only:** sel=Participant~Visit~TimePeriod
-- **Action:** Drew Participant, Visit and TimePeriod.
+- **~~Action:~~** Drew Participant, Visit and TimePeriod.
 - **Anchor:** node-box:Visit
 - **Spotlight:** slot-row:Visit.year_range, node-box:TimePeriod, node-box:Participant
 - **Description:**
-  ##### Visit *owns* TimePeriod
-  Two of Visit's attribute rows draw arrows, and they go opposite ways. `year_range`
-  holds a TimePeriod, drawn to the RIGHT. The line leaves
-  the row, the arrowhead lands on the entity the attribute names.
+  Visit defines two entity attributes, `year_range` and `associated_participant`.
+  Arrows from these point at their targets in opposite directions, conveying
+  an ownership:s[*]{sup} relationship. The direction of this relationship is not specified in the
+  BDCHM schema but in the Explorer's configuration. This tour explains the
+  rules determining that direction.
+
+  :s[*]{sup} :s[Also called containment, composition, 'has-a', or `has-part`/`part-of`.]{size=0.7em}
 - **Beats:**
-  1. the other way
+  1. forward
+     - Description:
+       ##### Visit *:s[owns]{color=own-fwd}* TimePeriod
+       When the Explorer reads an attribute as :s[owning]{color=own-fwd} what it
+       points at, it draws the target to the **right** and gives the line a
+       forward-pointing arrow {{edge:own-fwd}}:
+       :::s{center color=entity}
+           {{relation:own-fwd:Visit.year_range:TimePeriod}}
+       :::
+  2. the other way
      - Keep: true
      - **Spotlight:** slot-row:Visit.associated_participant, node-box:TimePeriod, node-box:Participant
      - Description:
@@ -1015,21 +1025,16 @@ If a label changes there, change it here. Do not hand-type a count.
        on the LEFT: the line runs backwards to it, with the peculiar backwards
        arrowhead sitting at start of the arrow rather than the end. This is
        to emphasize that it is Visit that defines this relationship, not Participant.
-  2. left to right
-     - Description:
-       ##### The canvas reads left to right
-       What decides the side is **ownership**. A Visit belongs to its
-       Participant, so Participant is drawn first; a Visit owns its
-       TimePeriod, so TimePeriod is drawn after. So the canvas reads left to
-       right as "contains": everything that owns an entity is to its left,
-       everything it owns is to its right.
 
-       The schema does not say which end owns which — so the Explorer works
-       it out, and that is what the rest of this tour is about.
+       When it reads the attribute the other way — the entity declaring it
+       :s[belongs to]{color=own-bkwd} the target — it draws the target to the
+       **left** and points the arrow back at it {{edge:own-bkwd}}.
+       :::s{center color=entity}
+         {{relation:own-bkwd:Condition.associated_participant:Participant}}
+       :::
 
-       Both rows point AT something; the schema gives no hint that one of
-       these is different from the other.
-       :s[small, **bold**, `code`]{size=.7em bg=pink opacity=.4}
+       Those two are the only kinds of line on the canvas. Everything that
+       follows is about which one an attribute gets.
 
 ### loops
 
@@ -1049,93 +1054,6 @@ If a label changes there, change it here. Do not hand-type a count.
 
   Studies, specimens, containers, questionnaire items, files and time points
   all nest this way.
-
-
-### why-ownership
-
-- **Title:** Relationships between entities
-- **Tour:** Ownership
-- Only: sel=Participant~Condition~BodySite
-- **Anchor:** node-box:Condition
-- Position: bottom
-- Highlight: none
-- **Width:** 560
-- **Description:**
-  The canvas is laid out by **ownership** (aka, containment or has-a
-  relationships): an entity is drawn to the right of whatever owns it. That one
-  idea is what the whole diagram is about, but the schema doesn't specify
-  these relationships — so the Explorer works them out, and this tour is about
-  how.
-- Beats:
-  1. own-fwd
-     - ~~Title: none~~
-     - Keep: true
-     - Highlight: dim
-     - Spotlight: slot-row:Condition.affected_body_site
-     - Description:
-       **Condition** has two attributes pointing at other entities.
-
-       `affected_body_site` → **BodySite**, optional (`0..1`). Some conditions
-       occur at a specific body site.
-  2. own-bkwd
-     - ~~Title: none~~
-     - Keep: true
-     - Highlight: dim
-     - Spotlight: slot-row:Condition.associated_participant
-     - Description:
-       `associated_participant` → **Participant**, required (`1..1`). A
-       condition record must belong to someone in a study.
-  3. two-edge-types
-     - ~~Title: none~~
-     - Description:
-       Both attributes point from Condition at something else, but they don't
-       mean the same thing. A condition *belongs to* its participant: the
-       record makes no sense without one, which is why the schema marks
-       `associated_participant` required. A body site is just part of how the
-       condition is described.
-
-       Ownership is about which record depends on which — not about which end
-       the schema happened to put the pointer on.
-  4. optional-owners
-     - ~~Title: none~~
-     - Change: sel=Visit
-     - Anchor: node-box:Visit
-     - Description:
-       **Visit** shows that required-ness isn't the test. `associated_visit`
-       is optional (though the source data may require it), and the Explorer
-       still draws Visit as owning Condition: when a visit is present, the
-       condition was observed or recorded during it.
-
-### edge-types
-
-- **Title:** Edge types
-- **Tour:** Ownership
-- Only: sel=Participant~Condition~BodySite
-- **Anchor:** node-box:BodySite
-- Position: bottom
-- Spotlight: slot-row:Condition.affected_body_site
-- **Description:**
-  When the Explorer reads an attribute as :s[owning]{color=own-fwd} what it
-  points at, it draws the target to the **right** and gives the line a
-  forward-pointing arrow {{edge:own-fwd}}.
-  :::s{center color=entity}
-    {{relation:own-fwd:Condition.affected_body_site:BodySite}}
-  :::
-- Beats:
-  1. backwards
-     - Keep: true
-     - **Anchor:** node-box:Participant
-     - Spotlight: slot-row:Condition.associated_participant
-     - Description:
-       When it reads the attribute the other way — the entity declaring it
-       :s[belongs to]{color=own-bkwd} the target — it draws the target to the
-       **left** and points the arrow back at it {{edge:own-bkwd}}.
-       :::s{center color=entity}
-         {{relation:own-bkwd:Condition.associated_participant:Participant}}
-       :::
-
-       Those two are the only kinds of line on the canvas. Everything that
-       follows is about which one an attribute gets.
 
 ### the-legend
 

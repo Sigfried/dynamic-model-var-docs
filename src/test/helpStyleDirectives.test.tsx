@@ -37,6 +37,9 @@ describe('styleOf', () => {
     expect(styleOf({ size: '.7em', bg: 'pink', opacity: '.4' }))
       .toBe('font-size:.7em;background-color:pink;opacity:.4');
     expect(styleOf({ nowrap: '', color: 'blue' })).toBe('white-space:nowrap;color:blue');
+    // the footnote marker: bold is part of `sup`, so an author writes it once
+    expect(styleOf({ sup: '' }, true))
+      .toBe('vertical-align:super;font-size:.75em;font-weight:700;line-height:0');
     expect(styleOf({ center: '' })).toBe('text-align:center');
     // block-only: dropped on the inline form, the rest kept
     expect(styleOf({ center: '', color: 'teal' }, true)).toBe('color:teal');
