@@ -325,9 +325,15 @@ export function pushStep(state: TourState, change: TourChange): TourState {
  * With no earlier step, the tour is back to having drawn
  * nothing, at region 0.
  *
- * Scalars are NOT restored, per the standing decision: a step overwrites them
- * and a pop leaves them (Siggie, 2026-08-27 — *"easy enough for the user to
- * reclick the button"*).
+ * Scalars are NOT restored: a step overwrites them and a pop leaves them. Every
+ * field pushing and popping the same way is what kept this a stack rather than
+ * a stack plus per-scalar previous-value frames.
+ *
+ * ⚠️ `detail` is being reconsidered — see `panel-and-zoom` in docs/TASKS.md. A
+ * panel a step opened on the viewer's behalf is state that step owns, unlike a
+ * setting such as `dir` or `merge`. The frames already snapshot merged scalars,
+ * so the previous value is available here to read. Scope any such change to
+ * `detail`; restoring all of them is the design that was weighed and not taken.
  */
 export function popStep(state: TourState): TourState {
   if (state.tourStates.length === 0) return state;

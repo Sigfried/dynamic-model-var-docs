@@ -8,6 +8,54 @@ Newest first.
 
 
 ---
+## 2026-09-20 — `panel-and-zoom` audited: still needed, and (a) reopens a 2026-08-27 decision
+
+Siggie asked whether the row was still needed. Audited all three faults against
+the code; **all three are intact**, and the row is rewritten with the mechanism
+for each instead of the symptom.
+
+**The row's own ⚠️ was wrong.** It guessed (b) and (c) were one bug — "an
+auto-fit zoom applied for a transient layout and never unwound" — and told the
+next session to check that before fixing them separately. They share no
+mechanism:
+
+- **(b)** is a MISSING TRIGGER. There is no `ResizeObserver` anywhere in the
+  codebase; the auto-fit in `OwnershipGraphView.tsx` fires only on
+  `[layout, contentW, contentH]`. `zoomToFit` reads `container.clientWidth`
+  live, so a fit would pick up reclaimed width — nothing asks for one when the
+  container resizes.
+- **(c)** is `autoFitRef` LATCHING. `onTourEnd` restores the selection and
+  nothing else, and nothing clears `autoFitRef` on exit. Opening node boxes or
+  starting another tour "fixes" it only because those land a new layout.
+
+Instance of the standing rule: a task row is a claim, not a fact. This one was
+written from a reading session and named a cause it had not measured.
+
+### (a) — kept as a fault, against the 2026-08-27 decision
+
+I initially recommended CUTTING (a): `popStep` says outright that scalars are
+not restored, per Siggie 2026-08-27 (*"easy enough for the user to reclick the
+button"*), and `detail` is a scalar — so the panel staying open on `back` was
+the decision working, not a fault.
+
+**Siggie overruled that:** keep (a), and remove the text saying not to do it.
+So the `popStep` comment no longer asserts the decision as standing; it states
+current behavior and points at the task.
+
+**The distinction that makes this not simply a reversal** — and the thing to
+preserve if it comes up again: a panel a step OPENED ON THE VIEWER'S BEHALF is
+state that step owns, unlike a setting such as `dir` or `merge` that the viewer
+chose. The 2026-08-27 quote was about settings clobbering user actions.
+
+⚠️ **Scope any fix to `detail`.** Restoring all five scalars on pop rebuilds the
+per-scalar previous-value hybrid that was explicitly weighed and rejected in
+2026-08 (archive/tasks-2026-08.md) as overcomplicated. The frames already
+snapshot merged scalars, so the previous value is there to read — which makes
+the over-general fix the tempting one. It is the one not to take.
+
+Docs-only plus one comment; link checker clean, `npm run build` green.
+
+---
 ## 2026-09-20 — the OWNERSHIP_CLASSIFICATION cut (1096 → 294), and where the pieces went
 
 `ownership-doc-rewrite` (b). The plan file OWNERSHIP_DOC_CUT.md is deleted, as
