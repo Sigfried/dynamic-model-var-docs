@@ -71,8 +71,8 @@ overlap fails loudly instead of resolving to whichever was declared first.
 | kind | rule | when | drawn |
 |---|---|---|---|
 | `own-fwd` | **`owns-target-forward-by-default`** — source **owns** range | the default; total, keyed by nothing | forward: source before range |
-| ↳ `own-bkwd` | **`belongs-to-target-backward-by-entity`** — source **belongs to** range | range ∈ [`REFERRED_TO_ENTITIES`](../src/models/ownershipRules.ts) | back: range before source, edge reversed |
-| ↳ `own-bkwd` | **`belongs-to-target-backward-by-attribute`** — source **belongs to** range | `Class.slot` ∈ [`NAMED_BACK_POINTERS`](../src/models/ownershipRules.ts) | back: range before source, edge reversed |
+| ↳ `own-bkwd` | **`belongs-to-target-backward-by-entity`** — source **belongs to** range | range ∈ [`REFERRED_TO_ENTITIES`](../src/models/ownershipRules.ts#L225-L253) | back: range before source, edge reversed |
+| ↳ `own-bkwd` | **`belongs-to-target-backward-by-attribute`** — source **belongs to** range | `Class.slot` ∈ [`NAMED_BACK_POINTERS`](../src/models/ownershipRules.ts#L255-L289) | back: range before source, edge reversed |
 | `own-fwd` | **`child-following-parent`** — induced, not a slot rule | second pass over forward edges; see below | forward |
 | `association` | neither owns the other | [`ASSOCIATION_SLOTS`](../src/models/ownershipRules.ts), empty since 2026-09-11 | back: range before source, both ends arrowed |
 
