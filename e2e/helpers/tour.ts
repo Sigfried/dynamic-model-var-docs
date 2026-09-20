@@ -28,17 +28,28 @@ export interface Placement {
   positionArea: string;
   popover: { top: number; bottom: number; left: number; right: number; height: number; width: number };
   anchor: { top: number; bottom: number; left: number; right: number; height: number } | null;
+  /**
+   * The popover's position in CANVAS coordinates — its offset within the zoom
+   * wrapper it is mounted in, which is where it is actually placed.
+   *
+   * Every other number here is a viewport rect, and a viewport rect moves when
+   * the canvas scrolls even though nothing was placed differently. That is a
+   * real distinction now that the popover scrolls WITH the canvas rather than
+   * being pinned to the viewport, and it is what `placement is stable across
+   * back-stepping` has to compare; see that test.
+   */
+  canvas: { top: number; left: number } | null;
 }
 
 /** Read the popover's address, or null when no popover is open. */
 export const address = (page: Page) =>
   page.evaluate(() =>
-    document.querySelector('.help-popover:popover-open')?.getAttribute('data-step-address') ?? null);
+    document.querySelector('.help-popover[data-open]')?.getAttribute('data-step-address') ?? null);
 
 /** Measure the open popover and the element its `--help-anchor` resolved to. */
 export const placement = (page: Page): Promise<Placement> =>
   page.evaluate(() => {
-    const pop = document.querySelector('.help-popover:popover-open');
+    const pop = document.querySelector('.help-popover[data-open]');
     if (!pop) throw new Error('no open popover');
     const p = pop.getBoundingClientRect();
     const cs = getComputedStyle(pop);
@@ -60,13 +71,16 @@ export const placement = (page: Page): Promise<Placement> =>
       positionArea: cs.positionArea || cs.getPropertyValue('position-area'),
       popover: rect(p),
       anchor: anchor ? rect(anchor) : null,
+      canvas: pop instanceof HTMLElement && pop.offsetParent
+        ? { top: pop.offsetTop, left: pop.offsetLeft }
+        : null,
     };
   });
 
 /** Open a tour step and wait for its popover. */
 export async function openStep(page: Page, tour: string, step: number) {
   await page.goto(`?tour=${tour}&step=${step}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('.help-popover:popover-open', { timeout: 20_000 });
+  await page.waitForSelector('.help-popover[data-open]', { timeout: 20_000 });
   await settle(page);
 }
 

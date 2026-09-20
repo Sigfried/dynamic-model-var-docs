@@ -8,29 +8,23 @@ import { goToAddress, openStep, placement, settle } from './helpers/tour';
  * asserts that the stylesheet TEXT contains a declaration; that is a claim about
  * CSS source, and it stayed green through three placement bugs.
  *
- * ⚠️ **THESE TESTS ARE EXPECTED TO FAIL RIGHT NOW.** That is the point: they
- * pin the bug `popover-placement` is open against, so that whatever fixes it
- * has something to prove it. Do not "fix" them by weakening the assertion.
+ * These passed on 2026-09-19, when the popover moved inside the canvas's zoom
+ * wrapper (BACKLOG §Placement). Do not "fix" a future failure by weakening an
+ * assertion: each one is a property Siggie asked for in words.
  *
- * The bug (measured 2026-09-18/19): step 3 beat 4 of *Using the Explorer*
- * authors `Position: bottom` on `node-box:Person` and lands ABOVE the anchor's
- * bottom. Beat 3 authors the same side on the same kind of anchor and places
- * correctly; they differ only in height.
+ * What the bug turned out to be, since three sessions guessed wrong before
+ * anyone measured it: the popover is placed by `position-area`, which places
+ * it WITHIN ITS CONTAINING BLOCK. Once the popover became a child of the zoom
+ * wrapper, and the wrapper was sized exactly to the content box, a popover
+ * anchored on the lowest node had no room below it — so `block-end`
+ * bottom-aligned it to the wrapper's edge and it landed on the box it was
+ * pointing at. `HELP_ROOM` in `useZoomPan.ts` is the fix, and it is the
+ * wrapper that grows, not the content.
  *
- * The mechanism, measured in a standalone repro: `.help-popover` is
- * `position: fixed`, and a fixed box's containing block is the VIEWPORT, so it
- * cannot overflow -- when it does not fit in the cell `position-area` chose,
- * the browser shifts it back inside, which only a tall popover triggers.
- *
- * ⚠️ `position: absolute` makes these pass and is NOT on its own the fix: it
- * trades this symptom for a popover clipped at the fold with its back/next row
- * unreachable. It was shipped and reverted. See
- * [BACKLOG §Placement](../docs/BACKLOG.md#placement) for the DOM-structure
- * approach to start from, and WORKLOG 2026-09-19 for the five hypotheses
- * already falsified.
- *
- * ⚠️ It was NOT the `flip-block` fallback. That fix was implemented first and
- * measured to change nothing.
+ * ⚠️ Two things that were blamed and are NOT the cause, both measured:
+ * `position: fixed` and the top-layer clamp (gone with the top layer, and the
+ * symptom survived it), and the node boxes' `x`/`y` transform (switching them
+ * to `left`/`top` changed none of these numbers).
  */
 
 const TOUR = 'using-the-explorer';
@@ -109,6 +103,22 @@ test.describe('placement is stable across back-stepping', () => {
    * Siggie's actual complaint is that placement differs depending on how you
    * ARRIVED at a step. This pins the property directly: the same beat reached
    * forwards and then again after stepping back must land in the same place.
+   *
+   * ⚠️ IN CANVAS COORDINATES, not viewport ones, and the difference is not a
+   * weakening of the assertion. The popover is mounted inside the canvas and
+   * scrolls with it, so its viewport rect moves when the canvas is scrolled
+   * even though it was placed identically — and a beat's `Action:` does scroll
+   * the canvas, by a different amount depending on which way you arrived.
+   *
+   * Measured 2026-09-19, arriving forwards and then backwards at the same
+   * beat: `offsetTop` 289 both ways and the 12px anchor gap held both ways,
+   * while `scrollTop` was 159 vs 473 — and 657.5 − 343.5 = 314 is exactly that
+   * scroll difference. The viewport comparison this replaces was measuring the
+   * scroll, which is why it stayed red through three placement fixes aimed at
+   * the wrong thing (WORKLOG 2026-09-18/19).
+   *
+   * The gap to the anchor is asserted alongside it, so a popover that really
+   * did move relative to what it points at still fails.
    */
   test('a beat lands in the same place arrived at forwards and backwards', async ({ page }) => {
     await openStep(page, TOUR, 3);
@@ -122,7 +132,15 @@ test.describe('placement is stable across back-stepping', () => {
 
     const again = await placement(page);
     expect(again.address, 'back did not return to the same beat').toBe(first.address);
-    expect(Math.abs(again.popover.top - first.popover.top), 'popover top moved after back-stepping').toBeLessThan(2);
-    expect(Math.abs(again.popover.left - first.popover.left), 'popover left moved after back-stepping').toBeLessThan(2);
+    expect(first.canvas, 'popover is not mounted in a canvas').not.toBeNull();
+    expect(again.canvas, 'popover is not mounted in a canvas').not.toBeNull();
+    expect(Math.abs(again.canvas!.top - first.canvas!.top),
+      'popover top moved after back-stepping').toBeLessThan(2);
+    expect(Math.abs(again.canvas!.left - first.canvas!.left),
+      'popover left moved after back-stepping').toBeLessThan(2);
+    // And it is still the same distance from the thing it points at.
+    const gap = (p: typeof first) => p.popover.top - p.anchor!.bottom;
+    expect(Math.abs(gap(again) - gap(first)),
+      'popover moved relative to its anchor').toBeLessThan(2);
   });
 });

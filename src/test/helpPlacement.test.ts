@@ -94,29 +94,33 @@ describe('unanchored popover placement', () => {
  *
  * The shell renders unconditionally and its contents are gated on `entry`, so
  * anything that keeps the closed shell visible shows as an empty bordered
- * rectangle over the canvas on page load — which is what shipped, because
- * `.help-popover { display: flex }` on the bare class overrides the UA
- * stylesheet's `[popover]:not(:popover-open) { display: none }` (Siggie,
- * 2026-08-29: "what's that rectangle doing there?").
+ * rectangle over the canvas on page load (Siggie, 2026-08-29: "what's that
+ * rectangle doing there?").
  *
- * Asserted against the CSS text: jsdom does not implement the Popover API's
- * UA rules, so a rendering test would pass either way.
+ * The open state is `[data-open]`, set by HelpLayer. It was `:popover-open`
+ * while the popover was a top-layer Popover-API element, and the UA
+ * stylesheet's `[popover]:not(:popover-open) { display: none }` hid the closed
+ * state for free. Nothing does now, so `display: none` on the bare class is
+ * explicit and BOTH halves are asserted here.
+ *
+ * Asserted against the CSS text rather than a render: jsdom does no layout.
  */
 describe('a closed popover is not painted', () => {
   const css = readFileSync(resolve(__dirname, '../help/help.css'), 'utf8');
 
   /** The body of a rule, by exact selector. */
   const ruleFor = (selector: string) =>
-    css.match(new RegExp(`\\n${selector.replace('.', '\\.')}\\s*\\{([^}]*)\\}`))?.[1];
+    css.match(new RegExp(
+      `\\n${selector.replace(/[.[\]()*+?^$|\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`,
+    ))?.[1];
 
-  it('does not set `display` on the bare .help-popover class', () => {
-    const bare = ruleFor('.help-popover');
-    expect(bare, 'the .help-popover rule should exist').toBeDefined();
-    expect(bare).not.toMatch(/(^|[;\s])display\s*:/);
+  it('hides the bare .help-popover class', () => {
+    // The UA stylesheet no longer does this for us; see the block comment.
+    expect(css).toMatch(/\n\.help-popover\s*\{\s*display:\s*none;?\s*\}/);
   });
 
-  it('sets `display` only under :popover-open', () => {
-    expect(ruleFor('.help-popover:popover-open')).toMatch(/display\s*:\s*flex/);
+  it('shows it only under [data-open]', () => {
+    expect(ruleFor('.help-popover[data-open]')).toMatch(/display\s*:\s*flex/);
   });
 });
 
@@ -182,39 +186,43 @@ describe('dmvd overrides the popover font size without touching the package', ()
     for (const decl of inPackage) expect(decl).toMatch(/13px/);
   });
 
-  it('tracks the canvas zoom, with a floor and a ceiling', () => {
+  it('does NOT track the canvas zoom by hand', () => {
     /*
-     * A diagram box's attribute text is 11px in CANVAS coordinates, so it is
-     * `11px * zoom` on screen; the popover is `fixed` and scales with nothing.
-     * At the zoom an auto-fit picks for six boxes the rows shrink and the
-     * popover does not, and the step becomes a slab over the diagram (Siggie,
-     * 2026-09-18). The ratio Siggie chose at 1:1 is 16/11, which held against
-     * `11px * zoom` reduces to `16px * zoom`.
+     * THE ACCEPTANCE CHECK for the placement restructure, not a style rule.
      *
-     * Clamped at both ends: the popover's own prose has to stay readable when
-     * the diagram is tiny (the floor is what binds — min zoom is 0.2, which
-     * unclamped is a 3px popover), and there is no reason to grow past the
-     * authored size when someone zooms in.
+     * The size used to be `clamp(11px, calc(16px * var(--graph-zoom, 1)),
+     * 16px)`, holding by arithmetic the ratio a top-layer `fixed` popover
+     * could not hold any other way: a box's attribute rows are 11px in CANVAS
+     * coordinates and so shrink with the zoom, while the popover scaled with
+     * nothing and became a slab over the diagram it described (Siggie,
+     * 2026-09-18).
+     *
+     * The popover now mounts inside the canvas's zoom transform, so it scales
+     * with the boxes for free. If this code has to come back, the popover is
+     * not really in the boxes' coordinate system and the restructure did not
+     * land — which is why docs/BACKLOG.md §Placement makes deleting it the
+     * check rather than a side-benefit.
      */
     const decl = app.match(/--help-font-size:\s*([^;]+);/)?.[1] ?? '';
-    expect(decl).toMatch(/clamp\(/);
-    expect(decl).toMatch(/var\(--graph-zoom/);
-    // The `var()` FALLBACK: nothing has published a zoom before the first
-    // frame, and a popover opened then must not collapse to zero.
-    expect(decl).toMatch(/var\(--graph-zoom,\s*1\)/);
+    expect(decl, 'the dmvd override should still exist').toBeTruthy();
+    expect(decl).not.toMatch(/clamp\(/);
+    expect(decl).not.toMatch(/var\(--graph-zoom/);
   });
 
-  it('has something publishing --graph-zoom for it to read', () => {
-    // Two files that must agree, and neither mentions the other's mechanism in
-    // code. The publisher is the zoom hook, on the documentElement because a
-    // popover is in the top layer and not a descendant of the transformed
-    // wrapper.
+  it('bounds the popover by a zoom-corrected viewport height', () => {
+    /*
+     * What replaced it, and the one thing a box inside the transform still
+     * cannot say for itself. `100vh` inside a scaled container is 100vh of
+     * SCREEN applied to unscaled content, so at zoom 0.5 a `max-height: 100vh`
+     * is two viewports tall. `--help-vh` is that height pre-divided by the
+     * zoom, published on the wrapper by the hook that owns the transform.
+     */
     const zoomPan = readFileSync(
       resolve(__dirname, '../explore/graph-core/useZoomPan.ts'), 'utf8',
     );
-    expect(zoomPan).toMatch(
-      /documentElement\.style\.setProperty\(\s*'--graph-zoom'/,
-    );
+    expect(zoomPan).toMatch(/setProperty\(\s*'--help-vh'/);
+    // Republished on resize too: it tracks the WINDOW as well as the zoom.
+    expect(zoomPan).toMatch(/addEventListener\('resize'/);
   });
 
   it('imports the override sheet after the package CSS', () => {
@@ -374,14 +382,17 @@ describe('a tall popover is kept on screen', () => {
     css.match(/\.help-popover\[data-anchored\]\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
 
   it('caps the popover at the viewport height, unconditionally', () => {
-    expect(popover).toMatch(/max-height:\s*calc\(100vh/);
+    // `--help-vh`, not `100vh`: inside the canvas's zoom transform the popover
+    // is laid out in CONTENT coordinates, so the viewport's height has to be
+    // divided by the zoom to mean anything here. `useZoomPan` publishes it.
+    expect(popover).toMatch(/max-height:\s*calc\(var\(--help-vh,\s*100vh\)/);
   });
 
   it('scrolls the BODY rather than growing past that cap', () => {
     // The cap is only survivable because the prose scrolls inside it and the
     // nav row keeps its place; a cap with no scroll just clips the text.
     expect(css).toMatch(/\.help-popover-body\s*\{[^}]*overflow-y:\s*auto/);
-    expect(css).toMatch(/\.help-popover:popover-open\s*\{[^}]*display:\s*flex/);
+    expect(css).toMatch(/\.help-popover\[data-open\]\s*\{[^}]*display:\s*flex/);
   });
 
   it('flips out of a side that does not fit instead of hanging off it', () => {
