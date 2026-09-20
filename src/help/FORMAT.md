@@ -721,6 +721,7 @@ whatever is wearing exactly that string, right now.
 | `node-box:<Entity>` | a whole entity box on the diagram — **not** a merged child |
 | `child-header:<Entity>` | a merged child's header strip inside its parent's box |
 | `relation-bar:<Entity>` | the `← N … M →` band at the top of that entity's box |
+| `legend-rule:<rule-id>` | one rule's block in the Ownership legend — needs `legend=1` |
 
 Only `help-id` and `none` are built in. **The other kinds belong to the host app
 and are unknown to the parser**, which splits `kind:argument` and stops: knowing

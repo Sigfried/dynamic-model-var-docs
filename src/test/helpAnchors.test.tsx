@@ -32,6 +32,7 @@ import SelectionTable from '../explore/SelectionTable';
 import { buildViewModel, mergeSiblings } from '../explore/OwnershipGraphView';
 import {
   ANCHOR_KINDS, categoryRowTag, childHeaderTag, entityCheckboxTag, entityRowTag,
+  legendRuleTag,
   nodeBoxAnchor, nodeBoxTag, relationBarTag, slotRowAnchor, slotRowTag,
 } from '../explore/helpAnchors';
 import { parseHelpContent } from '../help/parseHelpContent';
@@ -306,7 +307,7 @@ test('every diagram anchor in the content file matches a tag its step emits', ()
     + `degrades to an unringed popover:\n  ${bad.join('\n  ')}`).toEqual([]);
 });
 
-test('ANCHOR_KINDS and the builders name the same six kinds', () => {
+test('ANCHOR_KINDS and the builders name the same kinds', () => {
   /*
    * They drift apart silently otherwise, in both directions: a kind listed but
    * never emitted passes the content check and then anchors nothing, and a
@@ -318,7 +319,7 @@ test('ANCHOR_KINDS and the builders name the same six kinds', () => {
   const emitted = [
     entityRowTag('X'), entityCheckboxTag('X'), categoryRowTag('X'),
     nodeBoxTag('X'), childHeaderTag('X'), slotRowTag('X', 's'),
-    relationBarTag('X'),
+    relationBarTag('X'), legendRuleTag('X'),
   ].map(tag => tag.slice(0, tag.indexOf(':')));
   expect(emitted.sort()).toEqual([...ANCHOR_KINDS].sort());
 });

@@ -452,4 +452,21 @@ describe('ownership legend pivots', () => {
     // NAMED_BACK_POINTERS, 2026-09-16).
     expect(text.replace(/\s+/g, ' ')).toMatch(/149 attributes in the schema/);
   });
+
+  /*
+   * Each rule block is anchorable, so a tour's rule step can spotlight the
+   * block it is about (`Spotlight: legend-rule:<rule-id>`). Keyed by the rule
+   * id the tour ALREADY names in its `{{ownership-count:<rule-id>.total}}`
+   * counts, so the step and the block it points at cannot drift apart.
+   */
+  test('each rule block carries its legend-rule anchor', async () => {
+    await setup();
+    const anchored = Array.from(document.querySelectorAll('[data-help-id^="legend-rule:"]'))
+      .map(el => el.getAttribute('data-help-id'));
+    expect(anchored).toEqual([
+      'legend-rule:owns-target-forward-by-default',
+      'legend-rule:belongs-to-target-backward-by-entity',
+      'legend-rule:belongs-to-target-backward-by-attribute',
+    ]);
+  });
 });

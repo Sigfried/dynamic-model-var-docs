@@ -23,8 +23,9 @@
  * | `node-box:<E>` | a whole entity box | `OwnershipGraphView.tsx` |
  * | `child-header:<E>` | a merged child's header strip | `OwnershipGraphView.tsx` |
  * | `slot-row:<E>.<slot>` | one attribute row in a box | `OwnershipGraphView.tsx` |
+ * | `legend-rule:<rule-id>` | one rule's block in the Ownership legend | `OwnershipLegend.tsx` |
  *
- * `help-id:<id>` is the seventh kind and the only one the package owns: it is a
+ * `help-id:<id>` is the one kind the package owns: it is a
  * hand-written literal (`data-help-id="graph-canvas"`), not built here.
  *
  * **Not resolving is normal, not an error.** A box is only tagged when the
@@ -62,6 +63,7 @@ import type { NodeVM, RowVM } from './OwnershipGraphView';
 export const ANCHOR_KINDS = [
   'entity-row', 'entity-checkbox', 'category-row',
   'node-box', 'child-header', 'slot-row', 'relation-bar',
+  'legend-rule',
 ] as const;
 
 export type AnchorKind = typeof ANCHOR_KINDS[number];
@@ -97,6 +99,16 @@ export const childHeaderTag = (classId: string) => `child-header:${classId}`;
  *  tour). Same failure as the `node-box`-for-a-merged-child fallback that was
  *  removed for looking like it worked — see FORMAT.md §Anchor kinds. */
 export const relationBarTag = (classId: string) => `relation-bar:${classId}`;
+
+/**
+ * One rule's block in the Ownership legend, by its **rule id** — the same id
+ * the tour already names in `{{ownership-count:<rule-id>.total}}`, so a rule
+ * step and the block it points at cannot drift apart.
+ *
+ * Only resolves while the Legend panel is open (`legend=1`), which is the
+ * normal not-resolving case: a rule step that wants it opens the panel.
+ */
+export const legendRuleTag = (ruleId: string) => `legend-rule:${ruleId}`;
 
 /**
  * One attribute row, as `<DeclaringClass>.<slot>`.

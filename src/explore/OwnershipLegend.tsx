@@ -50,6 +50,7 @@ import { helpTextResolvers } from './helpTextResolvers';
 import HelpPanel from './HelpPanel';
 import { PANEL_WIDTH_REM } from './panelLayout';
 import EdgeSample, { type DrawnKind } from './EdgeSample';
+import { legendRuleTag } from './helpAnchors';
 import { EDGE_STYLE } from './edgeStyle';
 
 interface OwnershipLegendProps {
@@ -501,7 +502,7 @@ export default function OwnershipLegend({
       widthRem={PANEL_WIDTH_REM.legend}
     >
       <div className="text-xs">
-        <Section title="Arrow direction and ownership">
+        <Section title="Arrow direction">
           <p className={NOTE}>
             Edges connect entities in ownership (i.e., containment or has-a)
             relationships. They start at attribute rows that point to other
@@ -517,6 +518,8 @@ export default function OwnershipLegend({
             <EdgeExample kind="own-bkwd" example="Condition.associated_participant" />
             in which case, B appears to the left of A and the edge points backward.
           </p>
+        </Section>
+        <Section title="Ownership rules">
           {/*
             The accounting that makes 149 the anchor, and so makes `total`
             legible as the fourth pivot. It REPLACED a "two kinds of exception"
@@ -557,7 +560,8 @@ export default function OwnershipLegend({
                  * instead. The rules are now three peers on the page and a
                  * rule-and-its-exceptions in the prose above.
                  */
-                <li key={key} className="border-l-2 pl-2 border-gray-200 dark:border-slate-600">
+                <li key={key} data-help-id={legendRuleTag(g.rule)}
+                  className="border-l-2 pl-2 border-gray-200 dark:border-slate-600">
                   <div className="flex items-baseline gap-1.5">
                     <div
                       className={color ? 'font-medium' : 'font-medium text-gray-400'}

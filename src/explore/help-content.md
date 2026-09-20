@@ -1001,9 +1001,11 @@ If a label changes there, change it here. Do not hand-type a count.
 - **Description:**
   Visit defines two entity attributes, `year_range` and `associated_participant`.
   Arrows from these point at their targets in opposite directions, conveying
-  an ownership:s[*]{sup} relationship. The direction of this relationship is not specified in the
-  BDCHM schema but in the Explorer's configuration. This tour explains the
-  rules determining that direction.
+  an **ownership**:s[*]{sup} relationship. The direction of this relationship is not specified in the
+  BDCHM schema but in the Explorer's configuration.
+
+  This tour will explain the rules determining that direction after quickly describing
+  the arrows.
 
   :s[*]{sup} :s[Also called containment, composition, 'has-a', or `has-part`/`part-of`.]{size=0.7em}
 - **Beats:**
@@ -1014,87 +1016,53 @@ If a label changes there, change it here. Do not hand-type a count.
        points at, it draws the target to the **right** and gives the line a
        forward-pointing arrow {{edge:own-fwd}}:
        :::s{center color=entity}
-           {{relation:own-fwd:Visit.year_range:TimePeriod}}
+         {{relation:own-fwd:Visit.year_range:TimePeriod}}
        :::
+
   2. the other way
      - Keep: true
      - **Spotlight:** slot-row:Visit.associated_participant, node-box:TimePeriod, node-box:Participant
      - Description:
-       ##### Visit *belongs to* Participant
-       `associated_participant` also holds an entity, and Participant landed
-       on the LEFT: the line runs backwards to it, with the peculiar backwards
-       arrowhead sitting at start of the arrow rather than the end. This is
-       to emphasize that it is Visit that defines this relationship, not Participant.
-
+       ##### Visit *:s[belongs to]{color=own-bkwd}* Participant
        When it reads the attribute the other way — the entity declaring it
        :s[belongs to]{color=own-bkwd} the target — it draws the target to the
        **left** and points the arrow back at it {{edge:own-bkwd}}.
        :::s{center color=entity}
-         {{relation:own-bkwd:Condition.associated_participant:Participant}}
+         {{relation:own-bkwd:Visit.associated_participant:Participant}}
        :::
-
+  3. only-two-kinds
+     - Keep: true
+     - **Only:** sel=Participant~Visit~TimePeriod&panels=0
+     - **Spotlight:** node-box:TimePeriod, node-box:Participant
+     - Highlight: none
+     - Description:
        Those two are the only kinds of line on the canvas. Everything that
        follows is about which one an attribute gets.
 
-### loops
-
-- **Title:** An entity that names itself
-- **Tour:** Ownership
-- **Only:** sel=ResearchStudy
-- **Action:** Drew ResearchStudy on its own.
-- **Anchor:** node-box:ResearchStudy
-- Position: right
-- **Spotlight:** slot-row:ResearchStudy.part_of
-- **Description:**
-  `ResearchStudy.part_of` holds a ResearchStudy, so a study
-  can be a sub-study of another. An attribute pointing to
-  its own defining entity means that an instance of this entity
-  can *belong to* another instance of the same kind. We indicate
-  this with a loop mark {{loop}} on the attribute row.
-
-  Studies, specimens, containers, questionnaire items, files and time points
-  all nest this way.
-
 ### the-legend
 
-- **Title:** One rule, and where to check it
+- **Title:** Ownership rules
 - **Tour:** Ownership
-- Only: sel=Participant~Condition~BodySite&legend=1
+- **Only:** sel=Participant~Visit~TimePeriod&legend=1
 - **Action:** Opened the Legend panel — it is always in the Help menu.
-- **Anchor:** none
-- Highlight: none
-- **Width:** 560
+- **Anchor:** node-box:Participant
 - **Description:**
-  The schema doesn't say which end owns which, so the Explorer decides. It
-  decides by **one rule with two exceptions**, listed in the **Legend**, which
-  is open now and always available from the Help menu.
-
-  Each entry shows how many attributes it decided, and opening one lists them
-  — so when a line looks wrong, the Legend is where to go and find out why it
-  was drawn that way.
-
-### owns-target-forward-by-default
-
-- **Title:** The rule: an attribute owns what it points at
-- **Tour:** Ownership
-- **Only:** sel=Questionnaire~QuestionnaireItem&legend=0
-- **Action:** Drew Questionnaire and the items it holds.
-- **Anchor:** node-box:Questionnaire
-- **Spotlight:** slot-row:Questionnaire.items
-- Highlight: ring
-- **Width:** 560
-- **Description:**
-  **:s[Owns target / forward arrow / by default]{color=own-fwd}** —
-  {{ownership-count:owns-target-forward-by-default.total}} attributes, and the
-  default for every one of them.
-
-  If an entity declares an attribute pointing at another entity, the thing it
-  points at is taken to be **part of it**. `items` holds QuestionnaireItems, so
-  the Questionnaire owns them: target on the right, arrow forward.
-  :::s{center color=entity}
-    {{relation:own-fwd:Questionnaire.items:QuestionnaireItem}}
-  :::
+  Across the x entities in the BDCHM schema there are x defined
+  attributes. The schema doesn't say which end owns which, so the Explorer decides.
+  The rules are laid out in the **Legend**.
 - Beats:
+  1. owns-target-forward-by-default
+     - Keep: true
+     - **Spotlight:** legend-rule:owns-target-forward-by-default
+     - **Description:**
+       The default rule is **:s[Owns target / forward arrow / by default]{color=own-fwd}** —
+       attributes point forward; the attribute's entity owns its target.
+       {{ownership-count:owns-target-forward-by-default.total}} attributes
+       follow this rules.
+       the Questionnaire owns them: target on the right, arrow forward.
+       :::s{center color=entity}
+         {{relation:own-fwd:Questionnaire.items:QuestionnaireItem}}
+       :::
   1. not about cardinality
      - Only: sel=Observation~Quantity&legend=0
      - Action: Drew an Observation and a Quantity.
@@ -1221,6 +1189,25 @@ If a label changes there, change it here. Do not hand-type a count.
      - Description:
        Hover the **←** count to see them listed, each with the attribute that
        declares it.
+
+### loops
+
+- **Title:** An entity that names itself
+- **Tour:** Ownership
+- **Only:** sel=ResearchStudy
+- **Action:** Drew ResearchStudy on its own.
+- **Anchor:** node-box:ResearchStudy
+- Position: right
+- **Spotlight:** slot-row:ResearchStudy.part_of
+- **Description:**
+  `ResearchStudy.part_of` holds a ResearchStudy, so a study
+  can be a sub-study of another. An attribute pointing to
+  its own defining entity means that an instance of this entity
+  can *belong to* another instance of the same kind. We indicate
+  this with a loop mark {{loop}} on the attribute row.
+
+  Studies, specimens, containers, questionnaire items, files and time points
+  all nest this way.
 
 ### rules-recap
 
