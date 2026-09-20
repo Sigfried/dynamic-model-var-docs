@@ -243,6 +243,7 @@ kind:
 | `{{category-label:<id>}}` | a category's display label (`admin` → "Admin / Study") |
 | `{{edge:<kind>}}` | the arrow for `own-fwd`, `own-bkwd` or `association`, drawn inline exactly as the canvas and legend draw it — see [Inline widgets](#inline-widgets) |
 | `{{relation:<kind>:<Left>:<Right>}}` | a whole relation on one line, as the relation popover writes a row: `` `Left` `` arrow `` `Right` ``, never wrapped, slightly smaller — e.g. `{{relation:own-fwd:Condition.affected_body_site:BodySite}}` |
+| `{{loop}}` | the self-loop mark a row carries when an attribute points at its own entity — see [Inline widgets](#inline-widgets); no argument |
 | `{{ownership-count:<key>}}` | a live count of classified attributes: `declared`, `forward`, `backward`, or `<rule-id>.<owners\|attrs\|owned\|total>` |
 | `{{schema-count:<key>}}` | a live whole-schema total: `classes`, `concreteClasses`, `slots`, `enums`, `types`, `classRangedSlots` |
 
@@ -281,14 +282,24 @@ widget of that name instead of loading a picture:
 A owns B ![A owns B](widget:edge:own-fwd) when the schema puts the list on A.
 ```
 
-dmvd registers one widget, `edge`, which draws an `EdgeSample` — the same
-component the legend and the relation popover use, from the same `edgeStyle.ts`
-config the canvas draws from, so the arrow in the prose cannot drift from the
-arrow on the canvas. Authors normally write `{{edge:own-fwd}}` and let the
-resolver produce the image; the alt text is the legend's label, which is what a
-reader sees if a host has no such widget. Widgets are handed to
-`<HelpProvider widgets={...}>`; the package knows the URL shape and nothing
-about what any widget draws.
+dmvd registers three, each drawing the same component the app itself draws, so
+a mark in the prose cannot drift from the mark on the canvas:
+
+ | widget | drawn by | authored as |
+ |---|---|---|
+ | `edge` | `EdgeSample`, as the legend and relation popover draw it | `{{edge:own-fwd}}` |
+ | `relation` | a whole relation on one line | `{{relation:own-fwd:Condition.affected_body_site:BodySite}}` |
+ | `loop` | `LoopIcon`, the self-loop mark a row carries | `{{loop}}` |
+
+Authors normally write the `{{…}}` form and let the resolver produce the image
+rather than hand-writing a `widget:` URL. The alt text is what a reader sees if
+a host has no such widget. Widgets are handed to `<HelpProvider widgets={...}>`;
+the package knows the URL shape and nothing about what any widget draws.
+
+**A widget needing no argument** is written `{{loop}}`, with no colon — its
+resolver receives `''`. `loop` is the case: on the canvas the mark names the
+entity and attribute of the row it sits on, and in prose there is no row, so it
+carries a generic title instead.
 
 ### Styling a span or a block — `:s[…]{…}`
 

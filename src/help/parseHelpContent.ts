@@ -1370,8 +1370,13 @@ export type TextResolver = (arg: string) => string | undefined;
  * colon separates kind from arg. Whitespace inside the braces is tolerated
  * because it is invisible in a markdown file and would otherwise fail
  * mysteriously.
+ *
+ * **The arg is optional**, so a resolver that needs none is written `{{loop}}`
+ * rather than `{{loop:}}`; it receives `''`. A resolver that requires an arg
+ * is unaffected — it returns `undefined` for `''` and the placeholder stays
+ * visible, exactly as for any other bad arg.
  */
-const PLACEHOLDER = /\{\{\s*([a-z][a-z0-9-]*)\s*:\s*([^}]*?)\s*\}\}/gi;
+const PLACEHOLDER = /\{\{\s*([a-z][a-z0-9-]*)\s*(?::\s*([^}]*?)\s*)?\}\}/gi;
 
 /**
  * Substitute `{{kind:arg}}` placeholders in one markdown block.
@@ -1407,8 +1412,8 @@ export function fillPlaceholders(
    */
   const withTargets = applyLinkTargets(block);
   if (!resolvers) return withTargets;
-  return withTargets.replace(PLACEHOLDER, (whole, kind: string, arg: string) => {
-    const text = resolvers[kind.toLowerCase()]?.(arg);
+  return withTargets.replace(PLACEHOLDER, (whole, kind: string, arg?: string) => {
+    const text = resolvers[kind.toLowerCase()]?.(arg ?? '');
     return text ?? whole;
   });
 }
@@ -1419,5 +1424,5 @@ export function fillPlaceholders(
  * schema; not used by the rendering path.
  */
 export function placeholdersIn(block: string): Array<[string, string]> {
-  return [...block.matchAll(PLACEHOLDER)].map(m => [m[1].toLowerCase(), m[2]]);
+  return [...block.matchAll(PLACEHOLDER)].map(m => [m[1].toLowerCase(), m[2] ?? '']);
 }

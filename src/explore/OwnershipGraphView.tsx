@@ -48,8 +48,9 @@ import {
   cardinalityLabel, SKIP_SUBCLASS_EXPANSION,
   relationPositionLabel, RELATION_POSITION_ORDER,
 } from '../services/DataService';
-import { EDGE_COLORS, RANGE_COLORS, SIBLING_HEADER_TEXT } from '../config/appConfig';
+import { EDGE_COLORS, SIBLING_HEADER_TEXT } from '../config/appConfig';
 import { EDGE_STYLE, headMarker, headTrim } from './edgeStyle';
+import LoopIcon from './LoopIcon';
 import {
   useGraphLayout, useZoomPan, roundedPath, sectionPoints, mergeTail,
   smoothStepPath,
@@ -947,22 +948,6 @@ export function mergeSiblings(
 
   return { nodes, edges, edgeColors };
 }
-
-/** Self-loop marker: SVG so size/alignment don't depend on font metrics. */
-function LoopIcon({ title }: { title: string }) {
-  return (
-    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="false"
-      className="shrink-0" style={{ color: RANGE_COLORS.entity }}>
-      <title>{title}</title>
-      {/* 300° arc with a 60° gap on the right; arrowhead at the top end
-          pointing into the gap, so the loop reads as an arrow, not an O */}
-      <path d="M12.33 10.5 A5 5 0 1 1 12.33 5.5" fill="none"
-        stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M13.7 7.9 L10.6 6.7 L13.7 4.2 Z" fill="currentColor" />
-    </svg>
-  );
-}
-
 
 /** Top of the row list: below the header, and below the owners strip if shown.
  *  A merged box needs no extra band — its children are introduced by header
@@ -2755,7 +2740,7 @@ export default function OwnershipGraphView({
                               ? `font-semibold ${r.targetColor ? '' : 'text-gray-900 dark:text-gray-100'}`
                               : ''}`}>{r.slot}</span>
                           {r.isLoop && (
-                            <LoopIcon title={`self-referential: a ${r.range} can own another ${r.range} via ${r.slot}`} />
+                            <LoopIcon title={`Self-referential: a ${r.range} can belong to another ${r.range} via ${r.slot}`} />
                           )}
                           {/* P1 again: the range label names the thing the dot
                               colors, so the two agree. Cardinality is not a

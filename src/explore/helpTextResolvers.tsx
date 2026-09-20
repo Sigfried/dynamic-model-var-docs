@@ -39,6 +39,7 @@ import type { OwnershipRule } from '../models/ownershipRules';
 import { ENTITY_CATEGORIES } from '../config/entityCategories';
 import { RANGE_COLORS, SIBLING_COLORS } from '../config/appConfig';
 import EdgeSample from './EdgeSample';
+import LoopIcon, { LOOP_TITLE } from './LoopIcon';
 import { EDGE_STYLE, type DrawnKind } from './edgeStyle';
 
 /**
@@ -144,6 +145,14 @@ export function helpTextResolvers(dataService: DataService) {
       const r = parseRelationArg(arg);
       return r ? `![${r.left} ${r.right}](widget:relation:${arg})` : undefined;
     },
+
+    /*
+     * `{{loop}}` — the self-loop mark as the canvas draws it, inline in prose.
+     * Takes no argument: the canvas mark names the entity and attribute of the
+     * row it sits on, and in prose there is no row, so the widget carries the
+     * generic `LOOP_TITLE`.
+     */
+    'loop': () => `![${LOOP_TITLE}](widget:loop)`,
   };
 }
 
@@ -156,7 +165,9 @@ function parseRelationArg(arg: string) {
 
 /**
  * Inline widgets the tour's markdown can embed as `![alt](widget:<name>:<arg>)`.
- * The `edge` resolver above writes that URL; this is what draws it.
+ * The resolvers above write those URLs; this is what draws them. Each widget's
+ * root element carries `data-widget="<name>"`, so a mark seen on screen can be
+ * traced back to the widget that drew it.
  */
 export const helpWidgets = {
   edge: (kind: string) =>
@@ -173,6 +184,7 @@ export const helpWidgets = {
       </span>
     ) : null;
   },
+  loop: () => <LoopIcon title={LOOP_TITLE} className="help-inline-widget" />,
 };
 
 /**

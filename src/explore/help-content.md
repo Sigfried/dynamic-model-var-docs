@@ -994,7 +994,7 @@ If a label changes there, change it here. Do not hand-type a count.
 
 ### which-way
 
-- **Title:** Which way a line runs
+- **Title:** Which way an arrow points
 - **Tour:** Ownership
 - **Only:** sel=Participant~Visit~TimePeriod
 - **Action:** Drew Participant, Visit and TimePeriod.
@@ -1007,10 +1007,14 @@ If a label changes there, change it here. Do not hand-type a count.
   the row, the arrowhead lands on the entity the attribute names.
 - **Beats:**
   1. the other way
+     - Keep: true
+     - **Spotlight:** slot-row:Visit.associated_participant, node-box:TimePeriod, node-box:Participant
      - Description:
        ##### Visit *belongs to* Participant
        `associated_participant` also holds an entity, and Participant landed
-       on the LEFT: the line runs backwards to it, arrowhead at Participant.
+       on the LEFT: the line runs backwards to it, with the peculiar backwards
+       arrowhead sitting at start of the arrow rather than the end. This is
+       to emphasize that it is Visit that defines this relationship, not Participant.
   2. left to right
      - Description:
        ##### The canvas reads left to right
@@ -1033,11 +1037,16 @@ If a label changes there, change it here. Do not hand-type a count.
 - **Tour:** Ownership
 - **Only:** sel=ResearchStudy
 - **Action:** Drew ResearchStudy on its own.
-- **Anchor:** slot-row:ResearchStudy.part_of
+- **Anchor:** node-box:ResearchStudy
+- Position: right
+- **Spotlight:** slot-row:ResearchStudy.part_of
 - **Description:**
-  One case has no side to land on. `part_of` holds a ResearchStudy, so a study
-  can be a sub-study of another — an entity owning its own kind. A line from a
-  box to itself would only be noise, so the row carries a loop mark instead.
+  `ResearchStudy.part_of` holds a ResearchStudy, so a study
+  can be a sub-study of another. An attribute pointing to
+  its own defining entity means that an instance of this entity
+  can *belong to* another instance of the same kind. We indicate
+  this with a loop mark {{loop}} on the attribute row.
+
   Studies, specimens, containers, questionnaire items, files and time points
   all nest this way.
 
