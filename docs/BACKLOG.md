@@ -12,7 +12,8 @@
 
 ## Investigations
 
-### Let the schema say it: a `has_part` / `part_of` slot hierarchy
+### Schema-defined ownership
+#### Use a `has_part` / `part_of` slot hierarchy to define ownership direction
 
 > Status: **proposal, 2026-09-17, nothing implemented.** TASKS
 > [`ownership-slot-hierarchy`](TASKS.md). The findings below were checked
