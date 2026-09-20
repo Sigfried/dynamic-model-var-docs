@@ -998,21 +998,19 @@ If a label changes there, change it here. Do not hand-type a count.
 - **Tour:** Ownership
 - **Only:** sel=Participant~Visit~TimePeriod
 - **Action:** Drew Participant, Visit and TimePeriod.
-- **Anchor:** slot-row:Visit.year_range
+- **Anchor:** node-box:Visit
+- **Spotlight:** slot-row:Visit.year_range, node-box:TimePeriod, node-box:Participant
 - **Description:**
-  Two of Visit's rows draw lines, and they go opposite ways. `year_range`
-  holds a TimePeriod, drawn to the RIGHT. Same rule as ever — the line leaves
-  the row, the arrowhead lands on the entity the row names — so what differs
-  is only which SIDE the named entity is drawn on.
+  ##### Visit *owns* TimePeriod
+  Two of Visit's attribute rows draw arrows, and they go opposite ways. `year_range`
+  holds a TimePeriod, drawn to the RIGHT. The line leaves
+  the row, the arrowhead lands on the entity the attribute names.
 - **Beats:**
   1. the other way
      - Description:
-       ##### The same rule, the other way
+       ##### Visit *belongs to* Participant
        `associated_participant` also holds an entity, and Participant landed
        on the LEFT: the line runs backwards to it, arrowhead at Participant.
-       Both rows point AT something; the schema gives no hint that one of
-       these is different from the other.
-     - Anchor: slot-row:Visit.associated_participant
   2. left to right
      - Description:
        ##### The canvas reads left to right
@@ -1024,8 +1022,10 @@ If a label changes there, change it here. Do not hand-type a count.
 
        The schema does not say which end owns which — so the Explorer works
        it out, and that is what the rest of this tour is about.
-     - Anchor: node-box:Participant
 
+       Both rows point AT something; the schema gives no hint that one of
+       these is different from the other.
+       :s[small, **bold**, `code`]{size=.7em bg=pink opacity=.4}
 
 ### loops
 

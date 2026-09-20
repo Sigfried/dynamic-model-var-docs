@@ -12,83 +12,6 @@
 
 ## Investigations
 
-### Animating edge geometry
-
-Deferred by Siggie 2026-09-09, after the boxes moved to `motion/react`. Edges
-are SVG `d` attributes recomputed per layout, so they snap; today they fade
-out on the click and back in `EDGE_ARRIVE_MS` after the new layout lands
-(immediately on a fresh draw). Everything below is design, none of it built.
-
-**Approach:** ELK gives the endpoints and corner points of both the old and the
-new route, so animate by interpolating each point from its old position to its
-new one — no path guessing, no library. With `motion.path`, that is
-`animate={{ d }}`: motion interpolates a `d` string by pairing up its numbers.
-
-**The hard case:** a route whose corner count changes between layouts. Motion
-snaps when the number counts differ, so every route must be handed over with
-the same point count N. **Chosen:** keep ELK's original vertices and **pad
-extra points along the existing segments** up to N. The at-rest path is then
-exact (even resampling would lose the corners), and the structure is always N
-points. Fallbacks if that looks bad mid-flight: resample both routes evenly
-(loses orthogonality in flight); or Siggie's **bezier idea** — draw a curve
-between the moving endpoints *during* the transition, which needs no corner
-pairing at all, and hand back to the orthogonal route when the move lands.
-Siggie has ideas beyond these; do not invent a scheme without asking.
-
-**Do first: stable edge keys.** Edge ids are `edge-${idx}`, assigned by
-iteration order in [`containmentGraph.ts`](../src/models/containmentGraph.ts),
-so the same relationship gets a different id after a selection change and
-`edge-3` can name two different edges across layouts. `<AnimatePresence>`
-keyed on those would morph one relationship into another. Key on
-`(source, slot, target)`.
-
-Also in play: the `opacity={dimmed ? 0.4 : 1}` attribute on context edges
-would be overridden by motion's inline opacity — move it to `filter`, as the
-hover dimming already was. `pathLength` on `motion.path` gives draw-in edges on
-enter for one extra prop, if wanted.
-
-### Edge crossings
-
-> *"There are a lot of unnecessary edge crossings. I don't know how much we can
-> do to fix them, but we should try."*
-
-Layout is `useGraphLayout`. Cause not investigated. Do not speculate without
-measuring.
-
-### The bare diagonal
-
-One approach in a convergence arrives as a **straight diagonal with no steps**
-while its neighbours step once or twice, cutting across other boxes. Reproduce:
-
-```
-?sel=BodySite~Condition~Consent~Demography~Exposure~Observation~Procedure
-&exp=ImagingFile~ImagingStudy~MeasurementObservation~SpecimenCreationActivity
-```
-
-**Root cause found 2026-08-21 (Siggie's diagnosis, confirmed): `bend` mode
-degenerates when there is no corner to bend from.** `mergeDistFor(mode, pts)`
-returns, for `bend`, the length of the LAST ROUTED SEGMENT. When ELK routes an
-approach as a single straight run — which happens whenever the outermost fan
-lane lines up with the source row, i.e. the TOP approach of a large convergence
-— that "last segment" is the whole edge. `mergeCut` then walks back past the
-source, `cut` lands at index 0, and the entire path becomes one straight line
-from source anchor to shared arrowhead base.
-
-Verified numerically: a 2-point route 1020px long yields `mergeDist = 1020`,
-`cut = 0`. `near`/`far` are immune because their distance is a fixed 40/120px,
-so the cut always lands on the horizontal run near the node.
-
-So `merge-near` is not "better here" in general — **`bend` is simply undefined
-on a corner-less route.** The fix is a **guard**, not a compromise: clamp `bend`
-to `Math.min(lastSegment, nearDistance)`, or fall back to `near` when the route
-has fewer than 3 points. Not implemented — Siggie chose to build the comparison
-harness first.
-
-⚠️ Three guesses were made before this and **all three were wrong**. Do not
-theorise from the code; `?dbg=1` logs each convergence's routed approaches.
-
----
-
 ### Let the schema say it: a `has_part` / `part_of` slot hierarchy
 
 > Status: **proposal, 2026-09-17, nothing implemented.** TASKS
@@ -212,6 +135,83 @@ upstream has to mark:
 Recommendation: **(2) for the overlay and the upstream PR, with the app still
 falling back to forward** for an unmarked slot so a sync never blanks the
 diagram — the audit, not the renderer, is where "unmarked" should hurt.
+
+---
+
+### Animating edge geometry
+
+Deferred by Siggie 2026-09-09, after the boxes moved to `motion/react`. Edges
+are SVG `d` attributes recomputed per layout, so they snap; today they fade
+out on the click and back in `EDGE_ARRIVE_MS` after the new layout lands
+(immediately on a fresh draw). Everything below is design, none of it built.
+
+**Approach:** ELK gives the endpoints and corner points of both the old and the
+new route, so animate by interpolating each point from its old position to its
+new one — no path guessing, no library. With `motion.path`, that is
+`animate={{ d }}`: motion interpolates a `d` string by pairing up its numbers.
+
+**The hard case:** a route whose corner count changes between layouts. Motion
+snaps when the number counts differ, so every route must be handed over with
+the same point count N. **Chosen:** keep ELK's original vertices and **pad
+extra points along the existing segments** up to N. The at-rest path is then
+exact (even resampling would lose the corners), and the structure is always N
+points. Fallbacks if that looks bad mid-flight: resample both routes evenly
+(loses orthogonality in flight); or Siggie's **bezier idea** — draw a curve
+between the moving endpoints *during* the transition, which needs no corner
+pairing at all, and hand back to the orthogonal route when the move lands.
+Siggie has ideas beyond these; do not invent a scheme without asking.
+
+**Do first: stable edge keys.** Edge ids are `edge-${idx}`, assigned by
+iteration order in [`containmentGraph.ts`](../src/models/containmentGraph.ts),
+so the same relationship gets a different id after a selection change and
+`edge-3` can name two different edges across layouts. `<AnimatePresence>`
+keyed on those would morph one relationship into another. Key on
+`(source, slot, target)`.
+
+Also in play: the `opacity={dimmed ? 0.4 : 1}` attribute on context edges
+would be overridden by motion's inline opacity — move it to `filter`, as the
+hover dimming already was. `pathLength` on `motion.path` gives draw-in edges on
+enter for one extra prop, if wanted.
+
+### Edge crossings
+
+> *"There are a lot of unnecessary edge crossings. I don't know how much we can
+> do to fix them, but we should try."*
+
+Layout is `useGraphLayout`. Cause not investigated. Do not speculate without
+measuring.
+
+### The bare diagonal
+
+One approach in a convergence arrives as a **straight diagonal with no steps**
+while its neighbours step once or twice, cutting across other boxes. Reproduce:
+
+```
+?sel=BodySite~Condition~Consent~Demography~Exposure~Observation~Procedure
+&exp=ImagingFile~ImagingStudy~MeasurementObservation~SpecimenCreationActivity
+```
+
+**Root cause found 2026-08-21 (Siggie's diagnosis, confirmed): `bend` mode
+degenerates when there is no corner to bend from.** `mergeDistFor(mode, pts)`
+returns, for `bend`, the length of the LAST ROUTED SEGMENT. When ELK routes an
+approach as a single straight run — which happens whenever the outermost fan
+lane lines up with the source row, i.e. the TOP approach of a large convergence
+— that "last segment" is the whole edge. `mergeCut` then walks back past the
+source, `cut` lands at index 0, and the entire path becomes one straight line
+from source anchor to shared arrowhead base.
+
+Verified numerically: a 2-point route 1020px long yields `mergeDist = 1020`,
+`cut = 0`. `near`/`far` are immune because their distance is a fixed 40/120px,
+so the cut always lands on the horizontal run near the node.
+
+So `merge-near` is not "better here" in general — **`bend` is simply undefined
+on a corner-less route.** The fix is a **guard**, not a compromise: clamp `bend`
+to `Math.min(lastSegment, nearDistance)`, or fall back to `near` when the route
+has fewer than 3 points. Not implemented — Siggie chose to build the comparison
+harness first.
+
+⚠️ Three guesses were made before this and **all three were wrong**. Do not
+theorise from the code; `?dbg=1` logs each convergence's routed approaches.
 
 ---
 
