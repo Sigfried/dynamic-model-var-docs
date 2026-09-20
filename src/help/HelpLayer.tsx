@@ -34,8 +34,11 @@
  * height in order to place it, are gone: `position-try-fallbacks` and
  * `position-area` use the real one.)
  *
- * The popover also uses the **Popover API** for top-layer rendering, which is
- * what removes the portal.
+ * The popover is PORTALLED into whichever registered container encloses its
+ * anchor (`mountPoints.ts`), so it shares that container's coordinate system —
+ * inside the canvas it scales with the zoom and scrolls with the boxes. It
+ * used the Popover API's top layer instead until 2026-09-19; that is what put
+ * it in a different coordinate system from the thing it points at.
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
