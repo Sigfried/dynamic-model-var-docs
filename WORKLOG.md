@@ -8,6 +8,115 @@ Newest first.
 
 
 ---
+## 2026-09-20 (evening) — the help format grew three things, and `back` finally restores scalars
+
+A tour-authoring session: Siggie was editing `help-content.md` live throughout,
+so several of these landed as "make the thing they are already writing work".
+
+### `{{loop}}`, and a widget that had no home
+
+`LoopIcon` lived inside `OwnershipGraphView.tsx`. Siggie wanted the loop mark in
+prose, so it moved to its own file and got registered as a `loop` widget — the
+third, after `edge` and `relation`. FORMAT.md claimed dmvd registered ONE
+widget; it had had two since `relation` landed, so that line was already stale
+and is now a table.
+
+`{{loop}}` takes no argument, which the placeholder regex did not allow — the
+`:arg` group is now optional. A resolver needing an arg is unaffected: it gets
+`''` and returns undefined, leaving the placeholder visible as before.
+
+**A wrong turn worth recording.** Siggie observed that the widget syntax already
+has a title slot (`![A owns B](widget:edge:own-fwd)`), so I changed
+`WidgetRenderer` to `(arg, alt)` and threaded the alt text through as the
+widget's title. That is arguably the better shape, but it was not what was
+asked: the actual complaint was only that the GENERIC widget should not inherit
+the ResearchStudy-specific title. Siggie: *"i don't care if it has a title. just
+make this as simple as you can."* Reverted; the package seam is untouched and
+the widget carries `LOOP_TITLE` itself. **Do not re-propose passing `alt` into
+widgets without a reason beyond tidiness.**
+
+Also: the canvas title said a ResearchStudy can "own" another via `part_of`.
+Ownership runs the other way there — it now reads "belong to".
+
+### `:s[*]{sup}` — footnotes, deliberately dumb
+
+Siggie was hand-rolling a footnote with `**\***` and a `{superscript}` attribute
+that does not exist. Three options were offered (a `sup` attribute, a real
+`{{fn:...}}` with auto-numbering, remark-gfm footnotes); they took the smallest,
+adding *"it might need to be bolded in addition to superscript to make it
+noticeable"*.
+
+So `sup` sets `vertical-align:super; font-size:.75em; font-weight:700;
+line-height:0`. **Bold is inside the attribute, not left to the author** — a
+`*` at .75em is easy to miss, and `**:s[*]{sup}**` at every marker is noise.
+There is no numbering machinery: a footnote is two `:s[*]{sup}` and a sized
+note, and a second one picks `†`.
+
+### `Position:` is now a raw `position-area`
+
+The four sides were being rewritten to span one END of the cross axis
+(`left` → `inline-start span-block-end`). Siggie asked whether that mapping was
+ours — it was. Since `left`/`right`/`top`/`bottom` are themselves valid
+`position-area` values, the table only stood between the author and CSS, and it
+is gone. **This changed rendering for all 12 authored `Position:` fields**: a
+bare keyword means `span-all`, so popovers now centre along their anchor rather
+than hanging off a corner. Siggie green-lit that sight-unseen (*"if it looks bad
+we add the extra bit"*) — if a step looks worse, write both tokens there.
+
+**No keyword list**, at Siggie's insistence (*"there are a lot of valid values,
+i'd hate to maintain a list"*). The browser owns the grammar; an invalid value
+is dropped by CSS and the popover falls back to automatic placement.
+
+⚠️ **I said `CSS.supports` in the content test would be "cheaper and no browser
+needed". That was wrong** — jsdom implements no `CSS.supports` at all. The
+check is in `e2e/placement.spec.ts`, and it was verified by injecting `botom`
+and watching it fail. An ESM Playwright spec also has no `__dirname`; both facts
+were measured, not assumed, after the first run failed on exactly that.
+
+### `legend-rule:` anchors, and a trap in `Spotlight:`
+
+Siggie wanted to ring one rule block inside the Legend. Each block now carries
+`data-help-id="legend-rule:<rule-id>"`, keyed by the rule id the tour ALREADY
+names in `{{ownership-count:<rule-id>.total}}` — so the step and the block
+cannot drift apart.
+
+It did not work on first try, and the cause was not the anchor. **`HelpLayer`
+gates the whole spotlight render on `highlight !== 'none'`** (line ~763), and
+`the-legend` sets `Highlight: none`. A `Spotlight:` under such a step is
+silently inert, and nothing warns. The anchor was resolving the whole time —
+probed against a real `OwnershipLegend` render before changing anything, which
+is the only reason the second guess was not also wrong.
+
+### `tour-scalars-back` — shipped, and it swallowed `panel-and-zoom` (a)
+
+Siggie: *"i just stepped back into this and expected the legend to be cleared
+but it wasn't"* — and pushed back on the diagnosis, noting they had explicitly
+put `panels=0` on the beat being stepped back into.
+
+Measured rather than argued: `panels=0` DOES work going forward (the probe
+showed `legend: false` after that push); `popStep` then left it `true` coming
+back. So it was `tour-scalars-back` after all. The premise that did not hold is
+that `panels=0` re-fires on arrival — it is a one-time sweep recorded as
+ordinary scalars in that frame, and `back` pops frames without touching them.
+
+`popStep` now restores `prev.scalars`, **reversing the 2026-08-27 decision**
+(*"easy enough for the user to reclick the button"*). What outgrew it: a step
+that opens a panel owns it the way it owns its selection.
+
+Off the bottom of the stack it restores the scalars the tour STARTED in, not
+`{}` — so a legend the viewer opened before starting is not closed by the tour.
+That is why `startTour` now takes a scalars argument and `TourState` carries
+`startScalars`.
+
+⚠️ **This also fixed `panel-and-zoom` (a)**, whose row had asked for the
+OPPOSITE scoping — "scope this to `detail`", to avoid rebuilding the per-scalar
+hybrid rejected on 2026-08-27. Confirmed fixed with a probe before rewriting
+the row. What shipped is not that hybrid: it is one line reading the previous
+frame's scalars wholesale, which is simpler than either the hybrid or a
+`detail`-only special case. If that turns out to be wrong, the thing to
+reconsider is the whole line, not to add a per-scalar exception.
+
+---
 ## 2026-09-20 — `panel-and-zoom` audited: still needed, and (a) reopens a 2026-08-27 decision
 
 Siggie asked whether the row was still needed. Audited all three faults against

@@ -1013,8 +1013,9 @@ If a label changes there, change it here. Do not hand-type a count.
 - **Action:** Opened the Legend panel — it is always in the Help menu.
 - **Anchor:** node-box:Participant
 - **Description:**
-  Across the x entities in the BDCHM schema there are x defined
-  attributes. The schema doesn't say which end owns which, so the Explorer decides.
+  Across the {{schema-count:panelEntities}} entities in the BDCHM schema there
+  are {{ownership-count:declared}} attributes pointing from one entity to
+  another. The schema doesn't say which end owns which, so the Explorer decides.
   The rules are laid out in the **Legend**.
 - Beats:
   1. owns-target-forward-by-default
@@ -1022,10 +1023,10 @@ If a label changes there, change it here. Do not hand-type a count.
      - **Spotlight:** legend-rule:owns-target-forward-by-default
      - **Description:**
        The default rule is **:s[Owns target / forward arrow / by default]{color=own-fwd}** —
-       attributes point forward; the attribute's entity owns its target.
-       {{ownership-count:owns-target-forward-by-default.total}} attributes
-       follow this rules.
-       the Questionnaire owns them: target on the right, arrow forward.
+       an attribute owns what it points at, so the target is drawn to the right
+       with a forward arrow. {{ownership-count:owns-target-forward-by-default.total}}
+       attributes follow it: `Questionnaire.items` holds QuestionnaireItems, so
+       a Questionnaire owns them.
        :::s{center color=entity}
          {{relation:own-fwd:Questionnaire.items:QuestionnaireItem}}
        :::
@@ -1084,6 +1085,16 @@ If a label changes there, change it here. Do not hand-type a count.
        The schema can't tell us which entities these are — nothing in it
        distinguishes them — so the list is recorded in the Explorer by hand,
        and it is a judgement that can be argued with.
+  3. in the legend
+     - Change: legend=1
+     - Action: Opened the Legend panel.
+     - Anchor: none
+     - Spotlight: legend-rule:belongs-to-target-backward-by-entity
+     - Highlight: ring
+     - Description:
+       The Legend counts this rule against the live schema, and opening a count
+       lists the attributes it decided — so this is where to check a line that
+       looks wrong.
 
 ### belongs-to-target-backward-by-attribute
 
@@ -1127,6 +1138,15 @@ If a label changes there, change it here. Do not hand-type a count.
        name alone: two of them are called `part_of`, declared on different
        entities, and a bare attribute name would flip any future third one
        silently.
+  3. in the legend
+     - Change: legend=1
+     - Action: Opened the Legend panel.
+     - Anchor: none
+     - Spotlight: legend-rule:belongs-to-target-backward-by-attribute
+     - Highlight: ring
+     - Description:
+       This rule too is counted live in the Legend, and opening a count names
+       every attribute on the list.
 
 ### bar-sides
 

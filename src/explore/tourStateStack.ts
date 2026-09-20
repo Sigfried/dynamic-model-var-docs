@@ -190,10 +190,20 @@ export interface TourState {
   tourStates: TourStep[];
   /** Merged scalars, last-write-wins in push order. */
   scalars: TourChange['scalars'];
+  /**
+   * The scalars as they were when the tour STARTED, restored by `back` out of
+   * the first recorded step.
+   *
+   * Without it, backing off the bottom of the stack would have to reset to
+   * `{}` and close a panel the viewer had opened themselves before starting —
+   * the tour would be taking away something it never gave.
+   */
+  startScalars: TourChange['scalars'];
 }
 
 export const NO_TOUR: TourState = {
-  inTour: false, held: [], tempHeld: [], tour: [], region: 0, tourStates: [], scalars: {},
+  inTour: false, held: [], tempHeld: [], tour: [], region: 0, tourStates: [],
+  scalars: {}, startScalars: {},
 };
 
 const IDS_SEP = '~';
@@ -278,8 +288,11 @@ function union(a: readonly string[], b: readonly string[]): string[] {
  * `Change:` records nothing (the first tour in the content file is exactly
  * that), and a viewer tick during those opening steps has to land in `held`.
  */
-export function startTour(selection: readonly string[]): TourState {
-  return { ...NO_TOUR, inTour: true, held: [...selection] };
+export function startTour(
+  selection: readonly string[],
+  scalars: TourChange['scalars'] = {},
+): TourState {
+  return { ...NO_TOUR, inTour: true, held: [...selection], startScalars: { ...scalars } };
 }
 
 /**
@@ -344,6 +357,20 @@ export function popStep(state: TourState): TourState {
     tourStates,
     tour: prev ? prev.sel : [],
     region: prev ? prev.region : 0,
+    /*
+     * Scalars go back with the step (TASKS `tour-scalars-back`, 2026-09-20).
+     *
+     * This REVERSES a 2026-08-27 decision that `back` should leave them alone
+     * ("easy enough for the user to reclick the button"). What outgrew it is
+     * the tour: a step that opens the legend or sweeps the panels with
+     * `panels=0` owns that panel the way it owns its selection, so stepping
+     * off the step should take it away. Every frame already snapshots the
+     * merged scalars, so the previous value was there to read all along.
+     *
+     * Off the bottom of the stack, the state the tour STARTED in — not `{}`,
+     * which would close a panel the viewer opened before the tour began.
+     */
+    scalars: prev ? prev.scalars : state.startScalars,
   };
 }
 

@@ -134,21 +134,49 @@ describe('the tour draws on top of the viewer', () => {
   });
 });
 
-describe('scalars overwrite and do not restore', () => {
+describe('scalars overwrite, and step back with the step', () => {
   test("a step sets a scalar over the viewer's value", () => {
     const state = walk(startTour([]), 'dir=DOWN');
     expect(compose(base({ dir: 'RIGHT' }), state).dir).toBe('DOWN');
   });
 
-  test("popping does NOT put the viewer's scalar back", () => {
+  test("popping puts the viewer's scalar back", () => {
     /*
-     * Deliberate, and decided rather than overlooked. Siggie, 2026-08-27:
-     * "you're overcomplicating for the sake of probably rare edge cases. just
-     * do the stack. if scalar settings clobber user actions, don't worry about
-     * it. easy enough for the user to reclick the button."
+     * REVERSES a 2026-08-27 decision that it should not (Siggie: "easy enough
+     * for the user to reclick the button"). What outgrew it is the tour: a
+     * step that opens a panel owns it the way it owns its selection, so
+     * stepping off the step takes it away (TASKS `tour-scalars-back`).
+     *
+     * Off the bottom of the stack the tour restores what it STARTED in, which
+     * is why `startTour` takes the scalars — resetting to `{}` would close a
+     * panel the viewer had opened before the tour began.
      */
-    const state = walk(startTour([]), 'dir=DOWN');
-    expect(compose(base({ dir: 'RIGHT' }), popStep(state)).dir).toBe('DOWN');
+    const state = walk(startTour([], { dir: 'RIGHT' }), 'dir=DOWN');
+    expect(compose(base({ dir: 'RIGHT' }), popStep(state)).dir).toBe('RIGHT');
+  });
+
+  test('a panel a step opened is closed again by back', () => {
+    /*
+     * Siggie, 2026-09-20, arriving at `which-way` from `the-legend`: "i just
+     * stepped back into this and expected the legend to be cleared but it
+     * wasn't". `panels=0` on the earlier beat DID work going forward; what
+     * failed was the pop, which never restored scalars.
+     */
+    let state = startTour([]);
+    state = pushStep(state, parseTourChange('sel=Visit&panels=0', true));
+    expect(compose(base(), state).legend).toBe(false);
+    state = pushStep(state, parseTourChange('sel=Visit&legend=1', true));
+    expect(compose(base(), state).legend).toBe(true);
+    expect(compose(base(), popStep(state)).legend,
+      'back into the panels=0 beat should re-close the legend').toBe(false);
+  });
+
+  test('back out of the first step restores the legend the viewer opened', () => {
+    // The reason the empty stack restores tour-start scalars and not `{}`.
+    const state = pushStep(
+      startTour([], { legend: true }), parseTourChange('sel=Visit&legend=0', true));
+    expect(compose(base(), state).legend).toBe(false);
+    expect(compose(base(), popStep(state)).legend).toBe(true);
   });
 
   test('the most recent step naming a scalar wins', () => {

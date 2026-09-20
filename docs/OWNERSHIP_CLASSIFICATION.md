@@ -49,7 +49,7 @@ exposure and procedure lands before the Participant it describes.
 class-ranged slots of its own" — fails, several of them against our own reading.
 So they must be asserted. Do not re-litigate this; the sweep is in
 [WORKLOG.md](../WORKLOG.md). What *can* change is where the assertions live —
-see BACKLOG [§Let the schema say it](BACKLOG.md#let-the-schema-say-it-a-has_part--part_of-slot-hierarchy).
+see BACKLOG [§Let the schema say it](BACKLOG.md#use-a-has_part--part_of-slot-hierarchy-to-define-ownership-direction).
 
 ## The rules
 

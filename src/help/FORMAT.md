@@ -1010,11 +1010,15 @@ the field: an empty `Change:` pushes an empty frame, so stepping back into it
 pops the step after it; omitting the field pushes nothing, so back through the
 position is a plain move.
 
-**Scalars overwrite and are not restored.** A step that sets `dir=DOWN` over a
-viewer's `dir=RIGHT` keeps `DOWN` after the pop. Deliberate, and decided rather
-than overlooked — Siggie, 2026-08-27: *"if scalar settings clobber user actions,
-don't worry about it. easy enough for the user to reclick the button."* Only
-`sel` is refcounted, because only `sel` has room to hold two copies.
+**Scalars overwrite, and step back with the step.** A step that sets `dir=DOWN`
+over a viewer's `dir=RIGHT` shows `DOWN`, and `back` out of that step puts
+`RIGHT` back. A panel a step opened — or swept away with `panels=0` — is
+likewise the step's, so stepping off it takes it away. Backing out of the first
+recorded step restores the state the tour STARTED in, not a blank screen: a
+legend the viewer opened before starting is theirs.
+
+Scalars are still not refcounted the way `sel` is; each frame simply carries
+the merged value, and the pop reads the previous frame's.
 
 **Beats: only the first pushes the step's change.** Under the old model every
 beat re-applied its step's full state, which was harmless because re-applying
@@ -1097,10 +1101,6 @@ not matter, only that `panels` is a sweep and the named keys are exceptions.
 It is safe as a delta because it can only ever CLOSE things. A step that sweeps
 and a step that says nothing are both still deltas; neither snaps a setting back
 to a default, which is the trap that killed the old absolute `State:` field.
-
-⚠️ **`panels=0` is not restored by `back`,** because it sets scalars and scalars
-are not refcounted (above). Stepping back into a step that cleared the panels
-leaves them cleared. Author around it rather than relying on the pop.
 
 ### `Only:` — a step that names the whole canvas
 

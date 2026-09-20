@@ -601,7 +601,17 @@ function publish(state: ExploreState): void {
  * opening steps would be filed as nobody's.
  */
 function onTourStart(): void {
-  tourState = beginTour(readExploreState().sel);
+  /*
+   * The scalars go in too, so `back` off the first recorded step restores the
+   * screen the viewer started from rather than a blank one — a legend they
+   * opened themselves before starting the tour is theirs, not the tour's to
+   * close (TASKS `tour-scalars-back`).
+   *
+   * The whole state minus `sel` IS the scalar set: `compose` spreads them over
+   * the viewer's state, so anything a `Change:` can write is in here.
+   */
+  const { sel, ...scalars } = readExploreState();
+  tourState = beginTour(sel, scalars);
 }
 
 /**
