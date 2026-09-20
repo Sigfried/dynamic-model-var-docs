@@ -189,15 +189,6 @@ introduced and then use one word.
        at — so it is a record ABOUT a participant, not a fixed property of the
        human being.
      - Anchor: node-box:Demography
-  11. what the other categories borrow
-     - Description:
-       ##### What the other categories borrow
-       Participant and Visit are what the rest of the model hangs off.
-       Clinical, Observations, Laboratory and Files all point back at a
-       Participant, a Visit, or both — which is why those categories borrow
-       the two into their own views. Survey is the exception:
-       ten entities and almost no outward references, a self-contained subtree.
-     - Anchor: none
 
 
 ### clinical-records
@@ -264,14 +255,6 @@ introduced and then use one word.
        specimen's collection site names one, so the Explorer lists BodySite in
        both categories rather than choosing.
      - Anchor: node-box:BodySite
-  8. what the category is for
-     - Description:
-       ##### What this category is for
-       Clinical is the participant's medical history: diagnoses, procedures,
-       exposures and imaging, each anchored to a person, a study role, and
-       usually a point of contact with the health system. It says what was
-       *found* or *done*. What was *measured* is the next category.
-     - Anchor: none
 
 
 ### observation-measurement
@@ -338,15 +321,6 @@ introduced and then use one word.
        administered. These are the circumstances that make a number
        interpretable.
      - Anchor: node-box:Context
-  6. what the category is for
-     - Description:
-       ##### What this category is for
-       Observations are the measured facts a researcher actually analyzes.
-       Everything else in the model exists to say *whose* they are, *when* they
-       were taken, and *what they mean*. The subclass hierarchy here is the
-       largest in BDCHM, and how the diagram draws inheritance gets a tour of
-       its own.
-     - Anchor: none
 
 
 ### lab-biospecimen
@@ -419,14 +393,6 @@ introduced and then use one word.
        Three different things reach it: an Assay's reagent, a container's
        additive, and an additive used during collection or processing.
      - Anchor: node-box:Substance
-  8. what the category is for
-     - Description:
-       ##### What this category is for
-       Laboratory is the chain of custody: material comes off a participant,
-       gets created, processed, stored and transported, and has assays and
-       quality measures recorded against it. It is the only category that is
-       mostly about *things* rather than about records.
-     - Anchor: none
 
 
 ### survey-questionnaire
@@ -730,7 +696,7 @@ introduced and then use one word.
      - Position: right
      - **Action:** Clicked `Participant.associated_person` through **Person**'s RELATED menu
      - Description:
-       blafjlakjdfgfg 
+       > blafjlakjdfgfg 
 
 
 ### grow-participant
