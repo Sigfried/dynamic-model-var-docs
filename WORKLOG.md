@@ -84,6 +84,32 @@ likely thing for a future session to "restore" on seeing the field.
 - README's `#entity-is-the-universal-root...` anchor survives by luck — the
   heading was promoted from `###` to `##` but kept its words.
 
+### The task closed, and (a) went to its real owner
+
+Siggie: *"finishing the ownership tour is its own task
+(help-finish-authoring/ownership). i don't think this task still needs it."*
+Right — (a) was never doc work, and with (b) shipped there was nothing left, so
+`ownership-doc-rewrite` is archived (`63056ac`, archive/tasks-2026-09-20.md) and
+the rule steps went to `help-finish-authoring/ownership`, whose row had still
+been disclaiming them.
+
+Two side effects of removing the row:
+
+- The "Now" ordered table collapsed to one step (`read-tours`) and stopped
+  being a table.
+- Siggie on the line counts I had written into the rows: *"stupid to have
+  specific line counts anyway."* Also right — `1096 → 270` was wrong within an
+  hour of being written (the file finished at 294). Counts now survive only in
+  WORKLOG and the archived row, where a point-in-time number is the correct
+  thing and cannot drift.
+
+⚠️ **The archive had its own casualty**: `tasks-2026-09-15.md`'s header pointed
+at `OWNERSHIP_CLASSIFICATION.md §Rule 3`, a section this cut deleted. Re-pointed
+at §The induced pass. The repo's link checker only walks `README.md` +
+`docs/*.md`, so nothing would have caught it — worth knowing that archiving a
+row does not protect its links from a later cut. (The archive carries a large
+pre-existing dangling-link backlog besides, untouched here.)
+
 ### New task: `generalize-explorer`
 
 Siggie, unprompted by the cut but triggered by it: *"we may be splitting BDCHM
