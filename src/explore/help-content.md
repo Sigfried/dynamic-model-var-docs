@@ -1338,7 +1338,7 @@ No slot classifies as `association` any more (ASSOCIATION_SLOTS is empty since
 2026-09-11), so there is nothing on the canvas to point at and the step below
 would be describing a line a reader can never see. Kept as a comment because
 the KIND still exists and the schema could need it again; see
-OWNERSHIP_CLASSIFICATION.md §When a schema needs it.
+OWNERSHIP_CLASSIFICATION.md §When a schema needs an association edge.
 
 ### association-appendix
 

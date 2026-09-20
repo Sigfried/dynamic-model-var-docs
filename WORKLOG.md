@@ -8,6 +8,94 @@ Newest first.
 
 
 ---
+## 2026-09-20 — the OWNERSHIP_CLASSIFICATION cut (1096 → 294), and where the pieces went
+
+`ownership-doc-rewrite` (b). The plan file OWNERSHIP_DOC_CUT.md is deleted, as
+it instructed.
+
+### (a) was not a rewrite, and the task row was wrong about it
+
+The row and the "Now" table both said the tour "still teaches three numbered
+rules that no longer exist." **It does not, and had not for some time.** Every
+rule step in the Ownership tour is already named
+(`owns-target-forward-by-default`, `belongs-to-target-backward-by-entity`,
+`belongs-to-target-backward-by-attribute`), every count resolves through an
+`ownership-count` placeholder, and `grep` for `Rule 1|Rule 2|Rule 3|Exception
+2a|2b` over help-content.md returns nothing. The 809-test suite was green
+before any change this session.
+
+What (a) actually is: **Siggie reading the rule steps in the browser**, which
+is `read-tours` work and not something a session can do. The row now says that.
+A task row is a claim, not a fact — this one had drifted into describing work
+that had already shipped, and would have had a session "fix" text that was
+already correct.
+
+### The four keep/cut decisions (Siggie, this session)
+
+Asked per OWNERSHIP_DOC_CUT's rule — ask about each chunk you would KEEP:
+
+1. **§The relation vocabulary** — fold the five-positions and side/kind tables
+   **into** the three-kinds table, nesting `owns-mine`/`owns-theirs` under
+   `own-fwd` etc.; put the rules themselves in that table with links to the two
+   exception sets; drop the prose under it ("the text below the table sucks").
+   Siggie asked whether the phrasing table lives as config. **Answer: the
+   `close` column does** — it is `RELATION_POSITION_LABEL`
+   (`ownershipSubgraph.ts:85`), pinned by `relationPositions.test.ts`. The
+   `middle` and `far` columns are **dead**: "contains"/"contained by" appear in
+   no source file, and `far` was judged excessive and never built. So the table
+   was 5/7 dead and went; the live column survives inside the merged positions
+   table.
+2. **The rendering sections** (color system, how edges are drawn, relation bar,
+   layering and cycles) → **ARCHITECTURE.md §How the diagram is drawn**. Siggie:
+   *"maybe this whole document (after extreme cutting) belongs in
+   ARCHITECTURE"* — not done, because the classification doc is still the
+   answer to "how does an attribute become an edge", which is a different
+   question from "how is it drawn". Worth revisiting if the remaining 294 lines
+   keep shrinking.
+3. **The derivability proof** (§Exception 2a's falsified-discriminator list) —
+   Siggie: *"i don't think we need these counts and the text doesn't seem that
+   helpful."* Cut to two sentences in §Why there are rules at all, keeping only
+   the claim (verified 2026-08-21, do not re-litigate) and a pointer here. The
+   detail was written about `SINGLE_VALUE_OWNER_TARGETS`, a set that no longer
+   exists, which is most of why it read as unhelpful.
+4. **§PROPOSED and §PLANNED** → BACKLOG.md, with the two TASKS anchors
+   re-pointed. The `any_of` alternatives went with them.
+
+### What the doc kept, and why
+
+Everything OWNERSHIP_DOC_CUT listed as must-survive, in one screen each: when a
+schema needs an association edge (stated symmetrically — association is not an
+override of the default), that the memberships cannot be derived, why the two
+exception sets are keyed differently (the subtlest thing in the scheme), why
+`Entity` is drawn as a range but excluded from the inheritance tree, and that
+the induced pass is a second pass rather than a classifier branch.
+
+**Cardinality got an explicit ⚠️.** It used to *be* the rule, and
+`SlotFacts.multivalued` is still carried and deliberately unused — the most
+likely thing for a future session to "restore" on seeing the field.
+
+### Stale references the cut exposed
+
+- `ownershipRules.ts` header carried *"⚠️ that doc still describes the
+  pre-2026-09-13 scheme"*. No longer true; removed.
+- `OwnershipLegend.tsx` pointed at `§Rule 3`, `siblingMerge.test.ts` at a ⚠️
+  note that moved to ARCHITECTURE, help-content at `§When a schema needs it`
+  (renamed). All three re-pointed.
+- README's `#entity-is-the-universal-root...` anchor survives by luck — the
+  heading was promoted from `###` to `##` but kept its words.
+
+### New task: `generalize-explorer`
+
+Siggie, unprompted by the cut but triggered by it: *"we may be splitting BDCHM
+Explorer into a new, generalized LinkML Explorer that would work with arbitrary
+schemas and config settings. there will be implications about how to structure
+documentation to split off BDCHM-specific stuff from generic explorer stuff."*
+The row records the seam as it already stands and one ordering constraint:
+decide it **before** `ownership-slot-hierarchy`, because if ownership direction
+moves into the schema, the generic app needs no curated sets at all and the
+split looks different.
+
+---
 ## 2026-09-19 (evening) — `popover-placement` SHIPPED, and what the bug really was
 
 The plan in BACKLOG §Placement (since deleted, the work being done — the

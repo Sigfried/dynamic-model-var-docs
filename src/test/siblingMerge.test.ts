@@ -173,7 +173,8 @@ describe('siblingMerge', () => {
    * change WHICH color a class wears without unpairing anything.
    *
    * A previous attempt (2026-09-04) tested the sort correspondence instead and
-   * asserted a false invariant; see the ⚠️ note in docs/OWNERSHIP_CLASSIFICATION.md
+   * asserted a false invariant; see the ⚠️ note in docs/ARCHITECTURE.md
+   * §Sibling color assignment, and
    * the header comment on categoryViewHistory.test.tsx before writing
    * anything in this area.
    */

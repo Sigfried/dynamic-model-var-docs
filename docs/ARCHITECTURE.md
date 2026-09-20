@@ -2,8 +2,9 @@
 
 > How the app is put together, and why the diagram looks the way it does.
 > Development rules: [CLAUDE.md](CLAUDE.md) · Open work: [TASKS.md](TASKS.md) ·
-> Ownership rules and the colour system:
-> [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md)
+> What an edge *means*:
+> [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md) (how it is *drawn*
+> is [below](#how-the-diagram-is-drawn))
 
 Long reference sections are collapsed. Open the one you need.
 
@@ -139,8 +140,8 @@ diagram is shaped as it is:
 4. **Relation channels**: three edge kinds, distinguished by **hue**, not by
    one solid/dashed pair — `own-fwd` blue, `own-bkwd` teal, `association`
    slate, with association also dashed and arrowed at both ends. is-a is the
-   merged box, not an edge. See `OWNERSHIP_CLASSIFICATION.md`, "The color
-   system", for why a sequential ramp was the wrong encoding here.
+   merged box, not an edge. See [§The color system](#the-color-system) for why
+   a sequential ramp was the wrong encoding here.
 5. **Labels**: there are none on the edge layer, and that is settled
    (2026-09-02). A flipped edge is marked by a back-pointing arrowhead
    (`arrow-own-back`), not by re-verbed text. The intended replacement is one
@@ -533,6 +534,255 @@ DataService — see the enforcement rules in [CLAUDE.md](CLAUDE.md).
 ownership view can show a cardinality whether or not it is drawn as an edge.
 
 </details>
+
+---
+
+## How the diagram is drawn
+
+Moved here from `OWNERSHIP_CLASSIFICATION.md` (2026-09-20): this is rendering,
+not classification. What an edge *means* — how a slot gets its verdict — is
+still [OWNERSHIP_CLASSIFICATION.md](OWNERSHIP_CLASSIFICATION.md).
+
+### Terminology
+
+A class and its descendants drawn as one box is a **merged-inheritance box**.
+Edge convergence — several edges sharing one arrowhead — also uses the word
+"merge" (`mergeTargets`) and is a **different thing**. The distinction holds in
+identifiers as well as prose.
+
+### The color system
+
+Three palettes, deliberately of three different **kinds**, so the three
+questions they answer cannot be confused for one another. Values live in
+[`appConfig.ts`](../src/config/appConfig.ts); this section is why they are what
+they are.
+
+| | palette | entries | what carries it |
+|---|---|---|---|
+| **P1 — range** | ColorBrewer **Set1**, entity = blue | 4–5 | row dot, row range label, detail-panel badges |
+| **P2 — kind** | three **hues** (blue / teal / slate) | 3 | edge stroke, relation popover samples |
+| **P3 — siblings** | ColorBrewer **Pastel1** | 6 | slot name, merged-box header |
+
+**P1 answers "what kind of thing is this?"** — entity, enum, data type,
+variable. Qualitative and unordered, so Set1, which gives maximum mutual
+separation. It is one set of colors for one set of things: the Kitchen Sink
+element types and the Explorer's detail-panel badges are the same distinctions
+and take the same colors.
+
+**P2 answers "what kind of relation is this?"** — three distinct hues:
+`own-fwd` blue `#1d4ed8`, `own-bkwd` teal `#0e7490`, `association` slate
+`#64748b`. Association is also **dashed** and **arrowed at both ends**, so it
+has two channels beyond color; the dash carries the distinction, not faintness.
+
+⚠️ **Use a nominal palette, not a sequential one, for the three kinds.** A Blues
+ramp was tried and failed: the step between `own-fwd` and `own-bkwd` measured
+**1.50:1**, which on a 1.4px stroke is not a difference at all. Widening the
+ramp does not rescue it — separating the pair pushes `association` toward white,
+and a pale dashed hairline is the least visible thing the diagram can draw.
+Adjacent steps on a sequential ramp are built to read as *ordered*, which is the
+wrong property for three categories. Hue carries three categories at equal,
+readable lightness; lightness alone cannot.
+
+Strokes are thicker than the 0.8/0.54 they replaced: a hairline cannot carry
+*any* color, whatever the palette.
+
+**P3 answers "which class does this belong to?"** — it separates siblings from
+each other and lets the eye track between a slot row and its target box. It does
+**not** need separation from P1, because the two never share a position: P3
+lands on slot names and box headers, P1 on row dots and range labels. Pastel1's
+low saturation is what keeps it quiet.
+
+**Index 0 of P3 is the default** — parent-declared slots, and every box that is
+not an inheritance-merged box. It is a tint of P1's entity color, **not a
+neutral gray**: a box header *is* an entity, so its header and its own slot
+names carry the entity identity, and sibling colors read as departures from it.
+No other neutral is needed anywhere in the system.
+
+Each P3 entry needs **two steps**, because a header band is a filled swatch (its
+color must work as a background, with dark text on it) while a slot name is
+small text on the box's light background (its color must work as ink). Pastel1
+is a background palette; pale ink on white is unreadable, so one value cannot do
+both jobs.
+
+#### What each channel encodes
+
+| channel | encodes | palette |
+|---|---|---|
+| row dot | the slot's range kind | P1 |
+| row range label | the slot's range kind | P1 |
+| slot name | which class declares it | P3 |
+| box header | the class | P3 (default = the box's own) |
+| edge stroke | relation kind | P2, overridden by P3 where colored |
+
+Only **entity** ranges draw edges, so range kind contributes no variation to the
+stroke — relation kind is what the stroke has left to say. The few edges whose
+endpoint is a merged-box member override that with the P3 color.
+
+#### Sibling color assignment — the three-step algorithm
+
+Colors must be stable: unselecting one sibling must not shift every later
+sibling's color. So classes are colored from the **whole schema**, not from what
+is on canvas.
+
+1. **Color every class stably.** For each parent with subclasses, index its
+   children by position among **all** schema siblings sorted by id — not just
+   the ones on canvas. The parent takes the default (P3 index 0).
+   `buildSiblingColorIndex` → `siblingColor`, built once in `DataService`.
+2. **Color slot names by target:** a row wears the color of the class its range
+   names (`DataService.getTargetColor`).
+3. **A re-colored slot row re-colors the child header it belongs to** — the
+   container borrows its contents' color (the `borrowed` map in `mergeSiblings`,
+   [`OwnershipGraphView.tsx`](../src/explore/OwnershipGraphView.tsx)).
+
+**Step 3 is the load-bearing one**: it is what pairs a container with its
+contents, so `MeasurementObservationSet` and the `MeasurementObservation` it
+holds wear the same color. It applies only from a child's **own** rows — an
+inherited row is shared by every sibling, so letting it re-color one would hand
+that sibling a color on the strength of something it does not uniquely have.
+
+> ⚠️ **Sort order decides only WHICH color a class wears, never WHETHER a pair
+> matches.** The two families happening to sort alike is a correspondence that
+> exists today and is not used by anything. The test that proves the pairing is
+> therefore **"a row's color equals its target's color"**, swept over the real
+> schema — not anything phrased in terms of sort positions. See
+> [`siblingMerge.test.ts`](../src/test/siblingMerge.test.ts).
+
+Colors are **per group**, so two classes at index 0 in different groups share a
+color by design. That is palette reuse, not a collision, and not the pairing
+mechanism.
+
+Slots inherited without a `slot_usage` override merge onto the parent's row and
+have no child-specific row to color (`ImagingFile.derived_from` is the case to
+check a rule against). Classes whose parent is `Entity` are top-level and form
+no merged box.
+
+### Edges: labels, ports and adjacency
+
+| | |
+|---|---|
+| **Labels** | None on the edge layer. A flipped edge is marked by a back-pointing arrowhead (`arrow-own-back`). **Settled 2026-09-02: no persistent edge labels** — one label, on edge hover, in a chip near the cursor, with its point of view chosen by which endpoint the pointer is nearer. Not yet built. Entity hover deliberately does *not* label all of that entity's edges (`Observation` would sprout a dozen chips); it keeps its highlight, and the words stay in the relation bar's popovers. |
+| **Source rows** | One edge per declaring class, leaving that class's own row. The port id is keyed on `(anchorClass, slot)` — the same pair `rowY` resolves by. Keyed on slot name alone, every edge in a merged-inheritance box shared one port. |
+| **Target rows** | A `slot_usage`-narrowed edge points at the **child header** matching its range, not the box header. Row-targeted edges opt out of `mergeTargets` and draw their own arrowhead; both fan passes skip them. The no-merge shortcut rests on a schema property — no family member has more than one inbound edge — which [`mergedEdges.test.ts`](../src/test/mergedEdges.test.ts) guards, so a failure there means the schema changed, not the code. |
+| **Adjacency** | Curved edges are gone; one arrowhead per convergence, thinner strokes. Markers use `markerUnits="userSpaceOnUse"` so they do not scale with `strokeWidth`; one marker serves both ends via `orient="auto-start-reverse"`. |
+
+Still missing on dragging: obstacle-aware routing, and URL persistence. See
+[TASKS.md](TASKS.md).
+
+### Cardinality notation
+
+`0..1`, `1..1`, `0..*`, `1..*` — one notation, bounds written out
+(`cardinalityLabel`, [`containmentGraph.ts`](../src/models/containmentGraph.ts)).
+Writing the bounds out makes required-ness the left digit in every case and
+multivalued-ness the right, so the four labels differ only where the facts do.
+The mixed UML/regex spellings they replaced (`0..1` / `1` / `*` / `+`) raised
+the fair question of why a required single-valued slot showed `1` while a
+required multivalued one showed `+`.
+
+### Layering and cycles
+
+Class order comes from a layered DAG, so the layering edges must be acyclic.
+**The full relationship graph is not and cannot be a DAG** — every class
+`is_a Entity`, so slots ranging on `Entity` point at everything.
+
+`association` edges order their target first, exactly as `own-bkwd` does, and so
+participate in layering normally. **Only the ownership claim differs, not the
+geometry** — so changing an edge between these two categories moves nothing on
+screen except its stroke and arrowheads. Worth knowing when a verdict looks
+wrong: if the layout is the complaint, this is not the knob.
+
+Measured 2026-08-31 at `28007df`, re-measured 2026-09-11:
+
+- **6 self-loops** — `File.derived_from`, `ResearchStudy.part_of`,
+  `Specimen.parent_specimen`, `SpecimenContainer.parent_container`,
+  `TimePoint.index_time_point`, `QuestionnaireItem.part_of`.
+- **Zero non-self cycles.** This was the open risk — `Entity` became a live
+  range target with 13 inbound edges, exactly the shape that could introduce
+  one. It did not.
+
+Both properties are asserted in
+[`containmentGraph.test.ts`](../src/test/containmentGraph.test.ts): the
+self-loop count ("self-loop count is stable"), and that reverting
+`Specimen.contained_in` to `own-bkwd` reintroduces the one non-self cycle
+("contained_in must stay forward"). They were previously re-derived by hand
+every time someone wondered, which is how the self-loop count drifted once.
+
+### The relation bar
+
+Each box carries a `← N   M →` bar ([`RelationBar.tsx`](../src/explore/RelationBar.tsx)):
+**N** classes it belongs to, drawn to its left; **M** it owns, drawn to its
+right. Hovering either count opens a list of the relationships on that side.
+
+**Two counts, because they differ**: the header reads "Observation owns 4
+distinct entities through 7 attributes" — one entity can be reached by several
+slots, so a row count and an entity count are not the same number, and "add all
+4" beside seven rows is otherwise a puzzle.
+
+**A row offers two actions on two targets.** The `+`/`−` button adds or removes
+the entity; the **class name** opens its details. Clicking the row itself does
+nothing. An earlier version made the whole row the toggle, which left nowhere to
+click for detail and forced drawn rows to be dimmed just to signal that clicking
+would remove them — the button carries that state now, so every row stays at
+full contrast.
+
+**A row is written in diagram order** — owner on the left, owned on the right,
+the same order the canvas lays boxes out, so a row and the line it describes
+read the same way round:
+
+```
+Organization                      0..1  ──<  Observation.performed_by
+Visit                             0..1  ──<  Observation.associated_visit
+Participant                       1..1  ──<  Observation.associated_participant
+ObservationSet.observations       1..*  ──>  Observation
+```
+
+**Rows follow the box's own slot order**, so scanning from an attribute row to
+the same relationship in the popover does not mean re-finding it in a different
+order. A relationship declared by another class has no row on this box, so it
+sorts last — which is why `observations` is at the bottom.
+
+**Then rows are grouped by is-a family** (2026-09-10): a row whose class's
+parent has a row for the same slot follows that row, marked `↳`, recursively.
+Participant's 22 owned entities are mostly one Observation family and one
+ObservationSet family, which a flat alphabetical list hid. A child whose parent
+has no row for that slot stays where the sort put it. The parent lookup goes to
+`DataService.getClassSummary`, not to the canvas — most rows name classes that
+are not drawn.
+
+Three things are encoded independently:
+
+- **Which end is qualified** (`Class.slot` rather than a bare name) says which
+  class **declares** the attribute. It is not always this box: row 4 is
+  `ObservationSet`'s slot, which is why that class owns this one. On a
+  merged-inheritance box the declarer is often a **child** rather than the box's
+  title — `MeasurementObservation.performed_by` inside a box titled
+  `Observation` — so the end is named by the declarer, never by the title.
+- **The arrow** is the edge as the canvas draws it, so its direction says which
+  end carries the arrowhead. Both kinds occur on both sides.
+- **The colour** of each end is that class's own P3 sibling colour — the same
+  one its header and rows wear on the canvas. Row 4 is coloured at *both* ends
+  because both are children of merged boxes; rows 1–3 name parent-level classes
+  on the left, which have no colour of their own.
+
+The order is what carries "drawn to its left", so the popover does not say it.
+
+⚠️ **No `title` tooltips anywhere in it.** A native tooltip renders above the
+popover the same hover opened, covering its first rows. This has been
+reproduced twice, most recently within minutes of the new bar shipping. The
+popover header carries the text instead; `aria-label` keeps it available to
+screen readers.
+
+#### Why a bar count can go DOWN as you select more
+
+The bar counts **distinct classes outside the box** on each side, and a
+merged-inheritance box excludes anything folded into itself (`notSelfOrMember`,
+[`OwnershipGraphView.tsx`](../src/explore/OwnershipGraphView.tsx)). So selecting
+more can make a number fall: with `Observation` unchecked it is not a member of
+the box named after it, so `ObservationSet`'s relation to it counts as outside;
+check `Observation` and the count drops.
+
+Correct, but counter-intuitive — and more confusing still across combinations of
+several checkboxes. **Not being fixed**; recorded here so the next person to
+notice it does not treat it as a bug.
 
 ---
 

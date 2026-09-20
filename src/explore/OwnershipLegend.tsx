@@ -408,7 +408,7 @@ export default function OwnershipLegend({
    * leaves a reader nothing to do with a list of them.
    *
    * `getOwnershipPairGroups` still builds the group; what it means is recorded
-   * in OWNERSHIP_CLASSIFICATION.md §Rule 3 and in `OWNERSHIP_RULES`.
+   * in OWNERSHIP_CLASSIFICATION.md §The induced pass and in `OWNERSHIP_RULES`.
    */
   const slotRules = groups.filter(g => g.rule !== 'child-following-parent');
   /* The intro's counts, filled from this panel's own data — see `INTRO`. */

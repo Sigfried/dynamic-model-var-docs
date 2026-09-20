@@ -1,25 +1,18 @@
 # Ownership / containment / has-a relationships
 
-> 🛑 **The rule sections below are out of date — read
-> [`ownershipRules.ts`](../src/models/ownershipRules.ts) instead.**
-> §§`Rule 1`, `Rule 2`, `Exception 2a`, `Exception 2b` and `Rule 3` teach a
-> numbered three-rule scheme that was replaced on 2026-09-13. The classifier
-> has five NAMED rules and no numbering. Everything from §The color system
-> onward is still accurate, and so is §PROPOSED (2026-09-17). Scheduled for rewrite: TASKS
-> [`ownership-doc-rewrite`](TASKS.md), plan in
-> [OWNERSHIP_DOC_CUT.md](OWNERSHIP_DOC_CUT.md).
-
-How every class-ranged slot in the schema becomes an edge in the diagram, what
-each kind of edge means, and how the diagram colors what it draws.
+How every class-ranged slot in the schema becomes an edge in the diagram, and
+what each kind of edge means.
 
 **This is the technical reference.** User-facing wording lives in
-`src/explore/help-content.md` (help entries and the guided tour) and in the
-Ownership legend, which derives itself from the live classifier. Where the same
-thing has to be said in both places, this file states the rule and help states
-it in the second person; neither restates the other at length.
+[help-content.md](../src/explore/help-content.md) (help entries and the guided
+tour) and in the Ownership legend, which derives itself from the live
+classifier. Where the same thing has to be said in both places, this file states
+the rule and help states it in the second person; neither restates the other at
+length.
 
-Decision history — what was tried, rejected, and why — is in `WORKLOG.md`. This
-file states what is true now.
+How the diagram is *drawn* — colors, edge geometry, the relation bar, layering —
+is in [ARCHITECTURE.md](ARCHITECTURE.md). Decision history is in
+[WORKLOG.md](../WORKLOG.md). This file states what is true now.
 
 Classes are arranged so that if `A` is drawn **before** `B`, a reader should
 conclude **`B` is reached through `A`** — `A` is where you start if you want to
@@ -32,13 +25,13 @@ to the left.)
 relationships several different ways, following no strict rule, so ownership
 cannot be looked up — it has to be *read out*. These rules are **invented** for
 that purpose: they are a curated interpretation imposed on the schema to convey
-what logically belongs to what, and the exceptions exist because the rules
-themselves give the wrong answer in specific places.
+what logically belongs to what, and the exceptions exist because the rule itself
+gives the wrong answer in specific places.
 
-That matters for how to treat this file. A rule here is not a fact about
-BDCHM that a test could confirm against the source; it is a judgement that has
-to keep earning its place, and **the override sets are editorial** — which is
-why a schema sync can silently invalidate one and why classification calls are
+That matters for how to treat this file. A rule here is not a fact about BDCHM
+that a test could confirm against the source; it is a judgement that has to keep
+earning its place, and **the exception sets are editorial** — which is why a
+schema sync can silently invalidate one and why classification calls are
 Siggie's, not mechanical. Where a reading turns out wrong, the fix is to change
 the rule or add an exception, not to look for what the schema "really" meant.
 
@@ -50,425 +43,112 @@ Both say "X belongs to Y"; they differ only in which end the schema put the slot
 on. **Storage direction is normalized before drawing**, or every observation,
 exposure and procedure lands before the Participant it describes.
 
-Cardinality does not settle it either, which is why Rule 2 needs two exceptions
-of its own — see the rules below.
+**The memberships cannot be derived from the schema.** Verified exhaustively
+2026-08-21: every candidate discriminator — `identifier`, `inlined` /
+`inlined_as_list`, `required`, `abstract`, `is_a` depth, "class with no
+class-ranged slots of its own" — fails, several of them against our own reading.
+So they must be asserted. Do not re-litigate this; the sweep is in
+[WORKLOG.md](../WORKLOG.md). What *can* change is where the assertions live —
+see BACKLOG [§Let the schema say it](BACKLOG.md#let-the-schema-say-it-a-has_part--part_of-slot-hierarchy).
 
-## PROPOSED — let the schema say it: a `has_part` / `part_of` slot hierarchy
+## The rules
 
-> Status: **proposal, 2026-09-17, nothing implemented.** TASKS
-> [`ownership-slot-hierarchy`](TASKS.md). The findings below were checked
-> against linkml 1.11.1 on a patched copy of `bdchm.yaml`; the scratch
-> schema was not kept.
+**One rule, two exceptions, and an induced pass that is not a slot rule.** The
+order below is the order you would teach them in, which is also the order
+[`classify`](../src/models/ownershipRules.ts) applies them: state the rule, then
+say when it does not hold.
 
-Siggie's question: *is there a way in LinkML to indicate ownership direction
-between classes, so we would not need the classifier at all?*
+**The rules are named, not numbered.** The default is total and the two
+exceptions never compete with each other, so there is no precedence for a number
+to carry. The legend and the tour quote each rule's `label`, which stays correct
+if the order changes.
 
-**Short answer: LinkML has no metaslot that means "this slot owns its
-target".** The schema can *carry* the assertions the classifier makes today,
-but nothing in it can *derive* them — someone still decides, per slot, which
-way ownership runs. What changes is where the decision lives and who can review
-it. The classifier does not disappear; it shrinks to a lookup plus the induced
-pass, which stays because it is derived from class `is_a` already.
+An exception is only ever offered a slot its parent already claimed, so it does
+not restate the parent's condition — it revises the verdict already reached. The
+two exceptions are checked **together** rather than first-match, so a future
+overlap fails loudly instead of resolving to whichever was declared first.
 
-### What LinkML offers, closest first
-
-Every metaslot in the 1.11.1 metamodel that comes near the idea, and why each
-one falls short for BDCHM:
-
-| metaslot | what it means in LinkML | why it does not settle ownership here |
-|---|---|---|
-| `inlined` / `inlined_as_list` | The target is serialized **by value** inside the holder rather than **by identifier**. The nearest native notion of containment. | It is a statement about data shape, so asking upstream to set it on ~90 slots is a change to the JSON contract, not to documentation. It cannot say *belongs to*: a back-pointer and a plain reference are both simply not inlined. And BDCHM already uses it inconsistently — 9 of 149 edges, two of them against our reading (`Specimen.parent_specimen`, `SpecimenStorageActivity.container`, see §Exception 2a). |
-| **slot `is_a` / `mixins`** (a slot hierarchy) | A slot can inherit from another slot the way a class inherits from a class — LinkML's `rdfs:subPropertyOf`. The child keeps its own name, range and cardinality and becomes "a kind of" the parent. | **Nothing.** Pure semantics, no effect on serialization, expresses both directions and "neither", and every LinkML tool can read it back. This is the proposal. |
-| `subproperty_of` | Names an ontology property the slot specializes, as a CURIE. | The same idea without a local parent slot to hang a description on. Usable instead of, or in addition to, the hierarchy. |
-| `inverse` | Declares that `A.s = B` implies `B.s' = A`. | Pairs two slots; says nothing about which side owns. BDCHM declares none. |
-| `key` vs `identifier` | `key` is unique only **within a container** — LinkML's actual notion of a dependent object. | Every BDCHM class inherits a global `identifier` from `Entity`, so it discriminates nothing, and changing that is a modeling decision upstream will not make for a diagram. |
-| `annotations` | Free-form key/value. | No semantics; nothing but our own code would know what it meant. The earlier idea of `annotations: is_value_object` (§Exception 2a) is this option. |
-| `relational_role` | Which role (subject, object, predicate) a slot plays on a **reified relationship class**. | Wrong shape: it describes slots of an edge-class, not the direction of an edge. |
-
-### The proposal
-
-Two abstract slots, and every class-ranged slot declared `is_a` one of them:
-
-```yaml
-prefixes:
-  BFO: http://purl.obolibrary.org/obo/BFO_
-
-slots:
-  has_part:
-    abstract: true
-    slot_uri: BFO:0000051            # "has part"
-    description: The target is a part of the subject — the subject owns it.
-  part_of:
-    abstract: true
-    slot_uri: BFO:0000050            # "part of"
-    inverse: has_part
-    description: The subject is a part of the target — the target owns the subject.
-
-classes:
-  Specimen:
-    attributes:
-      processing_activity:
-        is_a: has_part               # own-fwd
-        range: SpecimenProcessingActivity
-        multivalued: true
-  Participant:
-    attributes:
-      member_of_research_study:
-        is_a: part_of                # own-bkwd
-        range: ResearchStudy
-```
-
-`has_part` maps onto `own-fwd` and `part_of` onto `own-bkwd` exactly. An
-`association` edge, should one return, is a class-ranged slot under neither.
-
-**Two homes, in order.** First an **overlay in this repo**: a sidecar YAML
-keyed `Class.slot → has_part | part_of`, applied by `transform_schema.py` at
-sync time (it already reads the schema through SchemaView, and
-`induced_class(c).attributes[a].is_a` is right there once the overlay is
-merged), so `processed.json` carries an ownership field per attribute and the
-app reads it. The two exception sets in `ownershipRules.ts` become the seed of
-that file. Then an **upstream PR** to
-[NHLBI-BDC-DMC-HM](https://github.com/RTIInternational/NHLBI-BDC-DMC-HM), the
-same route `in-subset-categories` is waiting on — once merged, the overlay
-no-ops and the assertions arrive with the sync instead of rotting here.
-
-**What it changes in this codebase.** `OWNERSHIP_RULES` collapses to: read the
-slot's ancestry; `has_part` → forward, `part_of` → backward. The
-`REFERRED_TO_ENTITIES` and `NAMED_BACK_POINTERS` sets go — their content
-becomes schema content. `child-following-parent` is untouched. The audit
-script's job gets *easier* and *more important*: a class-ranged slot under
-neither parent is exactly the row it should flag after every sync.
-
-### Verified 2026-09-17 (linkml 1.11.1, patched copy of `bdchm.yaml`)
-
-- **SchemaView resolves it on BDCHM's inline `attributes:`**, not only on
-  top-level slots — this mattered, since BDCHM declares nearly everything as
-  attributes. `induced_slot('processing_activity', 'Specimen')` reports
-  `is_a: has_part` with its own range and `multivalued` intact; walking `is_a`
-  upward gives the verdict. An untouched attribute reads as unmarked.
-- **`linkml-lint` raises no error** for abstract, range-less parent slots. (The
-  only lint errors are two pre-existing ones — `year_range.comments` is a
-  string where the metamodel wants a list — and are unrelated.)
-- **`gen-doc` shows it on the slot page only.** `processing_activity.md` gets
-  an *Inheritance* tree with `has_part` above it, and `has_part.md` lists every
-  slot beneath it — a free index of all owning attributes. The **class page is
-  unchanged**: the mermaid diagram still draws every class-ranged slot as the
-  same `-->`, and the slot table has no new column; `is_a` appears only in the
-  YAML dump at the foot. `inlined` is not rendered anywhere by `gen-doc`; the
-  one LinkML generator that draws containment at all is PlantUML (`*--` for
-  inlined slots). So conveying direction in **upstream's generated docs** would
-  take a custom `gen-doc` template (`--template-directory`) that reads the
-  hierarchy and draws composition arrows. Until then this app is the only
-  renderer of BDCHM that shows ownership direction.
-
-### Decision needed before writing the overlay
-
-**What does an unmarked slot mean?** Two readings, and they decide how much
-upstream has to mark:
-
-1. *Unmarked = forward.* Matches today's default rule; upstream needs `part_of`
-   on the 59 backward slots and nothing else. But then "nobody looked at this"
-   and "forward" are indistinguishable, which is the silent-staleness failure
-   this whole file complains about.
-2. *Unmarked = unclassified.* All 149 class-ranged slots carry a parent; the
-   audit flags any that does not. More to write once; rot becomes visible.
-
-Recommendation: **(2) for the overlay and the upstream PR, with the app still
-falling back to forward** for an unmarked slot so a sync never blanks the
-diagram — the audit, not the renderer, is where "unmarked" should hurt.
-
----
-
-## The relation vocabulary
-
-Three relation **kinds**, two of which can be seen from three **perspectives**:
-
-```
-2 (own-fwd, own-bkwd) × 3 (perspectives) + 1 (association) = 7
-```
-
-The kind is a property of the edge. The perspective is a property of the
-*reader* — which end they are looking from — and exists only once they have
-picked an entity out. With nothing hovered or selected there is no point of
-view, so **the three kinds are all the canvas encodes**; perspective belongs to
-hover behaviour and to the words in the relation bar.
-
-### The three kinds
-
-| kind | relationship | drawn |
-|---|---|---|
-| `own-fwd` | source **owns** range | forward: source before range |
-| `own-bkwd` | source **belongs to** range | back: range before source, edge reversed |
-| `association` | neither owns the other | back: range before source, both ends arrowed |
+| kind | rule | when | drawn |
+|---|---|---|---|
+| `own-fwd` | **`owns-target-forward-by-default`** — source **owns** range | the default; total, keyed by nothing | forward: source before range |
+| ↳ `own-bkwd` | **`belongs-to-target-backward-by-entity`** — source **belongs to** range | range ∈ [`REFERRED_TO_ENTITIES`](../src/models/ownershipRules.ts) | back: range before source, edge reversed |
+| ↳ `own-bkwd` | **`belongs-to-target-backward-by-attribute`** — source **belongs to** range | `Class.slot` ∈ [`NAMED_BACK_POINTERS`](../src/models/ownershipRules.ts) | back: range before source, edge reversed |
+| `own-fwd` | **`child-following-parent`** — induced, not a slot rule | second pass over forward edges; see below | forward |
+| `association` | neither owns the other | [`ASSOCIATION_SLOTS`](../src/models/ownershipRules.ts), empty since 2026-09-11 | back: range before source, both ends arrowed |
 
 **"Owns" and "belongs to" are different claims, not synonyms.** A class *owns*
-what it holds — the schema puts the collection on the owner, or the target is a
-value with no independent existence (a `Quantity` of `5 mg` is not something you
-look up). A class *belongs to* something that exists independently of it: an
-`Organization`, a `Participant`, a `Visit` carry on existing whether or not any
-particular observation points at them, so saying the observation *owns* them
-overclaims. **"Belongs to" is the correct verb for `own-bkwd`** wherever it
-appears in the legend or an edge label.
+what it holds — the target is part of what the source *is*, a value with no
+independent existence (a `Quantity` of `5 mg` is not something you look up). A
+class *belongs to* something that exists independently of it: an `Organization`,
+a `Participant`, a `Visit` carry on existing whether or not any particular
+observation points at them, so saying the observation *owns* them overclaims.
+**"Belongs to" is the correct verb for `own-bkwd`** wherever it appears.
 
 `association` makes **no ownership claim in either direction**. It layers the
-same way `own-bkwd` does — target first — but that is geometry, not meaning:
-`own-bkwd` asserts "belongs to" and `association` asserts nothing.
+same way `own-bkwd` does — target first — but that is geometry, not meaning.
 
-### The five positions, and the two axes they decompose onto
+⚠️ **Cardinality decides nothing.** It used to *be* the rule — multivalued meant
+forward, single-valued backward — and 51 of the 60 single-valued sites then had
+to be flipped back by an exception list. `SlotFacts.multivalued` is still
+carried and deliberately unused; dropping it changed no edge on this schema.
 
-`RelationPosition` ([`src/models/ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts)) is the three kinds
-crossed with **who declares the slot**. `association` does not split, because
-neither end declares ownership:
+### Why the two exception sets are keyed differently
 
-| position | label (`RELATION_POSITION_LABEL`) |
-|---|---|
-| `owns-mine` | belong to me by my attribute |
-| `owns-theirs` | belong to me by their attribute |
-| `owned-mine` | I belong to, by my attribute |
-| `owned-theirs` | I belong to, by their attribute |
-| `association` | associated with |
+`REFERRED_TO_ENTITIES` is keyed by **range**; `NAMED_BACK_POINTERS` by
+**`Class.slot`**. This is the subtlest thing about the scheme and the easiest to
+"simplify" wrongly.
 
-**Two independent facts are folded into those five names**, and the UI reads
-them separately. Keeping them apart is the thing to get right here — they were
-conflated repeatedly while the relation bar was designed (2026-09-04), in both
-directions:
+A **range** key makes the stronger claim: *every* arrival at this entity is a
+reference. That is true of Participant, Visit, Organization, ImagingStudy and
+Person, and it is the safe key — it cannot silently capture an unrelated slot
+the way a bare slot name can.
 
-- **SIDE** — where the class sits on the canvas. Layout is owner-first, so
-  everything that **owns me** is drawn to my **left** and everything **I own**
-  to my **right**.
-- **KIND** — the edge's verdict: which end carries the arrowhead, and therefore
-  which class declares the slot.
+A **`Class.slot`** key says "this one attribute is a back-pointer" and says
+nothing about its range — which matters, because both ranges in that set are
+genuinely **owned** by exactly one other attribute: `QuestionnaireItem` by
+`Questionnaire.items`, `ResearchStudy` by `ResearchStudyCollection.entries`. A
+range key would not merely be risky here, it would strip those two entities of
+the ownership they do have. Being referred to is a property of the **arrival**,
+not of the entity.
 
-| position | side | kind | glyph |
-|---|---|---|---|
-| `owned-mine` | left | `own-bkwd` | `--<` |
-| `owned-theirs` | left | `own-fwd` | `-->` |
-| `owns-mine` | right | `own-fwd` | `-->` |
-| `owns-theirs` | right | `own-bkwd` | `--<` |
-| `association` | left | `association` | `<-->` |
+The fully-qualified key is also what keeps `part_of` honest: two different
+classes declare one, and a bare `part_of` would flip any future third site
+silently.
 
-**Both kinds appear on both sides**, which is why they are independent rather
-than two names for one thing. Of the four classes that own `Observation`, three
-do so because Observation points at them (`own-bkwd`) and one because
-`ObservationSet` collects it (`own-fwd`). A reader cannot infer the kind from
-the side, nor the side from the kind. [`src/test/relationBar.test.ts`](../src/test/relationBar.test.ts) asserts
-exactly this, against the real schema.
+### The induced pass is not a classifier branch
 
-`association` sits on the left because the layout orders its target first,
-exactly as `own-bkwd` does — geometry, not an ownership claim.
+`child-following-parent` must not become one. It is a **second pass** in
+[`buildContainmentGraph`](../src/models/containmentGraph.ts) over the forward
+edges the classifier produced, walking `subtreeOf(range)`, with a matching walk
+in `getOwnershipPairGroups`; [`ownershipLegend.test.ts`](../src/test/ownershipLegend.test.ts)
+pins the two equal. It carries an entry in `OWNERSHIP_RULES` only so its text
+and legend group come from the same table as every other rule.
 
-The same relationship described from its two ends is one relationship, not two
-alternatives. A hovered edge shows **one** label, at the end the pointer is
-nearer; the neutral phrasing ("contains", "contained by", "associated with") is
-for prose, where no reader has a position.
-
-The reasoning that ruled out persistent on-edge labels is in `WORKLOG.md`
-(2026-09-02). The full phrasings are below — moved here 2026-09-04 from
-`NEXT_SESSION_EDGE_DISPLAY.md` §3.2, now in `docs/archive/`. (The pointer this
-replaces sent readers to `WORKLOG.md` for the tables; they were never written
-there.)
-
-### The phrasing table
-
-Not a render spec — one label renders, at the near end (above). This is the
-**source for hover-label copy** when that is built, and the clearest statement
-of the relation vocabulary in the repo.
-
-`close` and `far` are the same relationship described from its two ends, not
-alternatives between which something chooses. Pointer proximity selects the
-**row** — the point of view — and the `close` label is what renders. Showing
-`far` simultaneously at the other end was considered and judged **excessive**:
-it doubles the ink for something the reader gets by hovering the other end.
-`middle` is the neutral phrasing, for prose where no reader has a position.
-
-| from PoV | position | edge type | position type | other box pos | close label | middle label | far label |
-|---|---|---|---|---|---|---|---|
-| yes | mine | own-fwd | `owns-mine` | right | belongs to me by my attribute | contains | I belong to by their attribute |
-| yes | mine | own-bkwd | `owned-mine` | left | I belong to by my attribute | contained by | belongs to me by their attribute |
-| yes | theirs | own-fwd | `owns-theirs` | left | I belong to by their attribute | contains | belongs to me by my attribute |
-| yes | theirs | own-bkwd | `owned-theirs` | right | belongs to me by their attribute | contained by | I belong to by my attribute |
-| no | neutral | own-fwd | `owns` | right | | contains | |
-| no | neutral | own-bkwd | `owned` | left | | contained by | |
-| any | any | association | `association` | left | | associated with | |
-
-The `close` column is what shipped, as `RELATION_POSITION_LABEL`
-([`ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts)) — plural there, with singular forms for the two
-`owns-*` rows, since only those have a subject that inflects.
-
-### Wordings considered and rejected
-
-Siggie picked the personal language (2026-08-27) because all four name the
-declaring side the same way — "by my attribute" / "by their attribute" — so
-they read as one paradigm rather than two unrelated pairs.
-
-| personal language (SHIPPED) | shorter personal | objective language |
-|---|---|---|
-| belongs to me by my attribute | I contain it | self contains |
-| I belong to by my attribute | I belong to it | self contained by |
-| I belong to by their attribute | It contains me | contained by other |
-| belongs to me by their attribute | It belongs to me | other contained by |
-
-The shorter forms lose the declaring-side distinction entirely — "I contain it"
-cannot say *whose attribute* creates the relationship, which is the one thing
-the relation bar exists to show.
-
----
-
-## Rule 1 — Multivalued slot ⇒ `own-fwd`
-
-`A.things: B[]` — A holds a collection of Bs, stored owner-side. The schema put
-the collection on A, which is the schema saying A is where the Bs are found.
-Draw A before B.
-
-Most of these targets *do* exist independently — `Observation`, `Specimen`,
-`ResearchStudy`, `Consent` are all real entities. Rule 1 does not claim
-otherwise; it reads the storage direction the schema chose. (Exception 2a below
-reaches the same verdict by a different route: targets that exist only as part
-of their holder.)
-
-**32 edges** (measured 2026-09-11). Examples: `ObservationSet.observations`,
-`Questionnaire.items`, `Participant.consents`, `Specimen.processing_activity`.
-
-**Every multivalued class-ranged slot is now `own-fwd`** except
-`Specimen.parent_specimen` (see below). `Specimen.related_document` and
-`SpecimenStorageActivity.container` were the two exceptions until 2026-09-11,
-when they stopped being association.
-
-`Specimen.parent_specimen` is multivalued, so Rule 1 would make Specimen own its
-parents, pointing up the derivation tree. It is a **self-loop, rendered as a `⟲`
-marker on the slot's own row rather than a routed edge**, so nothing about
-layering or direction is visible.
-
----
-
-## Rule 2 — Single-valued slot ⇒ `own-bkwd`
-
-`A.thing: B` — A carries a pointer to one B that exists independently, stored
-member-side. **A belongs to B.** Draw B before A.
-
-**62 edges** (measured 2026-08-31) — the largest category. `associated_participant`,
-`associated_visit` and `performed_by` account for most of them, so any change to
-this rule reshapes most of the diagram.
-
-### Exception 2a — targets with no independent existence ⇒ `own-fwd` (41 edges)
-
-Rule 2's premise fails when the target is not something you can navigate to. The
-pointer is containment expressed as a pointer, and the value belongs to whoever
-holds it — so these draw **forward**, source before range.
-
-Without this exception `Quantity` would acquire 13 owned classes and `TimePoint`
-8, and a reader would conclude that to find a `ResearchStudy` you start from a
-`TimePoint`.
-
-| range | slots |
-|---|---|
-| TimePoint | `date_started`/`date_ended`, `valid_from`, `valid_to`, `period_start`, `period_end`, `index_time_point` |
-| Quantity | `value_quantity`, `range_low`, `range_high`, `duration`, `quantity_collected`, `substance_quantity`, `lower/upper_limit_of_detection` |
-| BodySite | `affected_body_site`, `body_site`, `anatomical_site`, `body_part_examined`, `collection_site` |
-| TimePeriod | `Visit.year_range` |
-| Activity | `Context.activity` |
-| QuestionnaireResponseValue | `QuestionnaireResponseItem.response_value` |
-| SpecimenContainer | `Specimen.contained_in`, `SpecimenContainer.parent_container` (self-loop) |
-
-Membership is `SINGLE_VALUE_OWNER_TARGETS` — 15 classes: `Quantity`,
-`TimePoint`, `TimePeriod`, `BodySite`, `CauseOfDeath`, `Substance`,
-`BiologicProduct`, `Activity`, `SpecimenContainer`,
-`QuestionnaireResponseValue` + its 5 typed subclasses.
-
-`SpecimenContainer` joined 2026-09-11 with `ownership-rules`: a container has
-no existence apart from the specimen in it, so `Specimen.contained_in` is a
-target rather than an owner. It is also what keeps the graph acyclic once
-association is gone — see [§association](#association--0-edges).
-
-**This list cannot be derived from the schema.** Verified 2026-08-21 — every
-candidate discriminator fails:
-
-- `identifier` — all classes inherit `id` from `Entity`. Discriminates nothing.
-- `inlined` / `inlined_as_list` — set on 10 of ~150 edges and inconsistent with
-  ownership (`Specimen.parent_specimen` is `inlined_as_list` but points *up* the
-  derivation tree; `SpecimenStorageActivity.container` is inlined but is a use).
-- `required`, `abstract`, `is_a` depth — no signal.
-- "Class with no class-ranged slots of its own" catches 9 of the 14 but misses
-  `TimePoint`, `TimePeriod`, `Substance`, `Activity`,
-  `QuestionnaireResponseValueTimePoint`. Closing it recursively over-collects to
-  40 classes including `Participant`, `Visit`, `Organization`.
-
-So it must be asserted. Best home, worst to best: a hand-typed TypeScript set
-(silent staleness) → a LinkML overlay (schema-shaped, reviewable as a diff;
-the `annotations: is_value_object` idea is superseded by the slot hierarchy in
-[§PROPOSED](#proposed--let-the-schema-say-it-a-has_part--part_of-slot-hierarchy))
-→ upstream in the schema. **Add a sync
-check** either way: flag any unlisted class that is a pure leaf, or any listed
-class that stops being one, so rot becomes a visible question.
-
-### Exception 2b — cardinality splits a family ⇒ `own-fwd` (2 edges)
-
-Two single-valued slots whose multivalued siblings are `own-fwd` under Rule 1.
-Rules 1–2 would split a family by cardinality alone, and the schema's `0..1` vs
-`0..*` choice here looks incidental.
-
-| slot | why forward |
-|---|---|
-| `Specimen.creation_activity` | Its siblings `processing_activity`, `storage_activity`, `transport_activity` are all `own-fwd` by Rule 1. A specimen's activities are one family; cardinality is the wrong axis to split them on. |
-| `Specimen.dimensional_measures` | Its siblings `quality_measure`, `quantity_measure` are `own-fwd`. **And** its range is `DimensionalObservationSet` — a `0..1` pointer at something that is itself a collection, so the singular cardinality is only apparent. |
-
-**Asserted, not derived**, and deliberately so: the only clean discriminator for
-the four `*Set` classes is the name suffix, and exactly one slot in the schema
-ranges single-valued on one — a "collection-ranged" rule would have a single
-member resting on a naming convention. Two asserted entries with stated reasons
-is more honest than a rule that looks derived and is not.
-
----
-
-## Rule 3 — A forward-owned range includes its subtree (10 induced edges)
-
-`A.things: P[]` where `P` has subclasses. In LinkML a slot ranged on `P`
-accepts an instance of any subclass of `P`, so the collection holds `C`s as
-readily as `P`s, and **A owns every subclass of P** through the same slot. The
-graph carries one **induced** edge per subclass, `A → C`, labelled with the
-same slot and marked `inducedFrom: P`. Draw A before C.
-
-This is the forward dual of slot inheritance, which the graph already had: a
-subclass inherits `associated_participant`, so Participant owns each
-Observation subclass through the child's own copy of the slot. Without Rule 3
-the two directions were asymmetric, and a subclass that no slot names directly
-— `QuestionnaireResponseValueString`, every `Observation` child on a canvas
-without a Participant — had **no owner at all**: a root in the DAG, layer 0,
-dragging the merged box it shares with its parent to the far left of the
-canvas, unconnected to the class that owns the family (Siggie, 2026-09-10).
-
-**10 edges** (measured 2026-09-10), from three declared ones:
-`ObservationSet.observations → Observation` (5), `QuestionnaireResponseItem.
-response_value → QuestionnaireResponseValue` (5), and none from
-`ImagingFile.derived_from → File`, whose only subclass is ImagingFile itself.
+In LinkML a slot ranged on `P` accepts an instance of any subclass of `P`, so
+whatever owns `P` owns each subclass through the same slot. The graph carries
+one induced edge per subclass, labelled with the same slot and marked
+`inducedFrom: P`.
 
 Scope, deliberately:
 
 - **Forward edges only.** No `own-bkwd` edge in the schema has a range with
-  subclasses, so the backward case is undefined rather than decided.
-- **`Entity` is skipped**, for the reason `SKIP_SUBCLASS_EXPANSION` exists:
-  its subtree is every class.
-- **A merged box collapses them.** Induced edges rewrite to the merged box like
-  any member edge and dedupe against the declared one on the same anchor row,
-  so the canvas shows ONE line into the box, landing on its header — the
-  relationship is with the family, not with a child.
+  subclasses, so the backward case is undefined rather than decided. All five
+  `REFERRED_TO_ENTITIES` are leaf classes, which is what keeps this true —
+  re-check after a schema sync.
+- **`Entity` is skipped**, for the reason `SKIP_SUBCLASS_EXPANSION` exists: its
+  subtree is every class.
+- **A merged box collapses them**, so the canvas shows ONE line into the box,
+  landing on its header — the relationship is with the family, not with a child.
 
-Anything that recomputes edges from slot data must skip `inducedFrom` edges or
-derive them the same way (`subtreeOf`); `containmentGraph.test.ts` does the
-latter.
-
-### They serve layout only, and are invisible in the UI
-
-Nothing user-facing lists an induced edge: `collectRelations` filters them out
-of the relation bar's rows and its counts, and neither the legend nor the
-Ownership tour mentions them.
-
-An induced edge is an **inference, not a declaration**. `response_value →
+**They serve layout only and are invisible in the UI.** Nothing user-facing
+lists an induced edge: `collectRelations` filters them out of the relation bar,
+and neither the legend nor the Ownership tour mentions them. An induced edge is
+an **inference, not a declaration** — `response_value →
 QuestionnaireResponseValueBoolean` says a subclass *may* fill the slot; no
-attribute anywhere says it does, so listing one beside declared relations
-asserts a relationship the schema does not contain. Their whole purpose is the
-layering above — put a subclass after the attribute that reaches its parent —
-and having served it they have nothing to tell a reader.
+attribute says it does, so listing one beside declared relations would assert a
+relationship the schema does not contain. Their whole purpose is the layering —
+put a subclass after the attribute that reaches its parent — and having served
+it they have nothing to tell a reader.
 
 ⚠️ **Do not confuse this with LinkML's `inherited_from`.** That is a different
 mechanism with the opposite character: `SchemaView.induced_class()` copies a
@@ -477,620 +157,138 @@ subclasses genuinely hold it. Those rows are REDUNDANT — the same fact twice �
 where induced edges are SPECULATIVE. `buildRelationRows` collapses the first and
 `collectRelations` drops the second, for those different reasons.
 
-`OWNERSHIP_RULES` keeps its `child-following-parent` entry and
-`getOwnershipPairGroups` still builds the group, so the pairs remain derivable.
-Nothing renders them.
-
----
-
-## `association` — 0 edges
-
-**No slot in this schema classifies as `association` (2026-09-11).** The
-category and its rendering still exist; `ASSOCIATION_SLOTS` is empty.
-
-An association edge makes **no ownership claim in either direction**. It is
-drawn dashed with **arrowheads at both ends**, and layers like `own-bkwd`
-(target ordered first) — no ownership claim, yet ordered as if there were one.
-That combination is why the category is kept while TASKS
-[`ownership-rules`](TASKS.md) makes edge kinds expressible as configuration:
-nothing else exercises it.
-
-### When a schema needs it
+### When a schema needs an association edge
 
 **Use association when no ownership claim is right in either direction** — not
 when one particular rule's claim is wrong. A slot whose objection is "it's a
 role, not membership" is `own-bkwd`, which already says only "belongs to".
 
-Both departed members were multivalued, so it has only ever overridden Rule 1.
-Nothing about the category is limited to Rule 1; `single-value-owns-fwd` also
-claims ownership, and a target that should not be owned would need association
-to override that instead.
+Association is not an override of the default rule. It is symmetric with it: any
+rule that claims ownership is one association could have to defeat, so restoring
+it means putting it *first*, ahead of the default — see the acceptance criterion
+in [`ownershipRules.ts`](../src/models/ownershipRules.ts), which
+[`ownershipRules.test.ts`](../src/test/ownershipRules.test.ts) proves by building
+the entry and checking it classifies and draws correctly.
 
-### The two edges that used to be here
+## Positions: side and kind are independent
 
-Both were multivalued, so Rule 1 now claims them as forward ownership.
+`RelationPosition` ([`ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts))
+is the edge kind crossed with **who declares the slot**. Two independent facts
+are folded into those five names, and the UI reads them separately — keeping
+them apart is the thing to get right:
 
-| source | slot | target | the association argument, and why it lost |
-|---|---|---|---|
-| Specimen | `related_document` | Document[] | Was: a document a specimen references is not part of it, and other classes may reference the same one. In this schema no other class does — `Document` connects to nothing but `Specimen` and its own `focus` — so the document belongs to its specimen. |
-| SpecimenStorageActivity | `container` | SpecimenContainer[] | Was: a container outlives the activity and holds specimens independently of it. True, but there is no clear ownership direction either way, and the distinction did not earn a whole edge kind. |
+- **SIDE** — where the class sits on the canvas. Layout is owner-first, so
+  everything that **owns me** is drawn to my **left**, everything **I own** to
+  my **right**.
+- **KIND** — the edge's verdict: which end carries the arrowhead, and therefore
+  which class declares the slot.
 
-Dropping them alone would have left the graph's only non-self cycle,
-`Specimen → SpecimenStorageActivity → SpecimenContainer → Specimen`, which
-association had been breaking. **`Specimen.contained_in` flipped forward in the
-same change** — `SpecimenContainer` joined the Exception 2a targets, since a
-container has no existence apart from the specimen in it — and that dissolves
-the cycle. Pinned by `containmentGraph.test.ts`, "contained_in must stay
-forward", which recomputes both variants and fails if the flip is reverted.
+| position | side | kind | glyph | label (`RELATION_POSITION_LABEL`) |
+|---|---|---|---|---|
+| `owns-mine` | right | `own-fwd` | `-->` | belong to me by my attribute |
+| `owns-theirs` | right | `own-bkwd` | `--<` | belong to me by their attribute |
+| `owned-mine` | left | `own-bkwd` | `--<` | I belong to, by my attribute |
+| `owned-theirs` | left | `own-fwd` | `-->` | I belong to, by their attribute |
+| `association` | left | `association` | `<-->` | associated with |
 
----
+**Both kinds appear on both sides**, which is why they are independent rather
+than two names for one thing. Of the four classes that own `Observation`, three
+do so because Observation points at them (`own-bkwd`) and one because
+`ObservationSet` collects it (`own-fwd`). A reader cannot infer the kind from
+the side, nor the side from the kind. [`relationBar.test.ts`](../src/test/relationBar.test.ts)
+asserts exactly this, against the real schema.
 
-## `Entity`-ranged slots ⇒ `own-fwd` (13 edges)
+`association` does not split by declarer, because neither end declares
+ownership; it sits on the left because the layout orders its target first,
+exactly as `own-bkwd` does.
 
-These point forward, like any other ownership edge — source before range, single
-arrowhead. They are not association.
+The personal language was picked (2026-08-27) because all four name the
+declaring side the same way — "by my attribute" / "by their attribute" — so they
+read as one paradigm rather than two unrelated pairs. `RELATION_POSITION_LABEL`
+is the config; it carries singular forms for the two `owns-*` rows, since only
+those have a subject that inflects.
 
-As of the `28007df` sync the slots ranging on `Entity` are `focus` (11 sites),
-`Condition.associated_evidence` (1), and
-`MeasurementObservation.associated_artifact` (1) — **13 sites**. This list grows
-whenever upstream generalizes a range, so treat it as measured rather than
-fixed. A convergence that keeps growing is worth watching: it is the kind of
-thing that turns a readable diagram into a hairball.
+## `Entity` is the universal root, and we draw it only as a range
 
-They must not be dropped. `focus` carries real meaning — "this observation is
-about *something*" — and deleting it silently removes information.
+`Entity` is `abstract: true` and every one of the other 53 classes descends from
+it. It plays three roles, and they need keeping apart:
 
-### `Entity` is the universal root, and we draw it only as a range
-
-`Entity` is `abstract: true` and every one of the other 53 classes descends
-from it — 37 directly, the rest through a parent. It plays three roles, and
-they need keeping apart:
-
-- **As an inheritance parent** — since every class `is_a Entity`, drawing those
-  edges adds a fan of 53 with no explanatory value. **Suppressed for clutter,
-  not because the relationship is not real**, by `SKIP_SUBCLASS_EXPANSION`.
-  This holds for any future inheritance view too.
+- **As an inheritance parent** — drawing those edges adds a fan of 53 with no
+  explanatory value. **Suppressed for clutter, not because the relationship is
+  not real**, by `SKIP_SUBCLASS_EXPANSION` in
+  [containmentGraph.ts](../src/models/containmentGraph.ts). This holds for any
+  future inheritance view too.
 - **As a slot range** — a deliberate polymorphic pointer that means something.
-  Entity-ranged edges classify normally (rule `entity-ranged`, always forward).
-- **As a node** — `Entity` is in `classIds` and, now that its inbound range
-  edges are drawn, it touches edges and survives `pruneIsolated`.
+  Entity-ranged edges classify normally, by the default rule, always forward.
+  They must not be dropped: `focus` carries real meaning ("this observation is
+  about *something*") and deleting it silently removes information.
+- **As a node** — `Entity` is in `classIds` and, since its inbound range edges
+  are drawn, it touches edges and survives `pruneIsolated`.
 
 **The problem is never the fact, it is the fan.** `RelationshipInfoBox` saying
 "Parent class: Entity" is true and useful; `LinkOverlay` rendering every
 `is_a Entity` link, and the containment graph fanning 53 of them, is the noise.
 
-### PLANNED — one inheritance accessor, with a required argument
+⚠️ `SKIP_SUBCLASS_EXPANSION` is a **separate concern from classification** and
+stays in `containmentGraph.ts`. Conflating the two is what went wrong with
+`EXCLUDE_HAS_A_TARGETS`.
 
-Inheritance is derived two independent ways today, and neither calls the other:
-
-| path | used by |
-|---|---|
-| `getParentClass` / `getSubclasses` ([`Graph.ts`](../src/models/Graph.ts)) | only `buildContainmentGraph`. `getSubclasses` has **no callers at all**. |
-| `DataService.getEdgesForItem(...)` filtered on `EDGE_TYPES.INHERITANCE` | [`RelationshipInfoBox.tsx`](../src/components/RelationshipInfoBox.tsx), [`LinkOverlay.tsx`](../src/components/LinkOverlay.tsx) |
-
-**Decided 2026-08-24: route all inheritance derivation through one accessor
-that takes a required parameter saying whether `Entity` inheritance is
-included.** Not optional, not defaulted.
-
-```ts
-// shape, not final naming
-getInheritance(graph, classId, { includeEntity: boolean })
-```
-
-Required is the whole point. A default is what let this rot in the first place:
-`EXCLUDE_HAS_A_TARGETS` and `SKIP_SUBCLASS_EXPANSION` sat side by side as two
-silent `Set<string>`s, and no call site ever had to say which behaviour it
-wanted — so the ranges case inherited the inheritance case's answer by accident.
-A required argument makes every caller state its intent, and makes a new caller
-*fail to compile* rather than quietly pick up the wrong one.
-
-| caller | `includeEntity` | why |
-|---|---|---|
-| `buildContainmentGraph` | `false` | drawing; the 53-edge fan is pure noise |
-| `LinkOverlay` | `false` | drawing |
-| `RelationshipInfoBox` | `true` | reporting a fact about one class |
-| future Explorer inheritance view | `false` | drawing |
-
-This replaces `SKIP_SUBCLASS_EXPANSION` entirely. The components must stop
-filtering `getEdgesForItem` on `EDGE_TYPES.INHERITANCE` directly — that
-filtering *is* the second derivation path.
-
-### `focus` carries per-class cardinality
-
-The source YAML declares `focus` on many classes with differing cardinality.
-[`bdchm.processed.json`](../public/source_data/HM/bdchm.processed.json) used to collapse all of them into one slot keyed `focus`,
-with `multivalued: false` and an owner that was none of the declaring classes.
-**The induced-slots migration fixed this**: there is no bare `focus` key any
-more, only 11 per-class entries (`focus-Document`, `focus-ObservationSet`,
-`focus-Observation`, …), each carrying the cardinality its own class declares —
-so `focus-ObservationSet` is multivalued and `focus-Document` is not.
-
-The verdicts never depended on it: `entity-ranged` fires before the multivalued
-test, so all `focus` sites drew forward either way. That immunity is a point in
-the rule's favour, but the underlying data is correct now regardless.
-
----
+Entity-ranged slots grow whenever upstream generalizes a range, so treat the
+list as measured rather than fixed. A convergence that keeps growing is worth
+watching: it is the kind of thing that turns a readable diagram into a hairball.
 
 ## `any_of` ranges — not handled (low priority)
 
-**The app ignores `any_of` entirely.** Exactly **one** slot in the schema uses it:
+**The app ignores `any_of` entirely.** Exactly **one** slot in the schema uses
+it: `MeasurementObservation.associated_artifact`, `range: Entity`, `any_of:
+[Assay, File, QuestionnaireResponse]`.
 
-```
-MeasurementObservation.associated_artifact
-  range:  Entity
-  any_of: [Assay, File, QuestionnaireResponse]
-```
+It is harmless today because the slot also declares `range: Entity`, so it draws
+forward — the correct verdict. LinkML convention is for an `any_of` slot to
+carry a `range` that is the common ancestor of the alternatives, so the declared
+range stays a truthful (if vague) statement. **We lose precision, not
+correctness.** What is lost: the diagram says "points at some Entity" where the
+schema names three classes, and **`Assay` became a false root** — nothing ranges
+on it since the `28007df` rename, so it sits at layer 0, a class you cannot
+navigate *to*.
 
-### Why ignoring it is currently harmless
-
-The slot also declares `range: Entity`, so the `entity-ranged` rule catches it
-and draws it forward — the correct verdict. LinkML convention is for an `any_of`
-slot to carry a `range` that is the common ancestor of the alternatives, so the
-declared range stays a truthful (if vague) statement. **We lose precision, not
-correctness.** What is lost is real, though:
-
-- The diagram says "points at some Entity" where the schema says "points at an
-  `Assay`, a `File`, or a `QuestionnaireResponse`".
-- It adds a 13th edge to the `Entity` convergence instead of three informative
-  edges to named classes.
-- **`Assay` became unreachable.** `associated_assay` was the only slot ranging on
-  `Assay`; after the `28007df` rename nothing ranges on it. It keeps 3 outbound
-  edges so `pruneIsolated` does not drop it — but it sits at layer 0 as a **false
-  root**, a class you cannot navigate *to*.
-
-### The decision (option 1, taken)
-
-**Leave it; assert it stays small.** A test fails when a *second* slot grows an
-`any_of`, so the decision gets revisited on evidence rather than rotting
-silently. Two things follow, both cheap and neither yet done:
-
-- **The label explains it.** `associated_artifact` gets a marker on the **row**
-  saying it may point at an `Assay`, a `File`, or a `QuestionnaireResponse` —
-  explained in the detail panel. This is a footnote on the row, not an edge
-  label; the edge still points at `Entity`.
-- **A note on `Assay`** explaining what attaches to it, so the false root is
-  legible rather than mysterious.
-
-The two alternatives, for when the trigger fires:
-
-2. **Fan out at graph-build time** — one `CLASS_RANGE` edge per `any_of` member,
-   tagged so they can be styled as one polymorphic slot. Classification then
-   works unchanged, per branch. Changes edge counts, layering, and every count
-   in this doc. It also raises a question the diagram cannot currently express:
-   **are three alternatives three edges, or one edge with three heads?** Drawing
-   three implies the slot points at all of them simultaneously, which is false.
-3. **A first-class polymorphic edge type.** Most faithful, most work. Only worth
-   it if `any_of` becomes common upstream.
-
-A cheap middle option, if the false root is the only thing that actually
-bothers anyone: fan out `any_of` **for reachability only** — enough to keep
-classes like `Assay` connected — while continuing to draw the single `Entity`
-edge. That splits layout correctness from edge semantics and defers the harder
-rendering question.
+**Decision (option 1, taken): leave it; assert it stays small.** A test fails
+when a *second* slot grows an `any_of`, so this gets revisited on evidence
+rather than rotting silently. The alternatives, and the cheap middle option that
+fans out for reachability only, are in BACKLOG
+[§`any_of`](BACKLOG.md#any_of-ranges--the-alternatives).
 
 **If this is picked up:** check whether `range` on an `any_of` slot is reliably
-the common ancestor. If it can be absent, the `entity-ranged` safety net
-disappears and the slot falls through to `fk-inversion`, which would draw it
-backward — wrong. A test for "every `any_of` slot has a class-valued `range`"
-would catch it cheaply.
-
----
-
-## The color system
-
-Three palettes, deliberately of three different **kinds**, so the three
-questions they answer cannot be confused for one another. Values live in
-[`src/config/appConfig.ts`](../src/config/appConfig.ts); this section is why they are what they are.
-
-| | palette | entries | what carries it |
-|---|---|---|---|
-| **P1 — range** | ColorBrewer **Set1**, entity = blue | 4–5 | row dot, row range label, detail-panel badges |
-| **P2 — kind** | three **hues** (blue / teal / slate) | 3 | edge stroke, relation popover samples |
-| **P3 — siblings** | ColorBrewer **Pastel1** | 6 | slot name, merged-box header |
-
-**P1 answers "what kind of thing is this?"** — entity, enum, data type,
-variable. Qualitative and unordered, so Set1, which gives maximum mutual
-separation. It is one set of colors for one set of things: the Kitchen Sink
-element types and the Explorer's detail-panel badges are the same distinctions
-and take the same colors.
-
-**P2 answers "what kind of relation is this?"** — three distinct hues:
-`own-fwd` blue `#1d4ed8`, `own-bkwd` teal `#0e7490`, `association` slate
-`#64748b`. Association is also **dashed** and **arrowed at both ends**, so it
-has two channels beyond color; the dash carries the distinction, not faintness.
-
-**P2 was a Blues ramp and is not any more (2026-09-04).** The original premise
-was that `own-fwd` and `own-bkwd` are the same relation seen from two ends, so
-they should sit one step apart and read as "different in direction, not in
-kind". Measured, that step is **1.50:1**, and on a 1.4px stroke it is not a
-difference at all — Siggie could not tell the two apart on the canvas. Widening
-the ramp does not rescue it: separating the pair pushes `association` toward
-white, and a pale dashed hairline is the least visible thing the diagram can
-draw.
-
-The mistake was using a **sequential** palette for a **nominal** variable.
-Adjacent steps on a sequential ramp are built to read as *ordered*, which is
-the wrong property — these three are categories, not magnitudes. Hue carries
-three categories at equal, readable lightness; lightness alone cannot. The
-"every edge is an entity relationship" idea that motivated the ramp is real but
-was never worth an unreadable distinction, and the arrowhead already says
-direction unambiguously.
-
-Strokes are still thicker than the 0.8/0.54 they replaced: a hairline cannot
-carry *any* color, whatever the palette.
-
-**P3 answers "which class does this belong to?"** — it separates siblings from
-each other and lets the eye track between a slot row and its target box. It does
-**not** need separation from P1, because the two never share a position: P3 lands
-on slot names and box headers, P1 on row dots and range labels. Pastel1's low
-saturation is what keeps it quiet.
-
-**Index 0 of P3 is the default** — parent-declared slots, and every box that is
-not an inheritance-merged box. It is a tint of P1's entity color, **not a
-neutral gray**: a box header *is* an entity, so its header and its own slot
-names carry the entity identity, and sibling colors read as departures from it.
-No other neutral is needed anywhere in the system.
-
-Each P3 entry needs **two steps**, because a header band is a filled swatch (its
-color must work as a background, with dark text on it) while a slot name is
-small text on the box's light background (its color must work as ink). Pastel1
-is a background palette; pale ink on white is unreadable, so one value cannot do
-both jobs.
-
-### What each channel encodes
-
-Per row in a box:
-
-| channel | encodes | palette |
-|---|---|---|
-| row dot | the slot's range kind | P1 |
-| row range label | the slot's range kind | P1 |
-| slot name | which class declares it | P3 |
-| box header | the class | P3 (default = the box's own) |
-| edge stroke | relation kind | P2, overridden by P3 where colored |
-
-Only **entity** ranges draw edges, so range kind contributes no variation to the
-stroke — relation kind is what the stroke has left to say. The few edges whose
-endpoint is a merged-box member override that with the P3 color.
-
-### Sibling color assignment — the three-step algorithm
-
-Colors must be stable: unselecting one sibling must not shift every later
-sibling's color. So classes are colored from the **whole schema**, not from
-what is on canvas.
-
-1. **Color every class stably.** For each parent with subclasses, index its
-   children by position among **all** schema siblings sorted by id — not just
-   the ones on canvas. The parent takes the default (P3 index 0).
-   `buildSiblingColorIndex` → `siblingColor`, built once in `DataService`.
-2. **Color slot names by target:** a row wears the color of the class its range
-   names (`DataService.getTargetColor`).
-3. **A re-colored slot row re-colors the child header it belongs to** — the
-   container borrows its contents' color (the `borrowed` map in `mergeSiblings`,
-   [`OwnershipGraphView.tsx`](../src/explore/OwnershipGraphView.tsx)).
-
-**Step 3 is the load-bearing one**: it is what pairs a container with its
-contents, so `MeasurementObservationSet` and the `MeasurementObservation` it
-holds wear the same color. It applies only from a child's **own** rows — an
-inherited row is shared by every sibling, so letting it re-color one would hand
-that sibling a color on the strength of something it does not uniquely have.
-
-> **Sort order decides only WHICH color a class wears, never WHETHER a pair
-> matches.** The two families happening to sort alike is a correspondence that
-> exists today and is not used by anything. Verified by hand (SG, 2026-09-04) by
-> renaming `MeasurementObservationSet` and `SpecimenQualityObservation` so the
-> families sort differently: colors moved, pairs held.
->
-> The test that proves the pairing is therefore **"a row's color equals its
-> target's color"**, swept over the real schema — not anything phrased in terms
-> of sort positions. See [`src/test/siblingMerge.test.ts`](../src/test/siblingMerge.test.ts), and `WORKLOG.md`
-> (2026-09-04) for the sort-position test that was tried and is wrong twice
-> over.
-
-Colors are **per group**, so two classes at index 0 in different groups share a
-color by design. That is palette reuse, not a collision, and not the pairing
-mechanism.
-
-Slots inherited without a `slot_usage` override merge onto the parent's row and
-have no child-specific row to color (`ImagingFile.derived_from` is the case to
-check a rule against). Classes whose parent is `Entity` are top-level and form
-no merged box.
-
----
-
-## How edges are drawn
-
-### Terminology
-
-A class and its descendants drawn as one box is a **merged-inheritance box**.
-Edge convergence — several edges sharing one arrowhead — also uses the word
-"merge" (`mergeTargets`) and is a **different thing**. The distinction holds in
-identifiers as well as prose.
-
-### Current state
-
-| | |
-|---|---|
-| **Labels** | None on the edge layer. A flipped edge is marked by a back-pointing arrowhead (`arrow-own-back`). **Settled 2026-09-02: no persistent edge labels** — one label, on edge hover, in a chip near the cursor, with its point of view chosen by which endpoint the pointer is nearer. Not yet built. Entity hover deliberately does *not* label all of that entity's edges (`Observation` would sprout a dozen chips); it keeps its highlight, and the words stay in the relation bar's popovers. |
-| **Source rows** | One edge per declaring class, leaving that class's own row. The port id is keyed on `(anchorClass, slot)` — the same pair `rowY` resolves by. Keyed on slot name alone, every edge in a merged-inheritance box shared one port. |
-| **Target rows** | A `slot_usage`-narrowed edge points at the **child header** matching its range, not the box header. Row-targeted edges opt out of `mergeTargets` and draw their own arrowhead; both fan passes skip them. The no-merge shortcut rests on a schema property — no family member has more than one inbound edge — which [`src/test/mergedEdges.test.ts`](../src/test/mergedEdges.test.ts) guards, so a failure there means the schema changed, not the code. |
-| **Colors** | See the color system above. |
-| **Adjacency** | Curved edges are gone; one arrowhead per convergence, thinner strokes. Markers use `markerUnits="userSpaceOnUse"` so they do not scale with `strokeWidth`; one marker serves both ends via `orient="auto-start-reverse"`. |
-
-Still missing on dragging: obstacle-aware routing, and URL persistence. See
-`docs/TASKS.md`.
-
-### Cardinality notation
-
-`0..1`, `1..1`, `0..*`, `1..*` — one notation, bounds written out
-(`cardinalityLabel`, [`containmentGraph.ts`](../src/models/containmentGraph.ts)).
-
-These were `0..1` / `1` / `*` / `+` until 2026-09-04: a UML-style range for the
-optional-single case and regex-style quantifiers for the rest. Each pair was
-self-consistent and the four together were not, which raised the fair question
-of why a required single-valued slot showed `1` while a required multivalued
-one showed `+` when both are simply required. Writing the bounds out makes
-required-ness the left digit in every case and multivalued-ness the right, so
-the four labels differ only where the facts do.
-
-### The relation bar
-
-Each box carries a `← N   M →` bar ([`RelationBar.tsx`](../src/explore/RelationBar.tsx)): **N** classes it
-belongs to, drawn to its left; **M** it owns, drawn to its right. Hovering
-either count opens a list of the relationships on that side.
-
-**Two counts, because they differ**: the header reads "Observation owns 4
-distinct entities through 7 attributes" — one entity can be reached by several
-slots, so a row count and an entity count are not the same number, and "add all
-4" beside seven rows is otherwise a puzzle.
-
-**A row offers two actions on two targets.** The `+`/`−` button adds or removes
-the entity; the **class name** opens its details. Clicking the row itself does
-nothing. An earlier version made the whole row the toggle, which left nowhere to
-click for detail and forced drawn rows to be dimmed just to signal that clicking
-would remove them — the button carries that state now, so every row stays at
-full contrast.
-
-**A row is written in diagram order** — owner on the left, owned on the right,
-the same order the canvas lays boxes out, so a row and the line it describes
-read the same way round:
-
-```
-Organization                      0..1  ──<  Observation.performed_by
-Visit                             0..1  ──<  Observation.associated_visit
-Participant                       1..1  ──<  Observation.associated_participant
-ObservationSet.observations       1..*  ──>  Observation
-```
-
-**Rows follow the box's own slot order**, so scanning from an attribute row to
-the same relationship in the popover does not mean re-finding it in a different
-order. A relationship declared by another class has no row on this box, so it
-sorts last — which is why `observations` is at the bottom.
-
-**Then rows are grouped by is-a family** (2026-09-10): a row whose class's
-parent has a row for the same slot follows that row, marked `↳`, recursively.
-Participant's 22 owned entities are mostly one Observation family and one
-ObservationSet family, which a flat alphabetical list hid. A child whose parent
-has no row for that slot stays where the sort put it. The parent lookup goes to
-`DataService.getClassSummary`, not to the canvas — most rows name classes that
-are not drawn.
-
-Three things are encoded independently:
-
-- **Which end is qualified** (`Class.slot` rather than a bare name) says which
-  class **declares** the attribute. It is not always this box: row 4 is
-  `ObservationSet`'s slot, which is why that class owns this one. On a
-  merged-inheritance box the declarer is often a **child** rather than the box's
-  title — `MeasurementObservation.performed_by` inside a box titled
-  `Observation` — so the end is named by the declarer, never by the title.
-- **The arrow** is the edge as the canvas draws it, so its direction says which
-  end carries the arrowhead. Both kinds occur on both sides.
-- **The colour** of each end is that class's own P3 sibling colour — the same
-  one its header and rows wear on the canvas. Row 4 is coloured at *both* ends
-  because both are children of merged boxes; rows 1–3 name parent-level classes
-  on the left, which have no colour of their own.
-
-The order is what carries "drawn to its left", so the popover does not say it.
-
-An earlier version put an icon reading `this` where the box's own name goes, to
-save width. It was removed: the box's name is exactly what a reader matches
-against the canvas, and an icon cannot carry the class's colour.
-
-It replaced a cascading five-branch menu, which made you traverse the position
-vocabulary to find one class. The bar's split is spatial and needs no
-vocabulary; the position table above is now read by the code, not the user.
-
-**No `title` tooltips anywhere in it.** A native tooltip renders above the
-popover the same hover opened, covering its first rows — the failure §3.4 of
-the old handoff doc recorded for the cascading menu's trigger, reproduced in
-the new bar within minutes of it shipping. The popover header carries the text
-instead; `aria-label` keeps it available to screen readers.
-
-### Why a bar count can go DOWN as you select more
-
-The bar counts **distinct classes outside the box** on each side, and a
-merged-inheritance box excludes anything folded into itself (`notSelfOrMember`,
-[`OwnershipGraphView.tsx`](../src/explore/OwnershipGraphView.tsx)). So selecting more can make a number fall: with
-`Observation` unchecked it is not a member of the box named after it, so
-`ObservationSet`'s relation to it counts as outside; check `Observation` and the
-count drops.
-
-Correct, but counter-intuitive — and more confusing still across combinations of
-several checkboxes. **Not being fixed**; recorded here so the next person to
-notice it does not treat it as a bug.
-
-(The old single "N related" chip counted the same way through `countsOf`. That
-function and the `relatedCount`/`shownCount` fields it fills are now **dead** —
-the bar counts its own rows. See `docs/TASKS.md`.)
-
----
-
-## Summary
-
-Counts measured 2026-08-31 by running the live `classifySlotEdgeExplained` rules
-over [`bdchm.processed.json`](../public/source_data/HM/bdchm.processed.json), after the upstream sync to `28007df`.
-
-| category | rule | edges | drawn |
-|---|---|---|---|
-| `own-fwd` | Rule 1 (multivalued) | 32 | forward |
-| `own-fwd` | Exception 2a (value object) | 41 | forward |
-| `own-fwd` | Exception 2b (cardinality split) | 2 | forward |
-| `own-fwd` | `Entity`-ranged | 13 | forward |
-| `own-fwd` | Rule 3 (range subtree, induced) | 10 | forward |
-| `own-bkwd` | Rule 2 (fk-inversion) | 60 | back |
-| `own-bkwd` | `backward-multivalued` (`parent_specimen`) | 1 | back |
-| `association` | enumerated | 0 | back, dashed, both ends arrowed |
-| **total** | | **159** | |
-
-**Re-measured 2026-09-11** from `getOwnershipPairGroups`, after
-`ownership-rules`. The moves from the 2026-08-31 figures: Rule 1 gained
-the two former associations (30→32); Exception 2a gained `Specimen.contained_in`
-and `SpecimenContainer.parent_container`, both now ranging on a value-object
-target (39→41); Rule 2 lost those two (62→60). Rule 3's 10 induced edges were
-missing from the older table rather than newly added, which is most of the
-149→159 difference.
-
-Two rules, one asserted list of 15 class names, and two small enumerated slot
-sets (2 cardinality-split, 1 backward-multivalued; association is empty).
-Everything else reads directly from the schema's `multivalued` flag and
-`range`.
-
-**Any future count should say which denominator it means and how it was
-obtained** — earlier drafts used three different ones (153 = every class-ranged
-slot in the processed JSON; 141 = what the builder emitted while
-`EXCLUDE_HAS_A_TARGETS` still dropped the Entity edges; 151 = the target once
-they were drawn), which is why they do not reconcile.
-
----
-
-## Appendix — implementation notes
-
-Developer reference: a map of the implementation, not a plan for it.
-
-### Layering and cycles
-
-Class order comes from a layered DAG, so the layering edges must be acyclic.
-**The full relationship graph is not and cannot be a DAG** — every class
-`is_a Entity`, so slots ranging on `Entity` point at everything, including
-themselves.
-
-`association` edges order their target first, exactly as `own-bkwd` does, and so
-participate in layering normally. **Only the ownership claim differs, not the
-geometry** — so changing an edge between these two categories moves nothing on
-screen except its stroke and arrowheads. Worth knowing when a verdict looks
-wrong: if the layout is the complaint, this is not the knob.
-
-Measured 2026-08-31 at `28007df`:
-
-- **6 self-loops** — `File.derived_from`, `ResearchStudy.part_of`,
-  `Specimen.parent_specimen`, `SpecimenContainer.parent_container`,
-  `TimePoint.index_time_point`, `QuestionnaireItem.part_of`.
-- **Zero non-self cycles.** This was the open risk — `Entity` became a live range
-  target with 13 inbound edges, exactly the shape that could introduce one. It
-  did not. Still zero after `ownership-rules` (re-measured 2026-09-11).
-
-Both properties are now asserted in
-[`src/test/containmentGraph.test.ts`](../src/test/containmentGraph.test.ts): the
-self-loop count ("self-loop count is stable"), and that reverting
-`Specimen.contained_in` to `own-bkwd` reintroduces the one non-self cycle
-("contained_in must stay forward"). They were previously re-derived by hand
-every time someone wondered, which is how the self-loop count drifted once.
-
-### What the code does today
-
-**The rules are one declaration.** [`src/models/ownershipRules.ts`](../src/models/ownershipRules.ts)
-holds `OWNERSHIP_RULES` — an ordered array where each entry carries its
-predicate, verdict, human text and rule id — and `OWNERSHIP_VERDICTS`, which
-carries how each verdict is DRAWN (colour, heads, dash, layering). Everything
-that used to be a separate copy is now a projection: `OWNERSHIP_RULE_TEXT`,
-`EDGE_STYLE.kinds`, the legend's grouping. `classifySlotEdgeExplained` in
-[`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts) is a fold
-over the array, and the module re-exports the declaration so existing import
-paths still work.
-
-**Order in that array is semantic** — the first entry whose `when` matches
-decides — and `tsc` cannot catch a reorder. The schema-sweeping tests in
-[`src/test/containmentGraph.test.ts`](../src/test/containmentGraph.test.ts) can,
-and [`src/test/ownershipRules.test.ts`](../src/test/ownershipRules.test.ts)
-asserts each override still beats the cardinality rule it overrides.
-
-The order, as declared:
-
-```
-1. slot ∈ ASSOCIATION_SLOTS            → association          (0 entries)
-2. slot ∈ BACKWARD_DESPITE_MULTIVALUED → own-bkwd             (1 entry)
-3. slot ∈ CARDINALITY_SPLIT_OWN_FWD    → own-fwd, Exc. 2b     (2 entries)
-4. range === ENTITY_ROOT               → own-fwd
-5. multivalued                         → own-fwd, Rule 1
-6. range ∈ SINGLE_VALUE_OWNER_TARGETS  → own-fwd, Exc. 2a    (15 entries)
-7. otherwise                           → own-bkwd, Rule 2
-```
-
-Every branch returns the rule that fired alongside the verdict, so the legend and
-the graph cannot disagree about *why* an edge was drawn. `classifySlotEdge`
-delegates here and discards the rule.
-
-Rule 3 is not a branch of the classifier: `buildContainmentGraph` runs it as a
-second pass over the forward edges the classifier produced, walking
-`subtreeOf(range)` and pushing one `inducedFrom`-marked copy per subclass.
-`getOwnershipPairGroups` does the same walk for the legend's `range-subtree`
-group, and `ownershipLegend.test.ts` pins the two enumerations equal.
-
-**Keep `classifySlotEdgeExplained`.** Having the classifier report which rule
-fired — and the legend render pairs grouped by rule — is what made the original
-incoherence visible. Whatever the rules become, the classifier must explain
-itself.
-
-The current sets, all in [`ownershipRules.ts`](../src/models/ownershipRules.ts)
-(`SKIP_SUBCLASS_EXPANSION` excepted — it is about the inheritance tree, not
-classification, and stays in `containmentGraph.ts`):
-
-| set | members |
-|---|---|
-| `ASSOCIATION_SLOTS` (0) | — emptied 2026-09-11; kept as the worked example for `ownership-rules` |
-| `BACKWARD_DESPITE_MULTIVALUED` (1) | `parent_specimen` |
-| `CARDINALITY_SPLIT_OWN_FWD` (2) | `creation_activity`, `dimensional_measures` |
-| `SINGLE_VALUE_OWNER_TARGETS` (15) | `Quantity`, `TimePoint`, `TimePeriod`, `BodySite`, `CauseOfDeath`, `Substance`, `BiologicProduct`, `Activity`, `SpecimenContainer`, `QuestionnaireResponseValue` + its 5 typed subclasses |
-| `SKIP_SUBCLASS_EXPANSION` (1) | `Entity` — inheritance only, **not** ranges |
-
-These sets are hand-curated and **go stale silently on every schema sync**:
-whether an entity newly added by a sync belongs in `REFERRED_TO_ENTITIES` is a
-judgement nothing can derive — verified exhaustively 2026-08-21, every
-candidate discriminator failed. That is a reading, and **ownership
-classification is Siggie's call, not a mechanical one.** Re-read this file
-after a sync; do not re-derive by query.
-
-### Where it lives
+the common ancestor. If it can be absent, the safety net disappears and the slot
+falls through to a rule that may draw it backward — wrong. A test for "every
+`any_of` slot has a class-valued `range`" would catch it cheaply.
+
+## Where it lives
 
 | file | what |
 |---|---|
-| [`src/models/ownershipRules.ts`](../src/models/ownershipRules.ts) | **the one declaration**: `OWNERSHIP_RULES`, `OWNERSHIP_VERDICTS`, `classify`, the override sets, `OWNERSHIP_RULE_TEXT` (a projection) |
-| [`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts) | `classifySlotEdge`, `classifySlotEdgeExplained`, `buildContainmentGraph`, `subtreeOf`, `SKIP_SUBCLASS_EXPANSION`; re-exports the declaration |
-| [`src/test/ownershipRules.test.ts`](../src/test/ownershipRules.test.ts) | the table is well-formed, order is honoured, and **association is expressible as configuration** — the acceptance criterion for `ownership-rules` |
-| [`src/models/ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts) | `RelationPosition`, `RELATION_POSITION_LABEL`, `buildOwnershipDag`, `computeSunkLayers` |
-| [`src/services/DataService.ts`](../src/services/DataService.ts) | `getOwnershipPairGroups`, `getConvergenceRanking`, `getDivergenceRanking`, `getContainmentGraph`, `getTargetColor` |
-| [`src/config/appConfig.ts`](../src/config/appConfig.ts) | the three palettes (P1 `RANGE_COLORS`, P2 `EDGE_COLORS`, P3 `SIBLING_COLORS`) |
-| [`src/explore/RelationBar.tsx`](../src/explore/RelationBar.tsx) | the `← N   M →` bar and its popovers; `POSITION_AXIS` is the side/kind table |
-| [`src/explore/edgeStyle.ts`](../src/explore/edgeStyle.ts) | **how an edge looks, in one place**: head geometry (one size for every head, both directions), dash, stroke widths, per-kind labels; the canvas, `EdgeSample` and the tour's `{{edge:…}}` widget all draw from it (2026-09-10) |
-| [`src/explore/EdgeSample.tsx`](../src/explore/EdgeSample.tsx) | one edge drawn as the canvas draws it, scaled from `edgeStyle`; shared by the legend, the popovers and the tour |
-| [`src/test/relationBar.test.ts`](../src/test/relationBar.test.ts) | pins the two axes — both kinds on both sides |
-| [`src/explore/OwnershipGraphView.tsx`](../src/explore/OwnershipGraphView.tsx) | edge stroke/marker selection, `mergeSiblings`, `countsOf`, `rowY`, `mergeTargets` |
-| [`src/explore/siblingMerge.ts`](../src/explore/siblingMerge.ts) | `groupSiblings`, `siblingColor`, `buildSiblingColorIndex` |
-| [`src/explore/OwnershipLegend.tsx`](../src/explore/OwnershipLegend.tsx) | renders every slot grouped by rule |
-| [`src/test/ownershipLegend.test.ts`](../src/test/ownershipLegend.test.ts) | asserts the legend cannot drift from the graph's actual edges |
-| [`src/test/siblingMerge.test.ts`](../src/test/siblingMerge.test.ts), [`src/test/mergedEdges.test.ts`](../src/test/mergedEdges.test.ts) | color stability, merged-box edge targeting |
+| [`ownershipRules.ts`](../src/models/ownershipRules.ts) | **the one declaration**: `OWNERSHIP_RULES`, `OWNERSHIP_VERDICTS`, `classify`, the exception sets, `OWNERSHIP_RULE_TEXT` (a projection) |
+| [`containmentGraph.ts`](../src/models/containmentGraph.ts) | `classifySlotEdge`, `classifySlotEdgeExplained`, `buildContainmentGraph`, `subtreeOf`, `SKIP_SUBCLASS_EXPANSION` |
+| [`ownershipSubgraph.ts`](../src/models/ownershipSubgraph.ts) | `RelationPosition`, `RELATION_POSITION_LABEL`, `buildOwnershipDag`, `computeSunkLayers` |
+| [`DataService.ts`](../src/services/DataService.ts) | `getOwnershipPairGroups` — **the source for every count** |
+| [`OwnershipLegend.tsx`](../src/explore/OwnershipLegend.tsx) | renders every slot grouped by rule, counted live |
+| [`ownershipRules.test.ts`](../src/test/ownershipRules.test.ts) | the table is well-formed, order is honoured, **association is expressible as configuration** |
+| [`ownershipLegend.test.ts`](../src/test/ownershipLegend.test.ts) | the legend cannot drift from the graph's actual edges |
+| [`relationBar.test.ts`](../src/test/relationBar.test.ts) | pins the two axes — both kinds on both sides |
 
-**Do not start implementation from this appendix or from the code.** Both are the
-accumulated result of decisions whose reasoning is in `WORKLOG.md`. Start from
-the rules above.
+⚠️ **Counts are re-measured, never adjusted by hand.** `getOwnershipPairGroups`
+is the source and the legend prints them live. Any count written into prose
+should say which denominator it means and how it was obtained — earlier drafts
+used three different ones, which is why their figures do not reconcile.
 
----
+**Do not start implementation from the code.** It is the accumulated result of
+decisions whose reasoning is in [WORKLOG.md](../WORKLOG.md). Start from the
+rules above.
 
 ## See also
 
-- `WORKLOG.md` — decision history: what was tried, rejected, and why.
-- [TASKS.md](TASKS.md) — open work.
-- `src/explore/help-content.md` — the user-facing wording and the guided tour.
-- [ARCHITECTURE.md](ARCHITECTURE.md) §"Why the diagram looks like it does" —
-  the visual-design reasoning, including item 1's owner-side/member-side
-  normalization.
+- [WORKLOG.md](../WORKLOG.md) — decision history: what was tried, rejected, why.
+- [TASKS.md](TASKS.md) — open work. [BACKLOG.md](BACKLOG.md) — deferred plans.
+- [help-content.md](../src/explore/help-content.md) — user-facing wording.
+- [ARCHITECTURE.md](ARCHITECTURE.md) — how the diagram is drawn: the color
+  system, edge geometry, the relation bar, layering and cycles.
