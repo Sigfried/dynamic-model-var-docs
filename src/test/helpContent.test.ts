@@ -1617,11 +1617,18 @@ ${fields}
     expect(parse('').width).toBeUndefined();
   });
 
-  test('Position: takes the four sides and ignores anything else', () => {
+  /*
+   * `Position:` is a CSS `position-area`, passed through verbatim -- the four
+   * sides are values of that property, not shorthands this format translates.
+   * So there is no keyword list here and nothing to reject: an invalid value
+   * is dropped by the BROWSER, and `e2e/placement.spec.ts` catches it with
+   * `CSS.supports` (jsdom implements none, so it cannot be checked here).
+   */
+  test('Position: passes any position-area through, lowercased', () => {
     expect(parse('- **Position:** bottom').position).toBe('bottom');
     expect(parse('- **Position:** LEFT').position).toBe('left');
-    // A typo costs the override, not the tour.
-    expect(parse('- **Position:** sideways').position).toBeUndefined();
+    expect(parse('- **Position:** block-end span-inline-start').position)
+      .toBe('block-end span-inline-start');
     expect(parse('').position).toBeUndefined();
   });
 

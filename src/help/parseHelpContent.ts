@@ -439,8 +439,21 @@ export interface TourPosition {
  */
 export type Highlight = 'dim' | 'ring' | 'none';
 
-/** A side of the anchor, as authored by `Position:`. */
-export type PopoverSide = 'left' | 'right' | 'top' | 'bottom';
+/**
+ * Where the popover goes, as authored by `Position:` — a CSS `position-area`.
+ *
+ * `left`, `right`, `top` and `bottom` are this format's own shorthands, mapped
+ * in `HelpLayer`; anything else is passed to CSS verbatim, so an author can
+ * write any value the property takes (`center`, `span-all`, `block-end
+ * span-inline-start`, …) without this package tracking the grammar. A string
+ * rather than a union for that reason — there is no list to keep current.
+ *
+ * An invalid value is dropped by the browser and the popover falls back to its
+ * automatic placement, so a typo costs the override rather than the tour. The
+ * content test is what catches it: it checks every authored `Position:` with
+ * `CSS.supports`, the browser's own grammar.
+ */
+export type PopoverSide = string;
 
 /**
  * A parsed `OffsetX:` — pixels, or a multiple of one of the anchor's own
@@ -477,12 +490,18 @@ function parseHighlight(value: string | undefined): Highlight | undefined {
 }
 
 /**
- * `Position: left|right|top|bottom`. Anything else is ignored rather than
- * throwing — a typo should cost the override, not the tour.
+ * `Position: left|right|top|bottom`, or any CSS `position-area` value.
+ *
+ * Passed through rather than checked against a keyword list: `position-area`
+ * has a large grammar, a list of it would go stale, and the browser already
+ * owns the real one. An unknown value reaches CSS, is dropped there, and the
+ * popover falls back to automatic placement — a typo costs the override, not
+ * the tour. `helpContent.test` validates the authored values with
+ * `CSS.supports` so a typo fails a test rather than only looking wrong.
  */
 function parsePosition(value: string | undefined): PopoverSide | undefined {
   const v = value?.trim().toLowerCase();
-  return v === 'left' || v === 'right' || v === 'top' || v === 'bottom' ? v : undefined;
+  return v || undefined;
 }
 
 /**

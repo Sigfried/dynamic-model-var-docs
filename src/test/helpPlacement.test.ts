@@ -447,8 +447,17 @@ describe('the popover prefers the axis the diagram does not grow along', () => {
   it('lets an authored Position: beat the automatic rule', () => {
     // Siggie, 2026-08-28: the automatic rule cannot know that a step is about
     // to open a menu into the space it just chose.
-    const s = popoverPosition(true, 'left', undefined, 320, null, 'below');
-    expect(String(s.positionArea)).toMatch(/^inline-start/);
+    //
+    // The authored value reaches `position-area` UNCHANGED: `left` is itself a
+    // valid one, so there is no longer a table rewriting it to `inline-start
+    // span-block-end`. A bare keyword means `span-all`, which centres the
+    // popover along the anchor instead of hanging it off one corner.
+    expect(String(popoverPosition(true, 'left', undefined, 320, null, 'below').positionArea))
+      .toBe('left');
+    // And any other position-area an author writes arrives the same way.
+    expect(String(popoverPosition(
+      true, 'block-end span-inline-start', undefined, 320, null, 'below').positionArea))
+      .toBe('block-end span-inline-start');
   });
 
   it('states an OffsetX against the anchor rather than a measured width', () => {

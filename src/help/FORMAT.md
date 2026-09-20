@@ -137,7 +137,7 @@ does not get swallowed into that entry's `Description:`.
 | `Highlight:` | how hard to point at the anchor: `ring`, `dim`, `none` — see [Highlight](#highlight) |
 | `Spotlight:` | ring a DIFFERENT element than the anchor, or several separated by `,`/`~`, same grammar as `Anchor:` — see [Spotlight](#spotlight) |
 | `Width:` | popover width in pixels; defaults to a width picked from the text (320–800); STICKY across beats — see [Placement](#placement) |
-| `Position:` | force the popover to a side: `left`, `right`, `top`, `bottom` — see [Placement](#placement) |
+| `Position:` | force the popover to a side: any CSS `position-area`, usually `left`, `right`, `top`, `bottom` — see [Placement](#placement) |
 | `OffsetX:` | nudge it horizontally — see [Placement](#placement) |
 | `Tour:` | which tour this is a step of, e.g. `Walkthrough`; omit for help-only |
 | `TourMetadata:` | **section-body field**: marks the section as describing a tour — see [TourMetadata](#tourmetadata--describing-a-tour-not-a-step) |
@@ -867,9 +867,19 @@ Two fields override it, on a step or on a beat:
 - **OffsetX:** anchor.width * 1.3
 ```
 
-`Position:` is one of `left`, `right`, `top`, `bottom`, relative to the anchor.
-A value that is none of those is ignored, so a typo costs the override rather
-than the tour.
+`Position:` is a CSS [`position-area`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/position-area),
+passed through verbatim — usually `left`, `right`, `top` or `bottom`, which are
+values of that property and need no translation here. Anything else the
+property takes works too: `center`, `span-all`, `block-end span-inline-start`.
+
+A bare keyword means `span-all` on the cross axis, so `bottom` centres the
+popover along the anchor's width. Write both tokens to pin it to one end
+(`block-end span-inline-start`).
+
+A value CSS rejects is dropped by the browser and the popover falls back to
+automatic placement — so a typo costs the override rather than the tour, and
+`e2e/placement.spec.ts` checks every authored value with `CSS.supports` so it
+fails a test rather than only looking wrong.
 
 `OffsetX:` shifts the popover horizontally after placing it. It takes either a
 pixel count (`260`, `-40`) or a multiple of the anchor's own size

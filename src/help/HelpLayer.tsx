@@ -1331,24 +1331,23 @@ export function popoverPosition(
    * should be able to pick a bad side, not push it off-screen" the clamp used
    * to enforce by hand.
    *
-   * `span-*` on the cross axis rather than plain `block-start` etc: it lets the
-   * popover extend along the anchor from wherever it is aligned, instead of
-   * being confined to the one cell beside it.
+   * An authored `Position:` IS a `position-area`, passed to CSS verbatim --
+   * `left`, `right`, `top` and `bottom` are already valid values of it, so
+   * there is no mapping table. They used to be rewritten to span one END of
+   * the cross axis (`inline-end span-block-end`); a bare keyword means
+   * `span-all`, which centres the popover along the anchor instead of hanging
+   * it off one corner (Siggie, 2026-09-20: "i would be ok with everything
+   * changing from end to all and if it looks bad we add the extra bit").
+   * An author who wants the old behaviour writes it out.
+   */
+  /*
+   * No authored side. In LR the diagram grows rightwards, so go BELOW the box;
+   * otherwise beside it. `position-try-fallbacks` supplies the "and if there is
+   * no room there" half that used to be an explicit `below + wantH <= vh - 8`
+   * test.
    */
   const area = side
-    ? {
-      right: 'inline-end span-block-end',
-      left: 'inline-start span-block-end',
-      top: 'block-start span-inline-end',
-      bottom: 'block-end span-inline-end',
-    }[side]
-    /*
-     * No authored side. In LR the diagram grows rightwards, so go BELOW the
-     * box; otherwise beside it. `position-try-fallbacks` supplies the "and if
-     * there is no room there" half that used to be an explicit `below + wantH
-     * <= vh - 8` test.
-     */
-    : growth === 'below' ? 'block-end span-inline-end' : 'inline-end span-block-end';
+    ?? (growth === 'below' ? 'block-end span-inline-end' : 'inline-end span-block-end');
 
   return {
     positionArea: area,

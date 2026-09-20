@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { expect, test } from './probe.fixture';
 import { goToAddress, openStep, placement, settle } from './helpers/tour';
 
@@ -143,4 +145,41 @@ test.describe('placement is stable across back-stepping', () => {
     expect(Math.abs(gap(again) - gap(first)),
       'popover moved relative to its anchor').toBeLessThan(2);
   });
+});
+
+/**
+ * Every authored `Position:` is a value CSS actually accepts.
+ *
+ * `Position:` is passed to `position-area` verbatim, so the format tracks none
+ * of that property's grammar and an author can write any of it. The cost is
+ * that a typo is silent: the browser drops an invalid `position-area` and the
+ * popover falls back to automatic placement, which looks like a placement bug
+ * rather than a spelling one.
+ *
+ * So the browser's own parser is the validator. This cannot be a vitest --
+ * jsdom implements no `CSS.supports` at all, so the check has to run where a
+ * real CSS parser is (measured 2026-09-20, after I claimed the opposite).
+ */
+test('every authored Position: is a valid position-area', async ({ page }) => {
+  // ESM spec: `__dirname` is not defined here (measured 2026-09-20).
+  const markdown = readFileSync(
+    fileURLToPath(new URL('../src/explore/help-content.md', import.meta.url)), 'utf8');
+
+  /* Field lines only -- `Position: bottom`, with the optional `**` the content
+     file uses for emphasis on a field name. */
+  const authored = [...markdown.matchAll(/^\s*-\s*\*{0,2}Position:?\*{0,2}\s*(.+?)\s*$/gim)]
+    .map(m => m[1].replace(/\*/g, '').trim().toLowerCase())
+    .filter(Boolean);
+  expect(authored.length, 'no Position: fields found -- has the field been renamed?')
+    .toBeGreaterThan(0);
+
+  await page.goto('/');
+  const bad: string[] = [];
+  for (const value of [...new Set(authored)]) {
+    const ok = await page.evaluate(
+      v => CSS.supports('position-area', v), value);
+    if (!ok) bad.push(value);
+  }
+  expect(bad, `Position: values the browser rejects as position-area -- each `
+    + `silently falls back to automatic placement:\n  ${bad.join('\n  ')}`).toEqual([]);
 });
