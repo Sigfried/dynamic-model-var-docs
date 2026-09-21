@@ -372,8 +372,8 @@ describe('tour state stack, end to end', () => {
      * `TimePeriod` is NAMED rather than taken positionally, because the
      * property above is a fact about the content: it is the one class in
      * Ownership's opening `Only:` that no later step re-adds. Taking
-     * `sel()[0]` picked Participant, which `why-ownership` draws again, so
-     * the test failed on a reorder of the tour rather than on a regression.
+     * `sel()[0]` picked Participant, which later steps draw again, so the
+     * test failed on a reorder of the tour rather than on a regression.
      */
     await startTour();
     for (let i = 0; i < 12 && !sel(); i++) next();
