@@ -8,6 +8,79 @@ Newest first.
 
 
 ---
+## 2026-09-21 — Legend anchors nest, and node 26 breaks jsdom's localStorage
+
+### The Legend gets three nested anchors, not a piecemeal one
+
+`the-legend` was anchored `node-box:Participant`, so its popover landed over the
+canvas covering the very boxes it was drawn against, while the panel it is ABOUT
+sat unremarked on the right (Siggie, reading it on screen). Siggie: *"put anchors
+on each of the sections and the whole panel instead of doing it piecemeal."*
+
+So `ANCHOR_KINDS` gains `legend-panel` and `legend-section:<id>` beside the
+existing `legend-rule:<rule-id>`. The three NEST — panel ⊃ section ⊃ rule — and a
+step points at the smallest thing it is actually about. `the-legend` now uses
+`legend-section:ownership-rules`.
+
+**Sections are keyed by SLUG, not by their `title`.** The titles are prose and
+will be rewritten; `legend-section:ownership-rules` has to survive retitling the
+section to "How ownership is decided". This is the same reasoning already written
+down for `category-row` (keyed by the `entityCategories.ts` slug, not the display
+label) and the one that made `relation-bar` take a class id.
+
+The panel anchor went on `HelpPanel` as an opt-in `helpId` prop rather than
+hardcoded: that component is shared with the example-cases panel, which no tour
+points at. Resolution needed no new code — every kind is a `data-help-id` lookup
+and the parser never interprets the string.
+
+⚠️ `legend-panel` takes no argument, so it carries **no colon**. The
+`ANCHOR_KINDS`-vs-builders guard in `helpAnchors.test.tsx` split every tag on
+`indexOf(':')`, which for a bare kind is `-1` and silently truncates the last
+character. It now checks for a colon first. A future argument-less kind will hit
+exactly this.
+
+Also dropped `the-legend`'s `Position: block-end inline-center` — it was placing
+the popover below-centre of a canvas box, and means nothing against a right-hand
+panel.
+
+### The node 26 / jsdom `localStorage` incompatibility
+
+Mid-session the suite went from 812 green to 41 failures across `appReset`,
+`exploreState`, `categoryViewHistory` and `tourStack.integration`, all
+`TypeError: Cannot read properties of undefined (reading 'clear')`. **Nothing in
+the repo changed** — the shell had moved to Homebrew's node 26.
+
+Probed rather than guessed, and the first guess was wrong. This is NOT jsdom
+failing to provide storage:
+
+- `window.localStorage` is an own property, present in `getOwnPropertyNames`
+- `window._localStorage` is a real object, and `_storageQuota` is a number
+- the origin is an ordinary `http://localhost:3000`, not opaque
+- the property is a **getter**, it does not throw, and it returns `undefined`
+
+Same jsdom, same code, node 24 → the getter returns an object; node 26 →
+`undefined`. So it is an upstream jsdom/node-26 incompatibility in how the
+IDL-generated getter resolves its backing object.
+
+**Upgrading jsdom does not fix it.** Siggie ran `npm install -D jsdom@latest`,
+27.0.1 → 30.1.0, three majors; the getter still returns `undefined` under node
+26 and an object under node 24. The upgrade is kept because the full suite passes
+on it — but it is not a fix for this, and a future session should not try a
+fourth major expecting one.
+
+`.nvmrc` now pins `24.2.0` (Siggie wrote it): the newest node this suite actually
+passes on, not the newest installed. ⚠️ **It does not bind the shell** —
+Homebrew's node at `/opt/homebrew/bin/node` comes first on PATH, so `.nvmrc` only
+applies after `nvm use`. An agent's Bash calls are fresh non-interactive shells
+that never see it, so they must prepend
+`$HOME/.nvm/versions/node/v24.2.0/bin` themselves. A green run reported without
+that is a run on node 26 and is not green.
+
+A `localStorage` shim in `src/test/setup.ts` was weighed and NOT taken: it would
+make the suite PATH-proof but paper over a real upstream regression. Reconsider
+if the pin proves too easy to forget.
+
+---
 ## 2026-09-20 (evening) — the help format grew three things, and `back` finally restores scalars
 
 A tour-authoring session: Siggie was editing `help-content.md` live throughout,

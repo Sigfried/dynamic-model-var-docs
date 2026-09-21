@@ -721,6 +721,8 @@ whatever is wearing exactly that string, right now.
 | `node-box:<Entity>` | a whole entity box on the diagram — **not** a merged child |
 | `child-header:<Entity>` | a merged child's header strip inside its parent's box |
 | `relation-bar:<Entity>` | the `← N … M →` band at the top of that entity's box |
+| `legend-panel` | the whole Legend panel — needs `legend=1` |
+| `legend-section:<id>` | one Legend section (`arrow-direction`, `ownership-rules`, `cardinality`, `colors`, `toolbar`) — needs `legend=1` |
 | `legend-rule:<rule-id>` | one rule's block in the Ownership legend — needs `legend=1` |
 
 Only `help-id` and `none` are built in. **The other kinds belong to the host app

@@ -23,6 +23,9 @@
  * | `node-box:<E>` | a whole entity box | `OwnershipGraphView.tsx` |
  * | `child-header:<E>` | a merged child's header strip | `OwnershipGraphView.tsx` |
  * | `slot-row:<E>.<slot>` | one attribute row in a box | `OwnershipGraphView.tsx` |
+ * | `relation-bar:<E>` | one box's relation bar | `OwnershipGraphView.tsx` |
+ * | `legend-panel` | the whole Legend panel | `OwnershipLegend.tsx` |
+ * | `legend-section:<id>` | one section of the Legend | `OwnershipLegend.tsx` |
  * | `legend-rule:<rule-id>` | one rule's block in the Ownership legend | `OwnershipLegend.tsx` |
  *
  * `help-id:<id>` is the one kind the package owns: it is a
@@ -63,7 +66,7 @@ import type { NodeVM, RowVM } from './OwnershipGraphView';
 export const ANCHOR_KINDS = [
   'entity-row', 'entity-checkbox', 'category-row',
   'node-box', 'child-header', 'slot-row', 'relation-bar',
-  'legend-rule',
+  'legend-panel', 'legend-section', 'legend-rule',
 ] as const;
 
 export type AnchorKind = typeof ANCHOR_KINDS[number];
@@ -101,12 +104,27 @@ export const childHeaderTag = (classId: string) => `child-header:${classId}`;
 export const relationBarTag = (classId: string) => `relation-bar:${classId}`;
 
 /**
+ * The three Legend anchors nest: the whole panel, one of its sections, one
+ * rule block inside the rules section. A step points at the smallest thing it
+ * is actually about — `legend-panel` only when introducing the panel itself.
+ *
+ * All three resolve only while the Legend is open (`legend=1`), which is the
+ * normal not-resolving case: a step that wants one opens the panel.
+ */
+export const legendPanelTag = () => 'legend-panel';
+
+/**
+ * One `<Section>` of the Legend, by a **slug** rather than its `title`, which
+ * is prose: `Anchor: legend-section:ownership-rules` survives retitling the
+ * section to "How ownership is decided". Same reason `category-row` is keyed
+ * by the slug in `entityCategories.ts` and not by its display label.
+ */
+export const legendSectionTag = (sectionId: string) => `legend-section:${sectionId}`;
+
+/**
  * One rule's block in the Ownership legend, by its **rule id** — the same id
  * the tour already names in `{{ownership-count:<rule-id>.total}}`, so a rule
  * step and the block it points at cannot drift apart.
- *
- * Only resolves while the Legend panel is open (`legend=1`), which is the
- * normal not-resolving case: a rule step that wants it opens the panel.
  */
 export const legendRuleTag = (ruleId: string) => `legend-rule:${ruleId}`;
 

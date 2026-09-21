@@ -469,4 +469,38 @@ describe('ownership legend pivots', () => {
       'legend-rule:belongs-to-target-backward-by-attribute',
     ]);
   });
+
+  /*
+   * The three Legend anchors NEST — panel ⊃ section ⊃ rule — so a step can
+   * point at the smallest thing it is actually about. Sections are keyed by a
+   * SLUG, not by their `title`: the titles are prose, and `Anchor:
+   * legend-section:ownership-rules` has to survive retitling the section.
+   */
+  test('the panel and each section carry their anchors', async () => {
+    await setup();
+    expect(document.querySelectorAll('[data-help-id="legend-panel"]'))
+      .toHaveLength(1);
+    const sections = Array.from(
+      document.querySelectorAll('[data-help-id^="legend-section:"]'))
+      .map(el => el.getAttribute('data-help-id'));
+    expect(sections).toEqual([
+      'legend-section:arrow-direction',
+      'legend-section:ownership-rules',
+      'legend-section:cardinality',
+      'legend-section:colors',
+      'legend-section:toolbar',
+    ]);
+  });
+
+  /* The nesting is real containment, which is what lets a step widen or
+   * narrow its aim without the anchors disagreeing about where things are. */
+  test('rule blocks sit inside the ownership-rules section', async () => {
+    await setup();
+    const section = document.querySelector(
+      '[data-help-id="legend-section:ownership-rules"]')!;
+    expect(section.querySelectorAll('[data-help-id^="legend-rule:"]'))
+      .toHaveLength(3);
+    expect(document.querySelector('[data-help-id="legend-panel"]')!
+      .contains(section)).toBe(true);
+  });
 });

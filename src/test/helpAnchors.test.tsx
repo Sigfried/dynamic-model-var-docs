@@ -32,7 +32,7 @@ import SelectionTable from '../explore/SelectionTable';
 import { buildViewModel, mergeSiblings } from '../explore/OwnershipGraphView';
 import {
   ANCHOR_KINDS, categoryRowTag, childHeaderTag, entityCheckboxTag, entityRowTag,
-  legendRuleTag,
+  legendPanelTag, legendSectionTag, legendRuleTag,
   nodeBoxAnchor, nodeBoxTag, relationBarTag, slotRowAnchor, slotRowTag,
 } from '../explore/helpAnchors';
 import { parseHelpContent } from '../help/parseHelpContent';
@@ -319,7 +319,11 @@ test('ANCHOR_KINDS and the builders name the same kinds', () => {
   const emitted = [
     entityRowTag('X'), entityCheckboxTag('X'), categoryRowTag('X'),
     nodeBoxTag('X'), childHeaderTag('X'), slotRowTag('X', 's'),
-    relationBarTag('X'), legendRuleTag('X'),
-  ].map(tag => tag.slice(0, tag.indexOf(':')));
+    relationBarTag('X'), legendPanelTag(), legendSectionTag('X'),
+    legendRuleTag('X'),
+    // `legend-panel` takes no argument and so carries no colon: there is one
+    // Legend, and a kind that named it twice would be the `relation-bar`
+    // mistake again in reverse.
+  ].map(tag => (tag.includes(':') ? tag.slice(0, tag.indexOf(':')) : tag));
   expect(emitted.sort()).toEqual([...ANCHOR_KINDS].sort());
 });

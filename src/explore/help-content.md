@@ -935,15 +935,20 @@ introduced and then use one word.
 
 <!--
 The structure, which the steps below now follow:
-- read a line's direction off the canvas, and the loop case -- which-way, loops
-  (both moved here 2026-09-17 from the folded-in "Reading the diagram" tour;
-  `which-way` used to END by handing off to this tour, so it now opens it)
-- explain ownership, why it's needed, the two edge types
-  - (association edges can be explained in a commented-out appendix, or not)
-- explain the rule and its exceptions, in this order:
-  - the default: an attribute owns what it points at -- owns-target-forward-by-default
-    - Exception, by entity: referred-to entities -- belongs-to-target-backward-by-entity
-    - Exception, by attribute: named back-pointers -- belongs-to-target-backward-by-attribute
+- which-way -- read a line's direction off the canvas, and learn that the two
+  arrow kinds are the only two there are. Carries the whole of what an arrow
+  means; `why-ownership` and `edge-types` were folded into it 2026-09-20.
+- the rule and its exceptions, in teaching order, each step ending at the
+  Legend block that counts it (`Spotlight: legend-rule:<rule-id>`):
+  - the-legend -- the default, an attribute owns what it points at, as a beat
+    (owns-target-forward-by-default; the step also introduces the Legend)
+  - belongs-to-target-backward-by-entity -- exception, by entity: referred-to entities
+  - belongs-to-target-backward-by-attribute -- exception, by attribute: named back-pointers
+- then what the rules look like once they are all running at once:
+  - bar-sides -- one side of a box, reached by two different rules
+  - loops -- an attribute whose range is its own entity
+  - rules-recap
+- (association edges are a commented-out appendix at the end, or not)
 
 The induced pass (`child-following-parent`) is deliberately NOT a step here,
 and is not in the legend either: induced edges serve LAYOUT only, so there is
@@ -976,7 +981,7 @@ If a label changes there, change it here. Do not hand-type a count.
   :s[*]{sup} :s[Also called containment, composition, 'has-a', or `has-part`/`part-of`.]{size=0.7em}
 - **Beats:**
   1. forward
-     - Description:
+     - **Description:**
        ##### Visit *:s[owns]{color=own-fwd}* TimePeriod
        When the Explorer reads an attribute as :s[owning]{color=own-fwd} what it
        points at, it draws the target to the **right** and gives the line a
@@ -996,6 +1001,7 @@ If a label changes there, change it here. Do not hand-type a count.
        :::s{center color=entity}
          {{relation:own-bkwd:Visit.associated_participant:Participant}}
        :::
+
   3. only-two-kinds
      - Keep: true
      - **Only:** sel=Participant~Visit~TimePeriod&panels=0
@@ -1011,7 +1017,7 @@ If a label changes there, change it here. Do not hand-type a count.
 - **Tour:** Ownership
 - **Only:** sel=Participant~Visit~TimePeriod&legend=1
 - **Action:** Opened the Legend panel — it is always in the Help menu.
-- **Anchor:** node-box:Participant
+- **Anchor:** legend-section:ownership-rules
 - **Description:**
   Across the {{schema-count:panelEntities}} entities in the BDCHM schema there
   are {{ownership-count:declared}} attributes pointing from one entity to
@@ -1021,6 +1027,7 @@ If a label changes there, change it here. Do not hand-type a count.
   1. owns-target-forward-by-default
      - Keep: true
      - **Spotlight:** legend-rule:owns-target-forward-by-default
+     - **Highlight:** ring
      - **Description:**
        The default rule is **:s[Owns target / forward arrow / by default]{color=own-fwd}** —
        an attribute owns what it points at, so the target is drawn to the right
@@ -1030,7 +1037,7 @@ If a label changes there, change it here. Do not hand-type a count.
        :::s{center color=entity}
          {{relation:own-fwd:Questionnaire.items:QuestionnaireItem}}
        :::
-  1. not about cardinality
+  2. not about cardinality
      - Only: sel=Observation~Quantity&legend=0
      - Action: Drew an Observation and a Quantity.
      - Anchor: node-box:Quantity
@@ -1042,6 +1049,17 @@ If a label changes there, change it here. Do not hand-type a count.
 
        This rule is **total**: on its own it would decide every attribute in
        the model. The next two steps are the only places it doesn't hold.
+  3. counted live
+     - Change: legend=1
+     - Action: Reopened the Legend panel.
+     - Anchor: none
+     - Spotlight: legend-rule:owns-target-forward-by-default
+     - Highlight: ring
+     - Description:
+       Every count in the Legend is worked out against the live schema each
+       time it opens, and opening one lists the attributes that rule decided.
+       So when a line looks wrong, the Legend is where to find out why it was
+       drawn that way.
 
 ### belongs-to-target-backward-by-entity
 
@@ -1092,9 +1110,8 @@ If a label changes there, change it here. Do not hand-type a count.
      - Spotlight: legend-rule:belongs-to-target-backward-by-entity
      - Highlight: ring
      - Description:
-       The Legend counts this rule against the live schema, and opening a count
-       lists the attributes it decided — so this is where to check a line that
-       looks wrong.
+       Here it is in the Legend. Opening the count names all five entities,
+       and every attribute that flipped because of one.
 
 ### belongs-to-target-backward-by-attribute
 
@@ -1145,8 +1162,9 @@ If a label changes there, change it here. Do not hand-type a count.
      - Spotlight: legend-rule:belongs-to-target-backward-by-attribute
      - Highlight: ring
      - Description:
-       This rule too is counted live in the Legend, and opening a count names
-       every attribute on the list.
+       And here it is in the Legend, where opening the count names every
+       attribute on the list — the whole of the rule, since this one is
+       nothing but its list.
 
 ### bar-sides
 

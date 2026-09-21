@@ -35,11 +35,15 @@ export interface HelpPanelProps {
   offset?: boolean;
   /** Default width in rem. The user can still drag the resize corner. */
   widthRem?: number;
+  /** `data-help-id` for the panel's root, so a tour step can anchor on the
+   *  whole panel. Opt-in: only a panel a tour points at needs one. */
+  helpId?: string;
   children: ReactNode;
 }
 
 export default function HelpPanel({
-  title, subtitle, onClose, offset, widthRem = PANEL_WIDTH_REM.cases, children,
+  title, subtitle, onClose, offset, widthRem = PANEL_WIDTH_REM.cases, helpId,
+  children,
 }: HelpPanelProps) {
   const drag = useDragged();
 
@@ -57,6 +61,7 @@ export default function HelpPanel({
   return (
     <div
       data-draggable=""
+      data-help-id={helpId}
       /* Placement is Tailwind's until the panel is dragged, then it is `fixed`
          viewport coordinates. `absolute`/`right-*` and an explicit `left` cannot
          both drive it, so the classes go when the inline style arrives.

@@ -50,7 +50,7 @@ import { helpTextResolvers } from './helpTextResolvers';
 import HelpPanel from './HelpPanel';
 import { PANEL_WIDTH_REM } from './panelLayout';
 import EdgeSample, { type DrawnKind } from './EdgeSample';
-import { legendRuleTag } from './helpAnchors';
+import { legendPanelTag, legendSectionTag, legendRuleTag } from './helpAnchors';
 import { EDGE_STYLE } from './edgeStyle';
 
 interface OwnershipLegendProps {
@@ -500,9 +500,10 @@ export default function OwnershipLegend({
       onClose={onClose}
       offset={offset}
       widthRem={PANEL_WIDTH_REM.legend}
+      helpId={legendPanelTag()}
     >
       <div className="text-xs">
-        <Section title="Arrow direction">
+        <Section id="arrow-direction" title="Arrow direction">
           <p className={NOTE}>
             Edges connect entities in ownership (i.e., containment or has-a)
             relationships. They start at attribute rows that point to other
@@ -519,7 +520,7 @@ export default function OwnershipLegend({
             in which case, B appears to the left of A and the edge points backward.
           </p>
         </Section>
-        <Section title="Ownership rules">
+        <Section id="ownership-rules" title="Ownership rules">
           {/*
             The accounting that makes 149 the anchor, and so makes `total`
             legible as the fourth pivot. It REPLACED a "two kinds of exception"
@@ -655,7 +656,7 @@ export default function OwnershipLegend({
           </ul>
         </Section>
 
-        <Section title="Cardinality">
+        <Section id="cardinality" title="Cardinality">
           <ul className="flex flex-wrap gap-x-4 gap-y-1">
             {CARDINALITY.map(([g, w]) => (
               <li key={g} className="flex items-center gap-1.5">
@@ -666,7 +667,7 @@ export default function OwnershipLegend({
           </ul>
         </Section>
 
-        <Section title="Colors">
+        <Section id="colors" title="Colors">
           <Swatches
             caption="A row's dot and its range label say what KIND of thing the attribute points at."
             items={[
@@ -691,7 +692,7 @@ export default function OwnershipLegend({
           />
         </Section>
 
-        <Section title="The toolbar">
+        <Section id="toolbar" title="The toolbar">
           <ul className="space-y-1">
             {TOOLBAR.map(t => (
               <li key={t.glyph} className="flex gap-2">
@@ -716,9 +717,15 @@ export default function OwnershipLegend({
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ id, title, children }: {
+  /** Slug for `legend-section:<id>`, NOT derived from `title` — see
+   *  `legendSectionTag`. */
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="mb-4 last:mb-1">
+    <section className="mb-4 last:mb-1" data-help-id={legendSectionTag(id)}>
       <h3 className="text-[11px] font-semibold uppercase tracking-wider
                      text-gray-400 dark:text-gray-500 mb-1">
         {title}
