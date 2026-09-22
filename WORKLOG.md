@@ -8,6 +8,36 @@ Newest first.
 
 
 ---
+## 2026-09-22 (later) — legend-table-grouping shipped
+
+**The arrow column came from Claude Design, not from an agent.** Siggie got
+the fix there and it lands in this commit. It makes `.lt-label-right` a
+**subgrid** row, the thing the entry below says doubled the table's height.
+It doesn't here, because nothing in that row gets auto-placed into its own
+grid row: the toggle is absolutely positioned, and the name and count share
+one `.lt-lname` cell in the last two tracks. The source column is
+`minmax(0, 1fr)`, and source cells span every track so the arrow overlaps
+them. So the doubling came from auto-placed children, not from subgrid
+itself. The "wrapper plus custom property" idea below was never needed.
+
+**Header arrow on its own row (earlier the same day, `f5b2f86`).** There were
+two separate causes: DOM order, and specificity. The arrow header was emitted
+after the target caption, and grid auto-placement only moves forward, so it
+wrapped. Its `padding-left: 0` also lost to `.lt-h:not(:first-child)`.
+Verified in the probe browser across all 12 pivots: it shares the caption row,
+and its x equals the row arrows' x. That fixes want (3).
+
+**Chevron moved back to the left gutter, plus a hairline under each group**
+(Siggie's last two asks). This reverses the 2026-09-15 "put the
+expand/collapse by the target" decision, because a group now reads as one
+block from its chevron down to its hairline. The existing test asserted
+`cursor-pointer` as a direct child of the label, which broke when the name
+moved into `.lt-lname`, so it now checks `lt-lname`.
+
+⚠️ Unresolved: a comment in `tracksFor` says "150px gap" but the code says
+`200px`. Siggie's call.
+
+---
 ## 2026-09-22 — the legend table's arrow column: reverted, handed back
 
 **Nothing shipped. The working tree was reverted to b341f35** and Siggie is

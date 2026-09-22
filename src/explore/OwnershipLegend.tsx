@@ -258,7 +258,13 @@ function tracksFor(shape: PivotShape): string {
   // The arrow track fits the EdgeSample (30px) plus a little breathing room.
   // A right-aligned-label shape has a one-field leaf but still needs the arrow
   // and the label columns — the label IS the third track, shared by the group.
-  const leaf = shape.leaf.length > 1 || shape.rightAlignLabel
+  // A right-aligned-label shape: source | arrow | gap | target. The source
+  // column is `1fr` and its cells span every track (legendTable.css), so the
+  // arrow overlaps it; the 150px gap holds the arrow that far left of the
+  // widest target, and the target names right-align into the last two tracks.
+  const leaf = shape.rightAlignLabel
+    ? 'minmax(0, 1fr) 38px 200px max-content'
+    : shape.leaf.length > 1
     ? 'max-content 38px max-content'
     : 'max-content';
   return `${indents} ${leaf}`;
@@ -280,7 +286,7 @@ function headerColumn(shape: PivotShape, i: number): string {
    * so the two captions are authored in that order — `[SRC_ATTR, ENTITY]` —
    * and land in tracks lvl+1 and lvl+3.
    */
-  if (shape.rightAlignLabel) return String(i === 0 ? lvl + 1 : lvl + 3);
+  if (shape.rightAlignLabel) return i === 0 ? String(lvl + 1) : '-3 / -1';
   if (i < lvl) return `${i + 1} / -1`;
   const nth = i - lvl;                    // 0 = first leaf field, 1 = the target
   // Track lvl+1 is the leaf's first field; lvl+2 is the arrow; lvl+3 the target.
@@ -343,16 +349,26 @@ function PivotTable({ nodes, shape, forward, isOpen: nodeOpen, onToggle, path = 
                   line. Everywhere else it follows the name (`Organization ——◀`),
                   where it means "arrows arrive here". */}
               {labelArrow && shape.rightAlignLabel && (
-                /* No spacer: `.lt-label-right` is a flex row with a gap. */
                 <span className="lt-arrow"><TableArrow kind={kind} /></span>
               )}
-              {/* Only an ENTITY label is a class you can select; an attribute
-                  name is not a thing the canvas can draw. */}
-              {shape.levels[depth] === 'entity' ? classLink(n.key) : n.key}
-              {labelArrow && !shape.rightAlignLabel && (
-                <span className="lt-arrow">&nbsp;<TableArrow kind={kind} /></span>
+              {shape.rightAlignLabel ? (
+                /* Name and count share the last grid track, so neither is
+                   auto-placed onto a row of its own. */
+                <span className="lt-lname">
+                  {shape.levels[depth] === 'entity' ? classLink(n.key) : n.key}
+                  {n.pairs.length > 1 && <span className="lt-count">{n.pairs.length}</span>}
+                </span>
+              ) : (
+                <>
+                  {/* Only an ENTITY label is a class you can select; an
+                      attribute name is not a thing the canvas can draw. */}
+                  {shape.levels[depth] === 'entity' ? classLink(n.key) : n.key}
+                  {labelArrow && (
+                    <span className="lt-arrow">&nbsp;<TableArrow kind={kind} /></span>
+                  )}
+                  {n.pairs.length > 1 && <span className="lt-count">{n.pairs.length}</span>}
+                </>
               )}
-              {n.pairs.length > 1 && <span className="lt-count">{n.pairs.length}</span>}
             </div>
             <div className="lt-kids">
               {n.children
@@ -627,10 +643,15 @@ export default function OwnershipLegend({
                                   forward, so an arrow emitted after the target
                                   (track levels + 3) wraps onto a row of its
                                   own. */}
-                              {shape.leaf.length > 1 && i === shape.levels.length + 1 && (
+                              {/* A right-aligned-label shape puts it in the
+                                  second-to-last track, the one its label
+                                  arrows use, beside the target caption. */}
+                              {(shape.rightAlignLabel
+                                ? i === 1
+                                : shape.leaf.length > 1 && i === shape.levels.length + 1) && (
                                 <div
                                   className="lt-h lt-h-arrow lt-arrow"
-                                  style={{ gridColumn: shape.levels.length + 2 }}
+                                  style={{ gridColumn: shape.rightAlignLabel ? -4 : shape.levels.length + 2 }}
                                 ><TableArrow kind={verdict} /></div>
                               )}
                               <div
@@ -638,7 +659,7 @@ export default function OwnershipLegend({
                                 style={{ gridColumn: headerColumn(shape, i) }}
                               >
                                 {h}
-                                {shape.arrow === `label:${i}` && (
+                                {shape.arrow === `label:${i}` && !shape.rightAlignLabel && (
                                   <span className="lt-arrow">
                                     &nbsp;<TableArrow kind={verdict} />
                                   </span>

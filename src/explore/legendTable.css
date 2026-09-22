@@ -116,41 +116,35 @@
  */
 .lt-label-right {
   /*
-   * A FLEX row, not `text-align: right`.
+   * A SUBGRID row, so the arrow and the name take the table's own tracks: every
+   * group's arrow lands in one column (the header's arrow too), and the name
+   * sits right-aligned in the last track. Still ONE row — the toggle is
+   * absolutely positioned and the count shares the name's cell, so nothing is
+   * auto-placed past the end of the row.
    *
-   * The arrow and the name are inline siblings, so text alignment lays the
-   * 14px-tall SVG on the 10px text's BASELINE — which sits it visibly high
-   * (Siggie, 2026-09-15: "the arrows are not vertically centered with the
-   * target"). `align-items: center` on the row centres the two against each
-   * other instead, and `justify-content: flex-end` does the right-aligning.
+   * `align-items: center` keeps the 14px SVG centred on the 10px text rather
+   * than sitting on its baseline (Siggie, 2026-09-15: "the arrows are not
+   * vertically centered with the target").
    */
-  display: flex;
+  display: grid;
+  grid-template-columns: subgrid;
   align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-  padding-right: 6px;
 }
+.lt-label-right > .lt-arrow { grid-column: -4; }
+.lt-label-right > .lt-lname { grid-column: -3 / -1; justify-self: end; }
+/* The source cell spans every track: label rows have nothing in the first
+   column, so the arrow column can sit over it instead of after it. */
+.lt:has(.lt-label-right) .lt-leaf > .lt-c1 { grid-column: 1 / -1; }
+.lt:has(.lt-label-right) > .lt-head > .lt-h:last-child { justify-self: end; }
 /*
- * The triangle follows the label to the right edge.
- *
- * It is `position: absolute; left: -13px` on an ordinary label, which puts it
- * in the indent track beside the name it opens. On a right-aligned label that
- * left edge is nowhere near the name — the control ends up stranded at the far
- * left of a wide row, opening an entity the reader is not looking at (Siggie,
- * 2026-09-15: "the expand/collapse would make more sense over by the target").
- * So it is pinned to the RIGHT edge instead, past the entity name.
+ * The triangle stays in the left gutter, as on every other table: the group
+ * reads as one block from its chevron to the hairline below its last source
+ * (Siggie, 2026-09-22). Pinning it past the target name, at the right edge,
+ * left the sources below with nothing on their side to say they belong to it.
  */
-.lt-label-right > .lt-toggle {
-  left: auto;
-  /* Inside the row, just left of the table's border — hanging it outside put
-     the chevron on the border itself (Siggie, 2026-09-15). */
-  right: 0;
-  text-align: left;
+.lt:has(.lt-label-right) > .lt-node:not(:last-child) {
+  border-bottom: 1px solid #e5e7eb;
 }
-/* Room for the triangle at the end of the name. */
-.lt-label-right { padding-right: 15px; }
-/* No triangles hang left on such a table, so its gutter is dead space. */
-.lt:has(.lt-label-right) { padding-left: 4px; }
 
 /* The disclosure triangle sits in the indent track to the LEFT of the label,
    so it never pushes the label out of alignment with its siblings. */
