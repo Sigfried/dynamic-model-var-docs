@@ -20,8 +20,15 @@ import { chromium, test as base, type Page } from '@playwright/test';
  * do this -- it speaks the Playwright server protocol, not CDP, and fails the
  * handshake with a 404 against 9222 -- so overriding the `browser` fixture is
  * the supported route. Unset, this is plain `@playwright/test`.
+ *
+ * `CDP_PORT` picks WHICH browser. Headed and headless run on separate ports
+ * (9222 and 9223) so both can be up at once and the caller chooses per run:
+ * headless for a verdict or a measurement, headed only to WATCH something just
+ * changed -- a headed browser steals focus on every click. See `make
+ * probe-browser` / `probe-browser-headless`.
  */
 const useProbe = !!process.env.USE_PROBE_BROWSER;
+const cdpPort = process.env.CDP_PORT ?? '9222';
 
 const markAsTest = async ({ page }: { page: Page }, use: (p: Page) => Promise<void>) => {
   await page.addInitScript(() => { window.__E2E__ = true; });
@@ -31,7 +38,7 @@ const markAsTest = async ({ page }: { page: Page }, use: (p: Page) => Promise<vo
 export const test = useProbe
   ? base.extend({
       browser: [async ({}, use) => {
-        const browser = await chromium.connectOverCDP('http://127.0.0.1:9222');
+        const browser = await chromium.connectOverCDP(`http://127.0.0.1:${cdpPort}`);
         // Detaches from the debug browser; does NOT close Siggie's window.
         await use(browser);
         await browser.close();

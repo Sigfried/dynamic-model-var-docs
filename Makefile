@@ -161,10 +161,14 @@ sync-check:  ## Is upstream ahead? (no changes written)
 #
 # Why this matters beyond any one bug: jsdom implements no CSS anchor
 # positioning at all, so no vitest can measure where a popover actually lands.
-# Reasoning from screenshots instead produced three wrong fixes on 2026-09-18.
-# Measure first.
+# Reasoning from screenshots instead produced three wrong fixes on 2026-09-18,
+# and two more on 2026-09-22 -- both of those while a browser was sitting there
+# unused. Measure first.
 #
 # Leave it running in its own terminal for the session; Ctrl-C when done.
+# `make probe-browser-both` starts a headless and a headed one on separate
+# ports (see CDP_PORT below) so a run can pick; `make probe-check` says which
+# are up.
 #
 # ⚠️ MEASURING IS NOT ENOUGH; MEASURE THE SYMPTOM, NOT THE CHANGE. Both reverted
 # sessions had a browser and still shipped wrong fixes, because they measured a
@@ -207,32 +211,28 @@ sync-check:  ## Is upstream ahead? (no changes written)
 # silently wrote the profile NEXT TO the temp dir ("/tmp/foocdp-profile") in the
 # second case rather than inside it.
 CHROME_PROFILE ?= $(TMPDIR:%/=%)/cdp-profile
-CDP_PORT       ?= 9222
 
-.PHONY: probe-browser
-probe-browser:  ## Start Chrome with a debug port (Siggie starts it; Claude connects to it)
-	@BIN=$$(node -e "console.log(require('playwright').chromium.executablePath())"); \
-	 echo "Chrome:  $$BIN"; \
-	 echo "Port:    $(CDP_PORT)"; \
-	 echo "Profile: $(CHROME_PROFILE)"; \
-	 echo ""; \
-	 echo "Leave this running. Ctrl-C to stop."; \
-	 echo ""; \
-	 "$$BIN" --remote-debugging-port=$(CDP_PORT) \
-	         --user-data-dir="$(CHROME_PROFILE)" \
-	         --no-first-run --no-default-browser-check
-
-# Same browser, same port, no window -- so `make e2e-probe` stops stealing
-# focus while Claude iterates. This is the REAL Chrome with its window
-# suppressed, NOT `chrome-headless-shell` (the stripped-down binary Playwright
-# would pick for a plain `headless: true` launch). It still serves CDP, so
-# `e2e-probe` connects to it unchanged.
+# TWO ports, because headed and headless serve different purposes:
 #
-# Its own profile dir: Chrome refuses a second instance on a profile already in
-# use, so this cannot share $(CHROME_PROFILE) with a visible probe browser.
-# Run one or the other -- they would collide on $(CDP_PORT) anyway.
-.PHONY: probe-browser-headless
-probe-browser-headless:  ## Same, with no visible window (Claude iterates without stealing focus)
+#   9222 ($(CDP_PORT))          headless -- verdicts and measurements, i.e.
+#                                           almost every run. THE DEFAULT, and
+#                                           where a single browser always goes.
+#   9223 ($(CDP_PORT_HEADED))   headed   -- only to WATCH something just
+#                                           changed; steals focus on each click.
+#
+# So `probe-browser` is headless and `make e2e-probe` needs nothing extra;
+# `probe-browser-headed` and the `e2e-*-headed` targets use 9223. Running ONE
+# browser (either kind, on 9222) still works -- `probe-browser-both` just puts
+# one of each up so a run can choose.
+CDP_PORT        ?= 9222
+CDP_PORT_HEADED ?= 9223
+
+# HEADLESS, because that is what almost every run wants and a visible window
+# steals focus on every click. This is the REAL Chrome with its window
+# suppressed, NOT `chrome-headless-shell` (the stripped-down binary Playwright
+# would pick for a plain `headless: true` launch). It still serves CDP.
+.PHONY: probe-browser
+probe-browser:  ## Start Chrome (headless) with a debug port -- Siggie starts it, Claude connects
 	@BIN=$$(node -e "console.log(require('playwright').chromium.executablePath())"); \
 	 echo "Chrome:  $$BIN (headless)"; \
 	 echo "Port:    $(CDP_PORT)"; \
@@ -245,11 +245,67 @@ probe-browser-headless:  ## Same, with no visible window (Claude iterates withou
 	         --user-data-dir="$(CHROME_PROFILE)-headless" \
 	         --no-first-run --no-default-browser-check
 
+# The name the headless browser used to have, kept so it still works.
+.PHONY: probe-browser-headless
+probe-browser-headless: probe-browser  ## Alias for `probe-browser`, which is headless
+
+# VISIBLE, on its own port, for watching a placement rather than measuring it.
+#
+# Its own profile dir: Chrome refuses a second instance on a profile already in
+# use, so it cannot share the headless one's.
+.PHONY: probe-browser-headed
+probe-browser-headed:  ## Start a VISIBLE Chrome on 9223 (to watch a placement, not to measure)
+	@BIN=$$(node -e "console.log(require('playwright').chromium.executablePath())"); \
+	 echo "Chrome:  $$BIN (headed)"; \
+	 echo "Port:    $(CDP_PORT_HEADED)"; \
+	 echo "Profile: $(CHROME_PROFILE)-headed"; \
+	 echo ""; \
+	 echo "Leave this running. Ctrl-C to stop."; \
+	 echo ""; \
+	 "$$BIN" --remote-debugging-port=$(CDP_PORT_HEADED) \
+	         --user-data-dir="$(CHROME_PROFILE)-headed" \
+	         --no-first-run --no-default-browser-check
+
+# Both at once, on separate ports, so a run can CHOOSE rather than take
+# whichever browser happens to be up: headless ($(CDP_PORT)) for verdicts and
+# measurements, headed ($(CDP_PORT_HEADED)) only to watch something just
+# changed.
+#
+# Both share this one terminal and their logs interleave -- Chrome's startup
+# chatter is unreadable either way. One Ctrl-C stops both: the shell sends
+# SIGINT to the whole foreground process group, which both children are in.
+.PHONY: probe-browser-both
+probe-browser-both:  ## Headless AND headed on separate ports (one Ctrl-C stops both)
+	@BIN=$$(node -e "console.log(require('playwright').chromium.executablePath())"); \
+	 echo "Chrome:   $$BIN"; \
+	 echo "Headless: port $(CDP_PORT)   profile $(CHROME_PROFILE)-headless"; \
+	 echo "Headed:   port $(CDP_PORT_HEADED)   profile $(CHROME_PROFILE)-headed"; \
+	 echo ""; \
+	 echo "Leave this running. One Ctrl-C stops both."; \
+	 echo ""; \
+	 "$$BIN" --headless \
+	         --remote-debugging-port=$(CDP_PORT) \
+	         --user-data-dir="$(CHROME_PROFILE)-headless" \
+	         --no-first-run --no-default-browser-check & \
+	 "$$BIN" --remote-debugging-port=$(CDP_PORT_HEADED) \
+	         --user-data-dir="$(CHROME_PROFILE)-headed" \
+	         --no-first-run --no-default-browser-check & \
+	 wait
+
+# Reports BOTH ports, so the answer to "which browsers are up?" is one command.
+# Exits non-zero only when NEITHER is reachable: `e2e-probe` and
+# `e2e-probe-headed` each check their own port, and a missing headed browser
+# must not fail a headless run.
 .PHONY: probe-check
-probe-check:  ## Is the debug browser up and reachable?
-	@curl -sf http://127.0.0.1:$(CDP_PORT)/json/version \
-	  && echo "" && echo "OK: debug browser reachable on $(CDP_PORT)" \
-	  || (echo "NOT reachable on $(CDP_PORT). Run: make probe-browser"; exit 1)
+probe-check:  ## Which debug browsers are up?
+	@up=0; \
+	 if curl -sf http://127.0.0.1:$(CDP_PORT)/json/version >/dev/null; then \
+	   echo "UP   headless  $(CDP_PORT)"; up=1; \
+	 else echo "down headless  $(CDP_PORT)   (make probe-browser)"; fi; \
+	 if curl -sf http://127.0.0.1:$(CDP_PORT_HEADED)/json/version >/dev/null; then \
+	   echo "UP   headed    $(CDP_PORT_HEADED)"; up=1; \
+	 else echo "down headed    $(CDP_PORT_HEADED)   (make probe-browser-headed)"; fi; \
+	 [ $$up = 1 ] || (echo ""; echo "No debug browser running. Try: make probe-browser-both"; exit 1)
 
 # --------------------------------------------------------------------------
 # placement tests (Playwright)
@@ -288,8 +344,24 @@ e2e-install:  ## One-time: fetch the browser Playwright drives
 # ⚠️ To check whether 4173 is up, curl `[::1]`, not `127.0.0.1`. Vite binds
 # `localhost`, which resolves to IPv6 here, so 127.0.0.1 reports "connection
 # refused" for a server that is running fine.
+# Gates on ITS OWN port, not on `probe-check` (which passes when EITHER browser
+# is up): a headless run must not be let through by a headed browser it is not
+# going to connect to.
 .PHONY: e2e-probe
-e2e-probe:  ## Placement tests in the probe browser (needs `make probe-browser`)
-	@$(MAKE) --no-print-directory probe-check >/dev/null \
-	  || (echo "Start it first, in your own terminal: make probe-browser"; exit 1)
-	USE_PROBE_BROWSER=1 npx playwright test -c playwright.probe.config.ts
+e2e-probe:  ## Placement tests in the headless probe browser (needs `make probe-browser`)
+	@curl -sf http://127.0.0.1:$(CDP_PORT)/json/version >/dev/null \
+	  || (echo "No headless browser on $(CDP_PORT). Start it in your own terminal:"; \
+	      echo "  make probe-browser        (headless only)"; \
+	      echo "  make probe-browser-both   (headless + headed)"; exit 1)
+	CDP_PORT=$(CDP_PORT) USE_PROBE_BROWSER=1 npx playwright test -c playwright.probe.config.ts
+
+# The same specs in the VISIBLE browser, to watch a placement happen. Not a
+# verdict -- `make e2e` is the verdict -- and it steals focus on every click,
+# so it is for something just changed, not for a routine run.
+.PHONY: e2e-probe-headed
+e2e-probe-headed:  ## Placement tests in the VISIBLE probe browser (needs `make probe-browser-headed`)
+	@curl -sf http://127.0.0.1:$(CDP_PORT_HEADED)/json/version >/dev/null \
+	  || (echo "No headed browser on $(CDP_PORT_HEADED). Start it in your own terminal:"; \
+	      echo "  make probe-browser-headed  (headed only)"; \
+	      echo "  make probe-browser-both    (headless + headed)"; exit 1)
+	CDP_PORT=$(CDP_PORT_HEADED) USE_PROBE_BROWSER=1 npx playwright test -c playwright.probe.config.ts

@@ -19,6 +19,24 @@ placement test can only read the stylesheet; this one measures real rects.
 | **Sees uncommitted edits** | no — it rebuilds | yes |
 | **Trust it for** | a verdict | iterating |
 
+#### Two probe browsers, two ports
+
+`probe-browser` is **headless** and lives on **9222**, because that is what
+almost every run wants and a visible window steals focus on every click.
+`probe-browser-headed` is visible and lives on **9223**, for *watching* a
+placement rather than measuring it.
+
+```bash
+make probe-browser-both   # one of each; one Ctrl-C stops both
+make probe-check          # which are up right now
+```
+
+Run both and a run chooses: `make e2e-probe` (headless, 9222) for a
+measurement or a verdict, `make e2e-probe-headed` (visible, 9223) only for
+something just changed. Each gates on **its own** port, so a headed browser
+never lets a headless run through. Running just one browser also works — it
+goes on 9222 either way.
+
 When the two disagree, `make e2e` wins. Claude cannot run `make e2e`: the
 sandbox denies a browser *launch*, which is what `playwright test` does, and
 allows a *connection*, which is what `e2e-probe` makes. **Headless is not a way
@@ -31,13 +49,16 @@ around this** — measured 2026-09-19, a headless launch dies the same way
 popover placement. When it does, at the start of the session:
 
 ```bash
-make probe-browser      # leave running in its own terminal; Ctrl-C when done
-make e2e-install        # first time only: fetches the browser
+make probe-browser-both  # leave running in its own terminal; Ctrl-C stops both
+make e2e-install         # first time only: fetches the browser
 ```
 
-**A blank browser window is what success looks like** — it opens nothing and
-runs nothing. Claude can then run `make e2e-probe` as often as it likes without
-asking again.
+**Success looks like nothing happening**: the headless one shows no window at
+all, and the headed one opens a blank window that runs nothing. Claude can then
+run `make e2e-probe` as often as it likes without asking again, and will ask
+before using the headed one — it takes your screen.
+
+`make probe-browser` alone is enough if you don't need to watch anything.
 
 Then run `make e2e` yourself before trusting a result — a fix claimed to work,
 a commit, a deploy. **Not after every change**: let Claude iterate on the
@@ -57,7 +78,13 @@ changes what the tests see.
 make e2e-ui             # step through it visually
 make e2e-headed         # the same run, but with a visible browser window
 make e2e-report         # open the report from the last `make e2e` run
+make e2e-probe-headed   # the probe run, in the visible browser on 9223
 ```
+
+⚠️ **Run a NEW spec under `make e2e-ui` before trusting it.** A test that
+passes may be passing for the wrong reason — asserting on an element that never
+resolved, or measuring a beat it never reached. `e2e-ui` shows what it actually
+did. This is cheap and catches the failure mode that green output cannot.
 
 `make e2e` is **headless**, so it no longer raises a window and steals focus on
 every click. It drives the same browser binary either way — `channel: 'chromium'`
