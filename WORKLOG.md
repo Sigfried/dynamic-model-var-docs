@@ -34,8 +34,17 @@ block from its chevron down to its hairline. The existing test asserted
 `cursor-pointer` as a direct child of the label, which broke when the name
 moved into `.lt-lname`, so it now checks `lt-lname`.
 
-⚠️ Unresolved: a comment in `tracksFor` says "150px gap" but the code says
-`200px`. Siggie's call.
+The Claude Design comment in `tracksFor` said "150px gap" while the code said
+`200px`. In the cleanup pass the comment dropped the number ("the gap track"),
+so the code alone says what the width is. Nobody has decided whether 150 was
+the intent.
+
+**Cleanup pass:** `panel-refit` and `legend-table-grouping` were archived to
+`docs/archive/tasks-2026-09-22.md`. panel-refit's one open question (should
+a dragged Legend reset on each tour step) moved to BACKLOG §Overlays. The
+`legendTable.css` comments that argued with the previous
+`width: max-content` layout and the right-edge chevron were cut down to
+current state.
 
 ---
 ## 2026-09-22 — the legend table's arrow column: reverted, handed back

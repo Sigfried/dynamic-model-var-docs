@@ -27,17 +27,12 @@
  * attribute on `.lt-node` and a button in the label.
  *
  * ⚠️ **`width: 100%` with `min-width: max-content`, and the table SCROLLS.**
- * It was `width: max-content; max-width: 100%`, which sized the table to its
- * widest row and let the panel clip it. Two problems, both Siggie's,
- * 2026-09-22: a table narrower than the panel left the space unused and bunched
- * the columns at the left instead of spreading the target column out to meet
- * its rows (*"just make it take the whole width even if it doesn't need it"*);
- * and a table wider than the panel was simply cut off, the TARGET column
- * running off the right edge.
- *
- * So: `100%` fills the panel, `min-width: max-content` refuses to shrink below
- * what the widest row needs, and `overflow-x: auto` gives that overflow
- * somewhere to go instead of hiding it. The legend's width floor (panelLayout)
+ * `100%` fills the panel, so a narrow table spreads its target column out to
+ * meet its rows rather than bunching at the left (Siggie, 2026-09-22: *"just
+ * make it take the whole width even if it doesn't need it"*);
+ * `min-width: max-content` refuses to shrink below what the widest row needs;
+ * and `overflow-x: auto` gives that overflow somewhere to go instead of
+ * clipping the target column. The legend's width floor (panelLayout)
  * is set so the scrollbar is a fallback for a hand-resized panel, not the
  * normal case — measured 2026-09-22, the widest of the twelve pivots (`total`
  * on the owns side) wants 487px.
@@ -52,8 +47,8 @@
  */
 .lt-scroll {
   overflow-x: auto;
-  /* The border lives out here now: it should bound the VISIBLE box, not a
-     table that may be scrolled sideways inside it. */
+  /* The border bounds the VISIBLE box, not a table that may be scrolled
+     sideways inside it. */
   border: 1px solid #e5e7eb;
   border-radius: 4px;
   margin: 4px 0 2px;
@@ -136,12 +131,9 @@
    column, so the arrow column can sit over it instead of after it. */
 .lt:has(.lt-label-right) .lt-leaf > .lt-c1 { grid-column: 1 / -1; }
 .lt:has(.lt-label-right) > .lt-head > .lt-h:last-child { justify-self: end; }
-/*
- * The triangle stays in the left gutter, as on every other table: the group
- * reads as one block from its chevron to the hairline below its last source
- * (Siggie, 2026-09-22). Pinning it past the target name, at the right edge,
- * left the sources below with nothing on their side to say they belong to it.
- */
+/* A hairline closes each group, so it reads as one block from its chevron
+   (in the left gutter, as on every table) to its last source (Siggie,
+   2026-09-22). */
 .lt:has(.lt-label-right) > .lt-node:not(:last-child) {
   border-bottom: 1px solid #e5e7eb;
 }

@@ -247,20 +247,18 @@ function tracksFor(shape: PivotShape): string {
    * One indent track per level — the track a nested `.lt-kids` consumes, and
    * where an ordinary row's disclosure triangle sits.
    *
-   * A right-aligned-label shape needs it only for the subgrid chain: its
-   * triangle moved to the RIGHT edge with the label, so a 16px track there is
-   * empty space down the whole table (Siggie, 2026-09-15: "can reclaim the
-   * white space on the left now"). Zero-width keeps the chain and reclaims it.
+   * A right-aligned-label shape has one level and nothing nested under its
+   * leaves, so it needs the track only for the subgrid chain; zero-width keeps
+   * the chain without a blank strip down the table. Its triangle hangs in the
+   * table's left padding instead.
    */
   const indent = shape.rightAlignLabel ? '0' : '16px';
   const indents = shape.levels.map(() => indent).join(' ');
   // A leaf with a target column needs name | arrow | target; otherwise one cell.
   // The arrow track fits the EdgeSample (30px) plus a little breathing room.
-  // A right-aligned-label shape has a one-field leaf but still needs the arrow
-  // and the label columns — the label IS the third track, shared by the group.
   // A right-aligned-label shape: source | arrow | gap | target. The source
   // column is `1fr` and its cells span every track (legendTable.css), so the
-  // arrow overlaps it; the 150px gap holds the arrow that far left of the
+  // arrow overlaps it; the gap track holds the arrow that far left of the
   // widest target, and the target names right-align into the last two tracks.
   const leaf = shape.rightAlignLabel
     ? 'minmax(0, 1fr) 38px 200px max-content'
@@ -284,7 +282,7 @@ function headerColumn(shape: PivotShape, i: number): string {
    * A right-aligned-label shape inverts the usual reading: its LEVEL caption
    * describes the last track (the shared label) and its leaf field the first,
    * so the two captions are authored in that order — `[SRC_ATTR, ENTITY]` —
-   * and land in tracks lvl+1 and lvl+3.
+   * and land in track lvl+1 and the last two tracks, where the label names do.
    */
   if (shape.rightAlignLabel) return i === 0 ? String(lvl + 1) : '-3 / -1';
   if (i < lvl) return `${i + 1} / -1`;
