@@ -974,7 +974,7 @@ chain with the Legend open on the right. The automatic rule puts the popover
 BELOW the anchored box, which is the only direction clear of both the chain and
 the panel; an override loses that. `Position: left` on a beat anchored to the
 rightmost box threw the popover across the canvas onto the box holding its own
-spotlit row (2026-09-22). 
+spotlit row (2026-09-22).
 -->
 
 ### which-way

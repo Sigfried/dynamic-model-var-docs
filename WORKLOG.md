@@ -8,6 +8,87 @@ Newest first.
 
 
 ---
+## 2026-09-22 — Two probe browsers, and a green test that was wrong
+
+### Why the ports split
+
+Siggie proposed running a headed and a headless probe browser at once so a run
+could pick. The tooling for connecting to a browser already existed (`make
+probe-browser`, `e2e-probe`, WORKLOG 2026-09-19); what was missing was the
+ability to have both up, since everything hardcoded 9222.
+
+Ports now: **9222 headless** (verdicts and measurements, the default and where
+a single browser always goes), **9223 headed** (only to watch something just
+changed). `probe-browser` FLIPPED to headless — Siggie: *"for you headless is
+default"* — with `probe-browser-headless` kept as an alias so the old name
+still works.
+
+Two things worth knowing:
+
+- `probe-browser-both` needs no `trap`. The first draft had `trap ... INT TERM`
+  plus `wait` to make one Ctrl-C stop both; Siggie: *"Ctl-C ending both is for
+  free."* Correct — the shell sends SIGINT to the whole foreground process
+  group.
+- Each `e2e-probe*` target gates on **its own** port rather than on
+  `probe-check`, which now passes when EITHER browser is up. A headed browser
+  must not let a headless run through to a connection it will not make.
+
+### The green test that was wrong, and the rule that came out of it
+
+⚠️ **This is the entry to read before writing another e2e spec.**
+
+`e2e/overlap.spec.ts` was written to catch "the popover covers what it points
+at" — the 2026-09-22 Ownership symptom. It passed. It is **deliberately not
+committed**, because Siggie then ran it under `make e2e-ui` and the trace
+showed the popover squeezed to a sliver BEHIND the Legend panel, showing about
+four characters per line, while both assertions stayed green. The trace also
+showed `Wait for selector` with a retry badge and 4 console errors — signals
+invisible in the terminal's `✓`.
+
+At least one selector is a fabrication: `.help-spotlight[data-help-id^=...]`
+was guessed without checking, and `.help-spotlight` is the RING OVERLAY div,
+not the row it rings. `data-help-spotlight` happens to be real
+(`HelpLayer.tsx`), so the first branch matched and the assertion measured
+something other than what it claimed to.
+
+Two lessons, both now in TESTING.md:
+
+1. **Run a new spec under `make e2e-ui` before trusting it.** Green output
+   cannot distinguish "the property holds" from "the assertion never ran
+   against the right element."
+2. **Do not invent a selector.** Grep for the attribute or class in the source
+   first. Every `data-help-*` name in this app is declared in one place.
+
+This is the same failure mode as the 2026-09-18 placement bugs, one level up:
+there the reasoning was from screenshots instead of measurements, here from a
+green checkmark instead of what the test actually did.
+
+### The measurement that matters, kept here because the spec was not committed
+
+The real cause of the Ownership placement trouble, measured on 9222 (viewport
+1600×1000, `?sel=Participant~Visit~TimePeriod`):
+
+```
+legend CLOSED   scroll container  l=320  r=1600  w=1280
+legend OPEN     scroll container  l=320  r=1600  w=1280   <- unchanged
+                legend            l=1040 r=1584  w=544
+```
+
+`HelpPanel` is `absolute top-14 right-4` / `z-30` — **an overlay that never
+enters layout**. The canvas shrank for the left selection tree (it starts at
+320) because that panel IS in the layout; the Legend is not. So with the Legend
+open the usable canvas is 320→1040, while `zoomToFit`, the ELK layout and the
+popover's containing block all compute against 1280.
+
+⚠️ This corrects a reading taken from screenshots: the canvas does NOT refit to
+the Legend on redraw. It refits to its container, which the Legend does not
+shrink. "Force a redraw when the panel opens" therefore delivers nothing on its
+own — an inset has to exist first. That is the agreed plan (see TASKS
+`legend-inset`), with dragging deliberately dropping the inset WITHOUT a
+redraw, so the diagram never rearranges under the user's hand.
+
+
+---
 ## 2026-09-22 — `owns-target`'s two groups are a fossil, not a distinction
 
 ### What the two groups actually are
