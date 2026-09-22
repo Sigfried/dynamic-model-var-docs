@@ -8,6 +8,74 @@ Newest first.
 
 
 ---
+## 2026-09-22 — the legend table's arrow column: reverted, handed back
+
+**Nothing shipped. The working tree was reverted to b341f35** and Siggie is
+doing this by hand (TASKS `legend-table-grouping`). Read this before trying it
+again with an agent.
+
+### The one structural fact that defeats the obvious fixes
+
+`.lt-label-right` — the group header on the `owns: owned` pivot — is a **flex
+row spanning every track**, not a row of grid cells. That is deliberate: it is
+what keeps a group header compact. Make it `display: grid` +
+`grid-template-columns: subgrid` so its arrow can take the arrow track, and
+every group header becomes a full-height row in every column: `BodySite` floats
+far above its own source list and the table roughly doubles in height.
+
+So the arrow cannot be placed in a grid track, and anything that positions it
+instead (a percentage, a fixed offset, an auto margin) has to answer "relative
+to what?" — which is where all four attempts died:
+
+- **`margin-left: 42%`** — a percentage margin resolves against the element's
+  OWN width, so the same 42% landed 58px apart on a 295px header cell and a
+  418px label.
+- **`grid-column` on the arrow** — no effect; the parent is flex.
+- **subgrid on the label** — the height blow-up above.
+- **`margin-left: auto`** — the arrow ends up immediately left of its own name,
+  and the names vary (`Activity` … `DimensionalObservationSet`), so the arrows
+  staggered into 18 distinct x positions down one table.
+
+The shape that would work: give the NAME a fixed-width box equal to the target
+track and right-align inside it, so everything left of it starts at one x. That
+needs a wrapper element in the JSX plus the track width published as a custom
+property — not attempted.
+
+### What was measured, and is worth keeping
+
+Real numbers from the probe browser, all twelve pivots at a 514px table:
+
+- Widest pivot table wants **487px** of content (`total` on the owns side);
+  then 433, 426, 387, 375, 361, 325, 249, 241, 237, 165, 163.
+- In the pivots that have a target column, source text ends at **199–299px**
+  and the target needs **72–163px** — so there is real slack to move the arrow
+  column right, which is Siggie's (4).
+- The count lines (`38 owners⌄ — 53 attrs⌄ …`) stop wrapping at **380px**; the
+  first wraps at 360.
+
+### Two process failures, both mine
+
+1. **I diagnosed clipping from a cropped screenshot.** `Acti`, `BiologicPro`,
+   `CauseOfD` looked truncated and I proposed scrapping the approach over it.
+   Siggie: *"nothing was getting clipped except the image i gave you."* The
+   probe said `scrollWidth - clientWidth === 0` in every pivot, before and
+   after. Measuring would have taken one call.
+
+2. **I claimed the header arrow was fixed when I had only measured its x.**
+   An x-coordinate says nothing about which ROW an element is on, and the
+   header arrow was still taking a row of its own in every pivot that renders
+   the `.lt-h-arrow` cell. Siggie: *"i don't think you fixed anything in that
+   last round. wtf?"* A claim of "fixed" needs a measurement of the thing that
+   was broken, not of something adjacent to it.
+
+Also lost in the revert, because it shared a working tree with the arrow work:
+the hairline rule under each group's source list, which Siggie approved on
+sight. It is a ~6-line rule on `.lt > .lt-node[data-open]:not(:last-child)`
+giving `border-bottom: 1px solid #f1f3f5` plus a little padding — worth
+re-adding on its own, independently of the arrows.
+
+
+---
 ## 2026-09-22 — panel-refit: two bugs, and three wrong turns getting there
 
 ### What shipped
@@ -109,8 +177,11 @@ Two of Siggie's complaints, one fix each:
   `width: max-content`, so a table narrower than the panel bunched its columns
   at the left and left the target column stranded. Now `width: 100%` with
   `min-width: max-content`.
-- The table clipped when wider than the panel. Now a `.lt-scroll` wrapper owns
-  `overflow-x` and the border.
+- A table wider than the panel had nowhere to overflow. Now a `.lt-scroll`
+  wrapper owns `overflow-x` and the border, so a hand-narrowed panel scrolls.
+  ⚠️ This was NOT fixing observed clipping — see the entry above; the apparent
+  truncation in the screenshots was the crop, and `scrollWidth === clientWidth`
+  in every pivot.
 
 ⚠️ The wrapper is not optional. A grid that is its own scroll container cannot
 also be `min-width: max-content` — the min-width wins and there is nothing left

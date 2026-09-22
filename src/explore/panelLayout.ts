@@ -31,18 +31,13 @@ export const PANEL_WIDTH_FRACTION = 0.35;
  * The narrowest each panel opens at, in px.
  *
  * **legend — 520.** Its pivot tables (`legendTable.css`) are column-aligned, so
- * a row that does not fit does not wrap. Measured 2026-09-22 over all twelve
- * pivots at a 900px panel: the widest is `total` on the owns side at **487px**
- * of content (the others: 433, 426, 387, 375, 361, 325, 249, 241, 237, 165,
- * 163). Plus the panel's own `px-4` on both sides = ~519. Consistent with the
- * ~506px measured 2026-09-15 by a different route.
+ * a row that does not fit does not wrap. The widest of the twelve pivots needs
+ * 487px of content (measured 2026-09-22), plus the panel's own `px-4` either
+ * side. Below this the tables scroll sideways rather than clip (`.lt-scroll`),
+ * so the floor is about the common case reading well, not correctness.
  *
- * Below this the tables scroll sideways rather than clip — `.lt-scroll` — so
- * the floor is about the COMMON case reading well, not about correctness.
- *
- * **cases — 380.** Confirmed by eye at 380 (Siggie, 2026-09-22): it is prose
- * and short link rows, with no column-aligned table to clip. 380 is also where
- * the legend's four-pivot count line stops wrapping, measured the same day.
+ * **cases — 380.** Prose and short link rows, with no column-aligned table to
+ * clip (Siggie confirmed it by eye, 2026-09-22).
  */
 export const PANEL_MIN_PX = {
   legend: 520,
@@ -84,10 +79,10 @@ export function offsetRightPx(viewportPx: number): number {
  * changed the scroll container's width by nothing at all (1280 either way).
  * The canvas cannot see the panel, so it has to be told.
  *
- * It is exactly the panel's opening width — no cap. A cap was drafted and cut
- * (Siggie, 2026-09-22): the panels are viewport-relative now, so they cannot
- * eat the canvas the way a fixed 34rem could, and a second limit on top of
- * `panelWidthPx`'s own floor would only disagree with it.
+ * It is exactly the panel's opening width, with NO cap of its own (Siggie's
+ * call, 2026-09-22). The panels are viewport-relative, so they cannot eat the
+ * canvas the way a fixed 34rem could, and a second limit here would only
+ * disagree with `panelWidthPx`'s floor.
  *
  * ⚠️ FROZEN AT OPEN TIME, by Siggie's rule. This takes the panel's OPENING
  * width; it deliberately does not track a corner-resize or a drag. A dragged
