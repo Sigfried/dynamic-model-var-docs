@@ -26,20 +26,47 @@
  * so children stop aligning with the header. Disclosure is a `data-open`
  * attribute on `.lt-node` and a button in the label.
  *
- * ⚠️ **`width: max-content` with `max-width: 100%`.** The table is sized by its
- * widest row, and the PANEL constrains it — which is why the legend panel had
- * to get wider rather than this getting cleverer about wrapping.
+ * ⚠️ **`width: 100%` with `min-width: max-content`, and the table SCROLLS.**
+ * It was `width: max-content; max-width: 100%`, which sized the table to its
+ * widest row and let the panel clip it. Two problems, both Siggie's,
+ * 2026-09-22: a table narrower than the panel left the space unused and bunched
+ * the columns at the left instead of spreading the target column out to meet
+ * its rows (*"just make it take the whole width even if it doesn't need it"*);
+ * and a table wider than the panel was simply cut off, the TARGET column
+ * running off the right edge.
+ *
+ * So: `100%` fills the panel, `min-width: max-content` refuses to shrink below
+ * what the widest row needs, and `overflow-x: auto` gives that overflow
+ * somewhere to go instead of hiding it. The legend's width floor (panelLayout)
+ * is set so the scrollbar is a fallback for a hand-resized panel, not the
+ * normal case — measured 2026-09-22, the widest of the twelve pivots (`total`
+ * on the owns side) wants 487px.
  */
+
+/*
+ * The scroll box. It must be a WRAPPER rather than `overflow-x` on `.lt`
+ * itself: a grid that is its own scroll container cannot also be
+ * `min-width: max-content` — the min-width wins and there is nothing left to
+ * scroll. So the wrapper clips and scrolls, and `.lt` inside it is free to be
+ * as wide as its widest row.
+ */
+.lt-scroll {
+  overflow-x: auto;
+  /* The border lives out here now: it should bound the VISIBLE box, not a
+     table that may be scrolled sideways inside it. */
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  margin: 4px 0 2px;
+}
 
 .lt {
   display: grid;
-  width: max-content;
-  max-width: 100%;
-  margin: 4px 0 2px;
+  /* Fills the panel when the content is narrower (so the target column spreads
+     out to meet its rows) and grows past it when wider (the wrapper scrolls). */
+  width: 100%;
+  min-width: max-content;
   /* The 14px left padding is the gutter the disclosure triangles hang into. */
   padding: 0 4px 3px 14px;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
   font-family: ui-monospace, Menlo, Consolas, monospace;
   font-size: 10px;
   color: #374151;

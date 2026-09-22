@@ -8,6 +8,135 @@ Newest first.
 
 
 ---
+## 2026-09-22 — panel-refit: two bugs, and three wrong turns getting there
+
+### What shipped
+
+Both halves of TASKS `panel-refit`, verified in the probe browser. The
+discriminating check (with a panel open, every node box's right edge is left of
+the panel's left edge) passes for both: legend 1536→1008 against a panel edge
+of 1024, drawer 1536→1196 against 1216.
+
+**(b), the drawer, was as small as the brief said.** `DetailDrawer` is a real
+flex child, so the container genuinely narrows; nothing watched it. A
+`ResizeObserver` on the scroll container in `useZoomPan`, gated on
+`autoFitRef`, refits. It skips its own first callback — a `ResizeObserver`
+fires once on `observe`, and that size is what the initial fit already used.
+
+**(a), the legend, needed three pieces, not the two I expected.** The brief
+said "an inset `zoomToFit` subtracts," and that alone does not work.
+
+### ⚠️ The inset has to go in the SPACER too, not just the fit
+
+This is the thing to know before touching `useZoomPan` again.
+
+With only the fit subtracting the inset, the zoom was correct (0.566, real
+room made) and the diagram still sat under the panel. Measured:
+
+```
+containerClientW 1280   scrollLeft 197   maxScrollLeft 197
+spacer width 1344 (padding 320 each side)   zoom 0.566
+boxes 466 → 1131        panel left edge 1024
+```
+
+`scrollLeft` was pinned at its maximum. `zoomToFit` scrolls to `slack().x` =
+320, but the spacer is `content + 2*slack`, and once the fit shrinks the
+content to the USABLE width that spacer is narrower than `container + slack` —
+so the scroll clamps short and the diagram never reaches the container's left
+edge. The old comment on that line ("Always reachable: the spacer is never
+narrower than twice the slack") was a true invariant that the inset broke.
+
+Fix: `syncSpacer` adds the inset to the spacer's width. The extra width is on
+the right, exactly where the panel covers, so it is pannable emptiness under
+the panel rather than anywhere the diagram wants to be. `setRightInset` calls
+`syncSpacer` BEFORE `zoomToFit`, or the new fit is clamped by the old spacer.
+
+### Siggie's two rules, and how they are enforced
+
+**Frozen at open time.** `HelpPanel` captures its width in a `useState`
+initializer, and `ExploreApp` computes the inset from `legendOpen`/`casesOpen`
+only. Neither tracks the window. A `vw` unit in CSS would NOT do: it keeps
+tracking, and the inset the canvas laid itself out against would silently go
+stale on every window resize. Corner-resizing a docked panel is likewise not
+tracked — Siggie chose this explicitly over refitting live.
+
+**Dragging drops the inset with no redraw.** `ExploreApp` never reads
+`useDragged`'s offset, so a dragged panel is still "open" and the inset stands
+until something else refits. Verified: every box at identical coordinates
+through a drag.
+
+### Three wrong turns, all the same failure
+
+1. **I compared two screenshots, one of which I invented.** Siggie's message
+   had one image; I carried an earlier one forward as "image 2" and built a
+   comparison on the pair. Then I read pixel coordinates off a scaled
+   screenshot (318–1400) and stated them as measurements. Siggie: *"there is no
+   image2 in my last prompt... your numbers are definitely wrong."* The real
+   number, from their DevTools: viewport 1440, panel 380.
+
+2. **My first probe reported "3/3 wrapped" at every width**, including widths
+   where the content needed less than half the space. The wrap test compared
+   children's `offsetTop`, and the row is `items-baseline`, so children differ
+   in `offsetTop` on ONE line. Comparing the row's height to its tallest child
+   fixed it. A green-looking probe that measures the wrong thing is the
+   2026-09-22 lesson one level down.
+
+3. **I measured the wrong constraint.** The probe answered "where do the
+   dropdowns wrap" (380px) correctly — but the binding constraint is the TABLE
+   the dropdown opens, which clips long before that. Siggie's img1 showed the
+   TARGET column running off the edge. Measured properly, one pivot at a time
+   at a 900px panel, all twelve: widest is `total` on the owns side at 487px;
+   then 433, 426, 387, 375, 361, 325, 249, 241, 237, 165, 163.
+
+### Panel widths: what the numbers are and why
+
+`35vw`, floored per panel: **legend 520** (487px widest table + the panel's own
+`px-4` either side), **cases 380** (prose and link rows, no aligned table —
+confirmed by eye).
+
+A `MAX_INSET_FRACTION` cap was drafted and CUT at Siggie's instruction. Its
+premise was that `HelpPanel`'s `maxWidth: calc(100vw - 2rem)` shrinks the panel
+on a narrow viewport, so the inset should mirror that. It does not: at 34rem
+the cap only binds below ~576px viewport, narrower than anyone opens this app.
+Siggie spotted it — *"i don't think the maxwidth is currently doing anything."*
+Once the panels became viewport-relative the cap had nothing left to prevent.
+
+### The `.lt` table, and why it grew a wrapper
+
+Two of Siggie's complaints, one fix each:
+
+- *"just make it take the whole width even if it doesn't need it"* — `.lt` was
+  `width: max-content`, so a table narrower than the panel bunched its columns
+  at the left and left the target column stranded. Now `width: 100%` with
+  `min-width: max-content`.
+- The table clipped when wider than the panel. Now a `.lt-scroll` wrapper owns
+  `overflow-x` and the border.
+
+⚠️ The wrapper is not optional. A grid that is its own scroll container cannot
+also be `min-width: max-content` — the min-width wins and there is nothing left
+to scroll.
+
+### The sticky header, which was a stacking bug
+
+Siggie, on img3/img4: *"some stuff in the tables scrolls up into the panel
+header."* The "some, not everything" is the diagnosis. `HelpPanel`'s header is
+`sticky top-0` with a background but had no `z-index`; `.lt-label` is
+`position: relative` and `.lt-toggle` `absolute`. A positioned element with
+`z-index: auto` paints above a non-positioned one in the same stacking context,
+in tree order — so group LABELS crossed the header while ordinary leaf rows
+correctly went under it. `z-10` on the header.
+
+### Testing notes
+
+`make probe-browser-both` was already up. Three throwaway specs were written
+and deleted; nothing new is committed to `e2e/`. Two selector mistakes worth
+not repeating: `/legend/i` matches the Help button's own `title` before the
+menu item, and `MenuItem` renders a plain `<button>` whose text includes its
+`<Hint>` line, so neither an exact name nor a `menuitem` role matches. The menu
+closes on `mouseleave`, so open it with `hover`, not `click`.
+
+
+---
 ## 2026-09-22 — Two probe browsers, and a green test that was wrong
 
 ### Why the ports split

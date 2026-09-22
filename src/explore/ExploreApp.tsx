@@ -21,6 +21,7 @@ import SelectionTable from './SelectionTable';
 import SelectionTree from './SelectionTree';
 import OwnershipGraphView from './OwnershipGraphView';
 import DetailDrawer from './DetailDrawer';
+import { panelInsetPx } from './panelLayout';
 import ExampleCasesPane from './ExampleCasesPane';
 import OwnershipLegend from './OwnershipLegend';
 import HelpMenu from './HelpMenu';
@@ -123,6 +124,34 @@ function ExploreAppInner() {
   const [casesOpen, setCasesOpen] = useState(initial.cases);
   const [legendOpen, setLegendOpen] = useState(initial.legend);
   const [copied, setCopied] = useState(false);
+
+  /*
+   * How much room the canvas leaves on the right for the open panels — bug (a)
+   * of TASKS `panel-refit`.
+   *
+   * ⚠️ WHY THIS LIVES HERE. The panels are `absolute`/`z-30` overlays that
+   * never enter layout (`HelpPanel`), so the canvas's container does not
+   * narrow when one opens and the canvas cannot discover them. Measured
+   * 2026-09-22: opening the legend changed the scroll container's width by
+   * nothing at all. This component owns the open/closed state, so it is the
+   * only place that can say.
+   *
+   * ⚠️ NOT recomputed on window resize, deliberately. `HelpPanel` freezes its
+   * width at open time for the same reason, and the two must agree; a value
+   * that tracked the window would desync from the panel it describes. Both
+   * refresh on the next open.
+   *
+   * ⚠️ A DRAGGED panel is not subtracted here, and dragging deliberately does
+   * NOT trigger a redraw (Siggie's rule): the canvas keeps the narrow fit
+   * until something else refits it, so nothing moves under the user's hand.
+   * That is why this reads only `legendOpen`/`casesOpen` and never
+   * `useDragged`'s offset — a dragged panel is still "open", and honouring the
+   * drag here would redraw on every pointer-move.
+   */
+  const rightInset = useMemo(
+    () => panelInsetPx({ legend: legendOpen, cases: casesOpen }, window.innerWidth),
+    [legendOpen, casesOpen],
+  );
 
   /*
    * Applying a case replaces every piece of graph state at once.
@@ -525,6 +554,7 @@ function ExploreAppInner() {
               setMergeMode={setMergeMode}
               mergeSibs={mergeSibs}
               setMergeSibs={setMergeSibs}
+              rightInset={rightInset}
             />
           )}
         </div>

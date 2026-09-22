@@ -1301,6 +1301,7 @@ export default function OwnershipGraphView({
   setDirection,
   mergeMode,
   setMergeMode,
+  rightInset = 0,
 }: {
   dataService: DataService;
   selectedIds: Set<string>;
@@ -1334,6 +1335,16 @@ export default function OwnershipGraphView({
   mergeSibs: boolean;
   setMergeSibs: (v: boolean) => void;
   onTogglePathToRoot?: () => void;
+  /**
+   * Room to leave on the RIGHT for the floating help panels, in px — bug (a)
+   * of TASKS `panel-refit`.
+   *
+   * The panels are `absolute`/`z-30` overlays that never enter layout, so this
+   * container keeps its full width and the boxes would otherwise draw
+   * underneath them. `ExploreApp` owns the panels and so owns this number;
+   * the canvas only obeys it. 0 when nothing is docked.
+   */
+  rightInset?: number;
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const markerId = (name: string) => `${name}-${uid}`;
@@ -1511,6 +1522,17 @@ export default function OwnershipGraphView({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- zp refs are stable
     [],
   );
+  /*
+   * Push the panels' inset down to the fit. Its own effect, not folded into
+   * the layout one below: the inset changes when a PANEL opens, which has
+   * nothing to do with a new ELK layout landing, and `setRightInset` already
+   * no-ops when the value is unchanged.
+   */
+  useEffect(() => {
+    zp.setRightInset(rightInset);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- zp fns are stable
+  }, [rightInset]);
+
   const contentW = (geom?.width ?? 0) + PAD * 2;
   const contentH = (geom?.height ?? 0) + PAD * 2;
   useEffect(() => {

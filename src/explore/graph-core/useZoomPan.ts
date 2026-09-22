@@ -94,6 +94,11 @@ export interface ZoomPan {
   isAutoFit: () => boolean;
   /** Tell the hook the unscaled content size (call when layout changes). */
   setContentSize: (width: number, height: number) => void;
+  /**
+   * Room to leave on the RIGHT for an overlay panel that never enters layout,
+   * in px. See `setRightInset` for why a fit needs telling.
+   */
+  setRightInset: (px: number) => void;
 }
 
 
@@ -136,6 +141,18 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
   const autoFitRef = useRef(true);
   // Cleared by the first fit, which is the one that must not animate.
   const firstFitRef = useRef(true);
+  /*
+   * Room on the right that the container's own width does not account for —
+   * bug (a) of TASKS `panel-refit`.
+   *
+   * ⚠️ This is the ONE thing a fit may know about an overlay, and it is not
+   * the popover-dodging the note above forbids. The difference: that one
+   * tracked a rect this file does not own and guessed which side was free,
+   * per fit. This is a scalar the HOST pushes in — the host owns the panels,
+   * decides when the value changes, and freezes it at open time. Nothing here
+   * measures a panel or knows one exists.
+   */
+  const insetRef = useRef(0);
 
   // The slack in px, from the container's current size.
   const slack = useCallback(() => {
@@ -153,7 +170,24 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
       // border-box (Tailwind's preflight), so the padding is inside the
       // width: the content box is exactly the zoomed content.
       spacer.style.padding = `${y}px ${x}px`;
-      spacer.style.width = `${sizeRef.current.w * zoomRef.current + 2 * x}px`;
+      /*
+       * PLUS the inset on the right.
+       *
+       * Without it the spacer is `content + 2*slack`, and a fit that shrank
+       * the content to the usable width leaves the spacer narrower than
+       * `container + slack` — so `scrollTo({left: slack})` CLAMPS short and
+       * the content never reaches the container's left edge. Measured
+       * 2026-09-22 with the legend open: requested 320, got 197 (the max),
+       * and the diagram sat 197px right of where the fit intended, running
+       * under the panel the fit had just made room for.
+       *
+       * Adding the inset here is what makes the fit's scroll target
+       * reachable: the extra width is on the right, exactly where the panel
+       * covers, so it is pannable emptiness UNDER the panel rather than
+       * anywhere the diagram wants to be.
+       */
+      spacer.style.width =
+        `${sizeRef.current.w * zoomRef.current + 2 * x + insetRef.current}px`;
       spacer.style.height = `${sizeRef.current.h * zoomRef.current + 2 * y}px`;
     }
   }, [slack]);
@@ -267,7 +301,16 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
     // on load rather than as a response to anything the user did.
     const animate = !firstFitRef.current;
     firstFitRef.current = false;
-    setZoom(Math.min(container.clientWidth / w, container.clientHeight / h, 1), animate);
+    /*
+     * The usable width is the container MINUS the overlay panels' inset. Never
+     * below a quarter of the container: an inset wider than the canvas would
+     * otherwise produce a zero or negative fit width and collapse the diagram
+     * to nothing. That floor is a guard against a bad inset, not a layout
+     * policy — `panelInsetPx` is what decides how much room a panel gets.
+     */
+    const usable = Math.max(container.clientWidth - insetRef.current,
+                            container.clientWidth * 0.25);
+    setZoom(Math.min(usable / w, container.clientHeight / h, 1), animate);
     requestAnimationFrame(() => {
       // To the content's origin, i.e. just past the slack. Always reachable:
       // the spacer is never narrower than twice the slack.
@@ -284,6 +327,66 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
       }
     });
   }, [setZoom, slack]);
+
+  /*
+   * The host tells the canvas how much room the overlay panels take, and a
+   * CHANGE refits — opening or closing a panel is exactly as much a reason to
+   * refit as a new layout is.
+   *
+   * Only while auto-fitting, like every other refit here: a user who chose a
+   * zoom keeps it.
+   *
+   * ⚠️ Dragging a panel sets this back to 0 and the host does NOT force a
+   * redraw for it (Siggie's rule) — but a later refit will use the new value,
+   * which is exactly "the canvas may use the full width at its next natural
+   * redraw". Nothing moves under the user's hand.
+   */
+  const setRightInset = useCallback((px: number) => {
+    if (px === insetRef.current) return;
+    insetRef.current = px;
+    // The spacer carries the inset (see `syncSpacer`), so it has to be resized
+    // before the fit scrolls — otherwise this fit's scroll target is clamped
+    // by the PREVIOUS inset's spacer width.
+    syncSpacer(0);
+    if (autoFitRef.current) zoomToFit();
+  }, [syncSpacer, zoomToFit]);
+
+  /*
+   * REFIT WHEN THE CONTAINER RESIZES — bug (b) of TASKS `panel-refit`.
+   *
+   * `DetailDrawer` is `w-96 shrink-0 border-l`, a real flex child, so opening
+   * it genuinely narrows this container. Nothing noticed: every fit ran from
+   * the layout effect, so only the FIRST fit ever saw the drawer. Measured
+   * 2026-09-22 at 1600px: a fresh load with `&detail=Person` fits into 896,
+   * but opening the drawer on an already-drawn diagram moved no box at all —
+   * the boxes kept their coordinates and were simply clipped.
+   *
+   * ⚠️ This is NOT the Legend's bug. `HelpPanel` is an overlay that never
+   * enters layout, so it does not resize this container and no observer here
+   * can see it; that one needs the inset (bug (a)). They share a symptom and
+   * nothing else.
+   *
+   * Only while auto-fitting, on the same rule as the relayout refit: a user
+   * who chose a zoom level keeps it, and a drawer opening is not a reason to
+   * overrule them.
+   */
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+    // The size the fit last ran against. A ResizeObserver fires once on
+    // observe, and that first callback is the size the initial fit already
+    // used — refitting on it would animate a fit that just happened.
+    let last = { w: container.clientWidth, h: container.clientHeight };
+    const ro = new ResizeObserver(() => {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      if (w === last.w && h === last.h) return;
+      last = { w, h };
+      if (autoFitRef.current) zoomToFit();
+    });
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [zoomToFit]);
 
   /*
    * `--help-vh` tracks the WINDOW as well as the zoom, so a resize that does
@@ -388,5 +491,6 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
     getZoom: () => zoomRef.current,
     isAutoFit: () => autoFitRef.current,
     setContentSize,
+    setRightInset,
   };
 }

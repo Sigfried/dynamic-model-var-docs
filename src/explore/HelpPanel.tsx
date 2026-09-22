@@ -22,9 +22,9 @@
  * dragging is per-open, so there is no arrangement to manage.
  */
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useDragged } from '../help/useDragged';
-import { PANEL_WIDTH_REM, OFFSET_RIGHT_REM } from './panelLayout';
+import { PANEL_MIN_PX, PANEL_WIDTH_FRACTION, offsetRightPx } from './panelLayout';
 
 export interface HelpPanelProps {
   title: string;
@@ -33,8 +33,15 @@ export interface HelpPanelProps {
   onClose: () => void;
   /** Steps the panel right, so a second one does not cover the first. */
   offset?: boolean;
-  /** Default width in rem. The user can still drag the resize corner. */
-  widthRem?: number;
+  /**
+   * WHICH panel this is, which decides its opening width: a fraction of the
+   * viewport, floored at the panel's own content minimum (`panelLayout`). It
+   * replaced a `widthRem` number — the two panels' floors differ for reasons
+   * specific to each (the legend's pivot tables, the cases pane's prose), so
+   * the caller naming itself keeps that reasoning in one place instead of
+   * spreading magic numbers across the call sites.
+   */
+  kind?: keyof typeof PANEL_MIN_PX;
   /** `data-help-id` for the panel's root, so a tour step can anchor on the
    *  whole panel. Opt-in: only a panel a tour points at needs one. */
   helpId?: string;
@@ -42,10 +49,26 @@ export interface HelpPanelProps {
 }
 
 export default function HelpPanel({
-  title, subtitle, onClose, offset, widthRem = PANEL_WIDTH_REM.cases, helpId,
+  title, subtitle, onClose, offset, kind = 'cases', helpId,
   children,
 }: HelpPanelProps) {
   const drag = useDragged();
+
+  /*
+   * The OPENING width, captured once per open and never updated.
+   *
+   * `useState` with an initializer, not a `useEffect` or a resize listener,
+   * and that is the whole point: the canvas's inset is frozen to this value
+   * (see `panelInsetPx`), so a width that tracked the window would silently
+   * desync the two. A panel reopens at whatever the viewport is then — which
+   * is also how `useDragged` treats position.
+   *
+   * ⚠️ `vw` in CSS would NOT do: it would keep tracking, and the inset the
+   * canvas laid itself out against would go stale on every window resize.
+   */
+  const [openWidth] = useState(() =>
+    Math.max(PANEL_MIN_PX[kind], window.innerWidth * PANEL_WIDTH_FRACTION));
+  const [openOffsetRight] = useState(() => offsetRightPx(window.innerWidth));
 
   // Escape closes, matching the drawer and the menu that opened this.
   useEffect(() => {
@@ -85,7 +108,7 @@ export default function HelpPanel({
          fifth short, and `resize` may still be dragged past it. */
       style={{
         resize: 'both',
-        width: `${widthRem}rem`,
+        width: `${openWidth}px`,
         maxWidth: 'calc(100vw - 2rem)',
         /* `top-14` is 3.5rem; leave the same 1rem margin at the bottom that
            `right-4` leaves at the side. A dragged panel is positioned from the
@@ -95,7 +118,7 @@ export default function HelpPanel({
           : 'calc(100vh - 4.5rem)',
         ...(drag.offset
           ? { position: 'fixed', ...drag.offset, right: 'auto' }
-          : !moved && offset ? { right: `${OFFSET_RIGHT_REM}rem` } : {}),
+          : !moved && offset ? { right: `${openOffsetRight}px` } : {}),
       }}
       className={`z-30 overflow-y-auto
                   rounded-lg border border-gray-300 dark:border-slate-600
@@ -108,7 +131,16 @@ export default function HelpPanel({
         /* The whole header is the handle, close button excluded by the hook's
            `button` test. `sticky` so it stays reachable once the body scrolls —
            which also means it stays the grab point on a tall panel. */
-        className="sticky top-0 flex items-baseline justify-between gap-2 px-4 py-2
+        /* ⚠️ `z-10` is load-bearing, not decoration. The header is `sticky`
+           and painted a background so the body scrolls UNDER it — but a
+           background is not enough on its own. `.lt-label` is
+           `position: relative` and `.lt-toggle` `position: absolute`
+           (legendTable.css), and a positioned element with `z-index: auto`
+           paints above a non-positioned one in the same stacking context, in
+           tree order. Both come after this header, so pivot-table group labels
+           scrolled OVER it while ordinary leaf rows correctly went under
+           (Siggie, 2026-09-22) — the "some stuff, not everything" tell. */
+        className="sticky top-0 z-10 flex items-baseline justify-between gap-2 px-4 py-2
                    border-b border-gray-200 dark:border-slate-700
                    bg-white dark:bg-slate-800 cursor-grab active:cursor-grabbing
                    select-none"

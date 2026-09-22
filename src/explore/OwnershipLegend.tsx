@@ -48,7 +48,6 @@ import HelpMarkdown from '../help/HelpMarkdown';
 import { fillPlaceholders } from '../help/parseHelpContent';
 import { helpTextResolvers } from './helpTextResolvers';
 import HelpPanel from './HelpPanel';
-import { PANEL_WIDTH_REM } from './panelLayout';
 import EdgeSample, { type DrawnKind } from './EdgeSample';
 import { legendPanelTag, legendSectionTag, legendRuleTag } from './helpAnchors';
 import { EDGE_STYLE } from './edgeStyle';
@@ -499,7 +498,7 @@ export default function OwnershipLegend({
       subtitle="What the diagram's arrows, colors and buttons mean."
       onClose={onClose}
       offset={offset}
-      widthRem={PANEL_WIDTH_REM.legend}
+      kind="legend"
       helpId={legendPanelTag()}
     >
       <div className="text-xs">
@@ -606,6 +605,12 @@ export default function OwnershipLegend({
                     const shape = shapeOf(pivot, forward);
                     const verdict = g.verdict as DrawnKind;
                     return (
+                      /* The scroll wrapper is not cosmetic: `.lt` is
+                         `min-width: max-content`, so a table wider than the
+                         panel has to overflow SOMEWHERE rather than be clipped
+                         (the TARGET column ran off the right edge). It cannot
+                         scroll itself — see legendTable.css. */
+                      <div className="lt-scroll">
                       <div className="lt" style={{ gridTemplateColumns: tracksFor(shape) }}>
                         {/* The header names the columns the rows land in. Its
                             cells span the same tracks, which is what the
@@ -647,6 +652,7 @@ export default function OwnershipLegend({
                           onToggle={path => toggleNode(key, pivot, path)}
                           classLink={classLink}
                         />
+                      </div>
                       </div>
                     );
                   })()}
