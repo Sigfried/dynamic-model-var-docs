@@ -717,9 +717,9 @@ and giving the three of them one drag/resize model. The drag mechanism itself is
 built and shared — [`useDragged.ts`](../src/help/useDragged.ts) — so the work left
 is the layout change, not the interaction.
 
-**Open, Siggie's call:** should a dragged Legend snap back to its default
-position on each tour step? Today the drag persists, which also drops the
-canvas inset `panel-refit` gives it ([archive](archive/tasks-2026-09-22.md)).
+**Decided (Siggie, 2026-09-22): a dragged Legend does NOT snap back** on a
+tour step. The drag persists, which also drops the canvas inset `panel-refit`
+gives it ([archive](archive/tasks-2026-09-22.md)).
 
 ⚠️ **"Apply the change before anchoring" does not work as a fix**, considered
 and rejected 2026-09-08. There is no synchronous moment when a step's `Change:`

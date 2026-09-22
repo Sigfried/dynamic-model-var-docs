@@ -41,7 +41,7 @@ the intent.
 
 **Cleanup pass:** `panel-refit` and `legend-table-grouping` were archived to
 `docs/archive/tasks-2026-09-22.md`. panel-refit's one open question (should
-a dragged Legend reset on each tour step) moved to BACKLOG §Overlays. The
+a dragged Legend reset on each tour step) was answered no by Siggie; recorded in BACKLOG §Overlays. The
 `legendTable.css` comments that argued with the previous
 `width: max-content` layout and the right-edge chevron were cut down to
 current state.
