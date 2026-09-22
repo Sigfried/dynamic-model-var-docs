@@ -1063,44 +1063,33 @@ than just re-reading.
   You can explore each of these using the `owners`, `attrs`, `owned`, and `total` dropdowns.
 - Beats:
   1. two-groups-of-owners-multivalued
-     - Only: sel=Person~CauseOfDeath&legend=1
-     - Anchor: node-box:CauseOfDeath
-     - Spotlight: slot-row:Person.cause_of_death
+     - Only: sel=ResearchStudyCollection~ResearchStudy&legend=1
+     - Anchor: node-box:ResearchStudy
+     - Position: span-left bottom
+     - Spotlight: slot-row:ResearchStudyCollection.entries
      - Description:
        Attributes classified as :s[Owns target]{color=own-fwd} fall into two general groups.
-       ##### Multivalued
-       For instance, a Person can have multiple (`0..*`) causes of death.
+       ##### Multivalued targets
+       In most cases, if an attribute holds a list of things, those things are part of the source entity. For instance, a ResearchStudyCollection holds one or more (`1..*`) ResearchStudy entries.
+       :::s{center color=entity}
+         {{relation:own-fwd:ResearchStudyCollection.entries:ResearchStudy}}
+       :::
   2. two-groups-of-owners-characteristics
+     - Keep: true
      - **Only:** sel=Participant~Visit~TimePeriod&legend=1
-     - Anchor: node-box:TimePeriod
+     - Anchor: node-box:Participant
+     - Position: span-right bottom
+     - OffsetX: anchor.width * .5
      - Spotlight: slot-row:Visit.year_range
      - Description:
        ##### Facts
-       The other group holds exactly one (`0..1`) — a single **fact about** the
-       entity holding it, with no life of its own. A Visit's `year_range` is
-       the one TimePeriod it ran over:
+       Attrbute targets that are not meaningful on their own and are used to describe or qualify the source entity are also :s[owned by]{color=own-fwd} the source. TimePeriod is a fact about a Visit.
        :::s{center color=entity}
          {{relation:own-fwd:Visit.year_range:TimePeriod}}
        :::
-
-       Quantities, TimePoints and BodySites arrive this way throughout the
-       model: a `5 mg` Quantity is not something you look up.
   3. one rule, not two
      - Description:
-       These were once **two** rules — an attribute owned what it pointed at
-       *because* it was multivalued, and single-valued ones owned *despite*
-       it. Cardinality was the rule: multivalued meant forward, single-valued
-       meant backward.
-
-       It didn't hold. Nearly every single-valued attribute had to be flipped
-       forward again by hand, so the exception list was longer than the rule.
-       Reading both shapes as ownership and letting the two exceptions on the
-       next steps do the flipping says the same thing about every line here,
-       with no list.
-
-       So the split is worth knowing and decides nothing: a list and a fact
-       differ in **how many**, not in who owns whom.
-
+       To explore these relationships, you can distinguish lists from facts by looking at the cardinality of :s[Owns target]{color=own-fwd} attributes in the legend's `{{ownership-count:owns-target-forward-by-default.owned}} owned` dropdown which is grouped by target.
 ### belongs-to-target-backward-by-entity
 
 - **Title:** Exception: entities that are only ever referred to

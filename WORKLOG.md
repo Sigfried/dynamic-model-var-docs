@@ -8,6 +8,36 @@ Newest first.
 
 
 ---
+## 2026-09-22 (evening) — `owns-target` finished; corner `Position:` values flip
+
+Siggie finished `owns-target`. Beat 1's example moved from
+`Person.cause_of_death` to `ResearchStudyCollection.entries` (`1..*`, not
+`0..*` — it is required). Siggie rewrote beats 2–3 themselves: the "Facts"
+beat is shorter and the "these were once two rules" history was cut to one line
+pointing at the Legend's `owned` pivot, where cardinality can be read per target.
+
+**"Two-word Position doesn't work" was a misreading, measured.** Siggie saw
+`bottom left` render identically to `bottom right`, and `bottom center` land
+somewhere else again. A probe (inline `positionArea` on the live popover, beat
+anchored on Participant) showed the computed area actually used:
+
+- `bottom left` → `right bottom`. The corner cell is entirely LEFT of the
+  anchor; Participant is at the canvas's left edge, so `flip-inline` mirrors it.
+- `bottom center` → `inline-end`. `center` confines the popover to the
+  anchor's own width (~200px vs a ~545px popover), so it overflows and drops to
+  the `--help-shift` fallback.
+
+The in-between placement Siggie wanted is `span-right bottom` (left edge on the
+anchor's left edge) plus `OffsetX: anchor.width * .5`; measured left edge 455,
+between `bottom` (330) and `bottom right` (566). **Trap:** a corner or `center`
+cell is only as big as the space beside/under the anchor; for a wide popover
+use `span-*` and nudge with `OffsetX`.
+
+`helpPanelWidth.test.tsx` fails since `99c5f0c` (legend min width 420 < the
+519 the test demands); not addressed, waiting on Siggie.
+
+
+---
 ## 2026-09-22 (later) — legend-table-grouping shipped
 
 **The arrow column came from Claude Design, not from an agent.** Siggie got
