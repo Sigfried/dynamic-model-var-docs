@@ -83,9 +83,46 @@ popover's containing block all compute against 1280.
 ⚠️ This corrects a reading taken from screenshots: the canvas does NOT refit to
 the Legend on redraw. It refits to its container, which the Legend does not
 shrink. "Force a redraw when the panel opens" therefore delivers nothing on its
-own — an inset has to exist first. That is the agreed plan (see TASKS
-`legend-inset`), with dragging deliberately dropping the inset WITHOUT a
-redraw, so the diagram never rearranges under the user's hand.
+own — an inset has to exist first.
+
+### The brief for the next session: TASKS `panel-refit`
+
+**Nothing is built.** This session ended with the diagnosis and the plan only;
+the code is untouched. Siggie's screenshots late in the session show the
+symptom live and are NOT a regression from anything here.
+
+**Two different bugs that look identical on screen.** Measured at 1600px with
+`?sel=Participant~Person~TimePeriod~Visit` — container `clientWidth`, then the
+rightmost node box's right edge:
+
+```
+plain            1280   1536
+&legend=1        1280   1536    <- identical: the Legend changed NOTHING
+&detail=Person    896   1196    <- container narrowed AND boxes refit
+```
+
+**(a) The Legend is an overlay.** `HelpPanel` is `absolute top-14 right-4` /
+`z-30` and never enters layout, so the container keeps its full width and the
+boxes draw underneath it. This needs the right-inset plan in the TASKS row.
+`useDragged`'s `offset === null` is already exactly the "docked" signal, so no
+new state is needed to know whether to apply it.
+
+**(b) `DetailDrawer` is NOT an overlay** — `w-96 shrink-0 ... border-l`, a real
+flex child, which is why `&detail=Person` narrows the container to 896 and the
+boxes refit to 1196. It is correct on a fresh load and wrong when the panel is
+opened interactively: nothing observes the container's resize. There is no
+`ResizeObserver` anywhere in `useZoomPan.ts`. That is the whole of bug (b), it
+is small, and it is independent of (a) — do it first.
+
+⚠️ Do not collapse these two into one fix. They share a symptom and have
+nothing else in common: (a) is "the canvas cannot see the panel", (b) is "the
+canvas saw it too late".
+
+**Verify with the browser, not with vitest.** jsdom has no layout, so a vitest
+assertion here is a claim about CSS text. `make probe-browser-both` then `make
+e2e-probe`; the discriminating check is that with a panel open, every node
+box's right edge is left of the panel's left edge. And per the rule above, run
+any new spec under `make e2e-ui` before believing it.
 
 
 ---
