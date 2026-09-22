@@ -940,8 +940,13 @@ The structure, which the steps below now follow:
   means; `why-ownership` and `edge-types` were folded into it 2026-09-20.
 - the rule and its exceptions, in teaching order, each step ending at the
   Legend block that counts it (`Spotlight: legend-rule:<rule-id>`):
-  - the-legend -- the default, an attribute owns what it points at, as a beat
-    (owns-target-forward-by-default; the step also introduces the Legend)
+  - the-legend -- introduces the Legend and the scale of the problem
+  - owns-target -- the default rule itself, an attribute owns what it points
+    at, with its four counts. Its beats split the rule's attributes into
+    multivalued and single-valued ("Facts") and then say that the split
+    decides NOTHING: those were two separate rules once, and collapsing them
+    is why there are three rules and not more. Rationale for modelers, not
+    machinery -- no code reads cardinality.
   - belongs-to-target-backward-by-entity -- exception, by entity: referred-to entities
   - belongs-to-target-backward-by-attribute -- exception, by attribute: named back-pointers
 - then what the rules look like once they are all running at once:
@@ -959,6 +964,17 @@ Every count below is LIVE — an `ownership-count` placeholder, resolved against
 the classifier at render — and the rule names are the legend's own `label`
 strings from `OWNERSHIP_RULES`, so tour, legend and classifier say one thing.
 If a label changes there, change it here. Do not hand-type a count.
+
+⚠️ There is no live key for the multivalued/single-valued split — only
+`owners`/`attrs`/`owned`/`total` — so `owns-target`'s beats say "the other
+group" rather than a number. Do not hand-type one.
+
+⚠️ Be sparing with `Position:` on the steps whose canvas is a left-to-right
+chain with the Legend open on the right. The automatic rule puts the popover
+BELOW the anchored box, which is the only direction clear of both the chain and
+the panel; an override loses that. `Position: left` on a beat anchored to the
+rightmost box threw the popover across the canvas onto the box holding its own
+spotlit row (2026-09-22).
 -->
 
 ### which-way
@@ -1023,43 +1039,62 @@ If a label changes there, change it here. Do not hand-type a count.
   are {{ownership-count:declared}} attributes pointing from one entity to
   another. The schema doesn't say which end owns which, so the Explorer decides.
   The rules are laid out in the **Legend**.
-- Beats:
-  1. owns-target-forward-by-default
-     - Keep: true
-     - **Spotlight:** legend-rule:owns-target-forward-by-default
-     - **Highlight:** ring
-     - **Description:**
-       The default rule is **:s[Owns target / forward arrow / by default]{color=own-fwd}** —
-       an attribute owns what it points at, so the target is drawn to the right
-       with a forward arrow. {{ownership-count:owns-target-forward-by-default.total}}
-       attributes follow it: `Questionnaire.items` holds QuestionnaireItems, so
-       a Questionnaire owns them.
-       :::s{center color=entity}
-         {{relation:own-fwd:Questionnaire.items:QuestionnaireItem}}
-       :::
-  2. not about cardinality
-     - Only: sel=Observation~Quantity&legend=0
-     - Action: Drew an Observation and a Quantity.
-     - Anchor: node-box:Quantity
-     - Spotlight: slot-row:Observation.value_quantity
-     - Description:
-       It has nothing to do with how many. `value_quantity` holds exactly one
-       Quantity (`0..1`) and is owned just the same — a Quantity is a fact
-       *about* the observation holding it, with no life of its own.
 
-       This rule is **total**: on its own it would decide every attribute in
-       the model. The next two steps are the only places it doesn't hold.
-  3. counted live
-     - Change: legend=1
-     - Action: Reopened the Legend panel.
-     - Anchor: none
-     - Spotlight: legend-rule:owns-target-forward-by-default
-     - Highlight: ring
+### owns-target
+
+- **Title:** Rules — Owns target
+- **Tour:** Ownership
+- **Only:** sel=Participant~Visit~TimePeriod&legend=1
+- **Anchor:** legend-rule:owns-target-forward-by-default
+- **Highlight:** ring
+- **Description:**
+  The default rule is **:s[Owns target]{color=own-fwd}** — an attribute owns what it points at. Of the {{ownership-count:declared}} attributes in the schema, {{ownership-count:owns-target-forward-by-default.total}} fall into this group, including, :s[{{relation:own-fwd:Visit.year_range:TimePeriod}}]{center color=entity}.
+    
+  The {{ownership-count:owns-target-forward-by-default.total}} :s[Owns target]{color=own-fwd} attributes 
+  - are defined on {{ownership-count:owns-target-forward-by-default.owners}} distinct source entities (owners),
+  - have {{ownership-count:owns-target-forward-by-default.attrs}} distinct attribute names,
+  - and point to {{ownership-count:owns-target-forward-by-default.owned}} distinct targets.
+  
+  You can explore each of these using the `owners`, `attrs`, `owned`, and `total` dropdowns.
+- Beats:
+  1. two-groups-of-owners-multivalued
+     - Only: sel=Person~CauseOfDeath&legend=1
+     - Anchor: node-box:CauseOfDeath
+     - Spotlight: slot-row:Person.cause_of_death
      - Description:
-       Every count in the Legend is worked out against the live schema each
-       time it opens, and opening one lists the attributes that rule decided.
-       So when a line looks wrong, the Legend is where to find out why it was
-       drawn that way.
+       Attributes classified as :s[Owns target]{color=own-fwd} fall into two general groups.
+       ##### Multivalued
+       For instance, a Person can have multiple (`0..*`) causes of death.
+  2. two-groups-of-owners-characteristics
+     - **Only:** sel=Participant~Visit~TimePeriod&legend=1
+     - Anchor: node-box:TimePeriod
+     - Spotlight: slot-row:Visit.year_range
+     - Description:
+       ##### Facts
+       The other group holds exactly one (`0..1`) — a single **fact about** the
+       entity holding it, with no life of its own. A Visit's `year_range` is
+       the one TimePeriod it ran over:
+       :::s{center color=entity}
+         {{relation:own-fwd:Visit.year_range:TimePeriod}}
+       :::
+
+       Quantities, TimePoints and BodySites arrive this way throughout the
+       model: a `5 mg` Quantity is not something you look up.
+  3. one rule, not two
+     - Description:
+       These were once **two** rules — an attribute owned what it pointed at
+       *because* it was multivalued, and single-valued ones owned *despite*
+       it. Cardinality was the rule: multivalued meant forward, single-valued
+       meant backward.
+
+       It didn't hold. Nearly every single-valued attribute had to be flipped
+       forward again by hand, so the exception list was longer than the rule.
+       Reading both shapes as ownership and letting the two exceptions on the
+       next steps do the flipping says the same thing about every line here,
+       with no list.
+
+       So the split is worth knowing and decides nothing: a list and a fact
+       differ in **how many**, not in who owns whom.
 
 ### belongs-to-target-backward-by-entity
 

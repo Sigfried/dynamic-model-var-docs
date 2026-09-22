@@ -8,6 +8,75 @@ Newest first.
 
 
 ---
+## 2026-09-22 — `owns-target`'s two groups are a fossil, not a distinction
+
+### What the two groups actually are
+
+Siggie split `the-legend` into a standalone `owns-target` step and left beat 2
+empty under a `##### Characteristics` heading, asking for the text.
+
+The first draft got the framing wrong. I probed the classifier for the
+cardinality split of the 90 forward-owned attributes (**38 multivalued / 52
+single-valued**) and wrote the two groups as a distinction derived from that
+data. Siggie corrected it: *"these used to be two rules: multivalued and the
+exceptions to owns-bkwd. the distinction no longer matters for classification in
+code, but it may still be of interest to modelers or people trying to understand
+our classification rationales."*
+
+So the groups are the **fossil of two retired rules** — "Owns because
+multivalued" and "Owns despite being single-valued" (the labels Siggie wrote for
+the old legend, WORKLOG 2026-09-11). Cardinality *was* the rule: multivalued →
+forward, single-valued → backward, with 51 of 60 single-valued sites flipped
+back by an exception list. That is the whole point of the beat, and it is
+rationale for modelers, not machinery. A new beat 3 says it outright.
+
+Heading renamed **Characteristics → Facts**, Siggie's word. The `5 mg` Quantity
+line is lifted from OWNERSHIP_CLASSIFICATION.md so tour and doc argue it
+identically.
+
+⚠️ **Don't reintroduce a cardinality count here.** There is no live
+`ownership-count` key for the multivalued/single split (only
+`owners`/`attrs`/`owned`/`total`), so "52" would have to be hand-typed — the
+exact rot the placeholders exist to prevent. The prose says "the other group".
+Growing the resolver for one sentence was weighed and not taken.
+
+### The popover kept landing on what it points at
+
+Beat 2 anchors `node-box:TimePeriod` and spotlights `slot-row:Visit.year_range`,
+which is the *read-tours* pattern (anchor the box, spotlight the row). Two
+failed placements, both read on screen by Siggie:
+
+1. **No `Position:`, Legend open** — the popover went to TimePeriod's
+   lower-right, underneath the open Legend panel.
+2. **`Position: left`** — worse. TimePeriod is the rightmost box, so `left`
+   (which is `left span-all`) threw the popover clear across the canvas onto
+   **Visit**, hiding the box that declares the spotlit row. Siggie: *"TimePeriod
+   has to be visible"*, then a screenshot of the ring sitting under the popover.
+
+The fix was to **delete the override**. `popoverPosition`'s automatic rule
+already picks `block-end span-inline-end` for an LR diagram — below the box,
+which is the one direction clear of both Visit and the Legend. The authored
+`Position:` was overriding exactly the right default. Beat 1, which never had
+one, placed correctly the whole time.
+
+**The general trap:** on a step whose canvas is a left-to-right chain with a
+panel open on the right, an authored `Position:` has almost nowhere good to go;
+the automatic rule knows about the growth axis and the fallbacks, and an override
+only takes that away.
+
+Beat 2 also repeated beat 1's `##### Multivalued` block verbatim, which made it
+tall enough to reach the row it spotlights. Beats REPLACE by default, so the
+repeat was there only to show both headings at once; it is cut to the `Facts`
+heading alone. For the same reason beat 3 carries no `Keep: true` — appending
+history under both headings is the growing-block pattern that default-replace
+was introduced to kill.
+
+Beat 1 moved `Change:` → `Only:`. `Change:` is additive, so it was drawing
+Person and CauseOfDeath *on top of* the step's Participant/Visit/TimePeriod —
+five boxes while the copy discusses two.
+
+
+---
 ## 2026-09-21 — Legend anchors nest, and node 26 breaks jsdom's localStorage
 
 ### The Legend gets three nested anchors, not a piecemeal one
