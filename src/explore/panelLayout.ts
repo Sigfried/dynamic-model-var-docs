@@ -25,12 +25,12 @@
  * ~600px viewport — narrower than the floors. Both panels stay resizable by
  * their corner; these are the OPENING sizes, and the inset is frozen to them.
  */
-export const PANEL_WIDTH_FRACTION = 0.35;
+export const PANEL_WIDTH_FRACTION = 0.30;
 
 /**
  * The narrowest each panel opens at, in px.
  *
- * **legend — 520.** Its pivot tables (`legendTable.css`) are column-aligned, so
+ * **legend** Its pivot tables (`legendTable.css`) are column-aligned, so
  * a row that does not fit does not wrap. The widest of the twelve pivots needs
  * 487px of content (measured 2026-09-22), plus the panel's own `px-4` either
  * side. Below this the tables scroll sideways rather than clip (`.lt-scroll`),
@@ -40,7 +40,7 @@ export const PANEL_WIDTH_FRACTION = 0.35;
  * clip (Siggie confirmed it by eye, 2026-09-22).
  */
 export const PANEL_MIN_PX = {
-  legend: 520,
+  legend: 420,
   cases: 380,
 } as const;
 
