@@ -35,7 +35,7 @@
  * an ad-hoc case from whatever it turned up.
  */
 
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { cardinalityLabel } from '../models/containmentGraph';
 import {
   PIVOTS, PIVOT_LABEL, STARTS_OPEN, pivotCount, pivotTree, shapeOf,
@@ -618,31 +618,34 @@ export default function OwnershipLegend({
                             every depth. */}
                         <div className="lt-head">
                           {shape.headers.map((h, i) => (
-                            <div
-                              key={h}
-                              className="lt-h"
-                              style={{ gridColumn: headerColumn(shape, i) }}
-                            >
-                              {h}
-                              {shape.arrow === `label:${i}` && (
-                                <span className="lt-arrow">
-                                  &nbsp;<TableArrow kind={verdict} />
-                                </span>
+                            <Fragment key={h}>
+                              {/* The arrow column's own header, in the track
+                                  the leaves put their arrow in — `levels + 2`,
+                                  NOT `levels + 1`: the leaf's first field takes
+                                  that one. It must come BEFORE the target
+                                  caption in the DOM: auto-placement only moves
+                                  forward, so an arrow emitted after the target
+                                  (track levels + 3) wraps onto a row of its
+                                  own. */}
+                              {shape.leaf.length > 1 && i === shape.levels.length + 1 && (
+                                <div
+                                  className="lt-h lt-h-arrow lt-arrow"
+                                  style={{ gridColumn: shape.levels.length + 2 }}
+                                ><TableArrow kind={verdict} /></div>
                               )}
-                            </div>
+                              <div
+                                className="lt-h"
+                                style={{ gridColumn: headerColumn(shape, i) }}
+                              >
+                                {h}
+                                {shape.arrow === `label:${i}` && (
+                                  <span className="lt-arrow">
+                                    &nbsp;<TableArrow kind={verdict} />
+                                  </span>
+                                )}
+                              </div>
+                            </Fragment>
                           ))}
-                          {/* The arrow column's own header, in the track the
-                              leaves put their arrow in — `levels + 2`, NOT
-                              `levels + 1`: the leaf's first field takes that
-                              one. Getting this wrong put the arrow on top of
-                              the attribute-name caption and shifted every
-                              caption after it one track left. */}
-                          {shape.leaf.length > 1 && (
-                            <div
-                              className="lt-h lt-h-arrow lt-arrow"
-                              style={{ gridColumn: shape.levels.length + 2 }}
-                            ><TableArrow kind={verdict} /></div>
-                          )}
                         </div>
                         <PivotTable
                           nodes={pivotTree(g.pairs, pivot, forward)}

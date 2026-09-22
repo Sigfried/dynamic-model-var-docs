@@ -328,8 +328,8 @@ describe('ownership legend pivots', () => {
       fireEvent.click(find(/38\s*owners/));
       const heads = Array.from(document.querySelectorAll('.lt-head .lt-h'))
         .map(h => h.textContent!.replace(/\u00a0/g, ' ').trim());
-      expect(heads).toEqual(['Source entity', 'Attribute name', 'Target entity', '']);
-      // The fourth cell is the arrow column: an EdgeSample, so it has no text.
+      expect(heads).toEqual(['Source entity', 'Attribute name', '', 'Target entity']);
+      // The third cell is the arrow column: an EdgeSample, so it has no text.
       expect(document.querySelector('.lt-head .lt-h-arrow svg')).not.toBeNull();
     });
 

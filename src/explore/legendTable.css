@@ -87,7 +87,9 @@
   color: #6b7280;
 }
 .lt-head .lt-h:not(:first-child) { padding-left: 6px; }
-.lt-head .lt-h-arrow { padding-left: 0; text-align: center; }
+/* `.lt-h` too: without it this loses to the `:not(:first-child)` rule above
+   (0,2,0 vs 0,3,0) and the arrow sits 6px right of the row arrows. */
+.lt-head .lt-h.lt-h-arrow { padding-left: 0; text-align: center; }
 
 .lt-node {
   display: grid;
