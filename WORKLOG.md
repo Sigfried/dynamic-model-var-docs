@@ -98,8 +98,17 @@ rightmost node box's right edge:
 ```
 plain            1280   1536
 &legend=1        1280   1536    <- identical: the Legend changed NOTHING
-&detail=Person    896   1196    <- container narrowed AND boxes refit
+&detail=Person    896   1196    <- the FIRST fit does see the drawer
 ```
+
+⚠️ **All three rows are fresh page loads, and that limits what they prove.**
+The first draft of this entry read the third row as "the drawer already works"
+and said the container narrows when it opens. Siggie tested it interactively
+and it does not: opening either panel leaves every box at identical
+coordinates, simply clipped. What the row actually shows is that the drawer is
+in the layout *before the first fit runs* — nothing about what happens when it
+opens later. A measurement taken only at load cannot answer a question about
+an interaction.
 
 **(a) The Legend is an overlay.** `HelpPanel` is `absolute top-14 right-4` /
 `z-30` and never enters layout, so the container keeps its full width and the
@@ -108,11 +117,12 @@ boxes draw underneath it. This needs the right-inset plan in the TASKS row.
 new state is needed to know whether to apply it.
 
 **(b) `DetailDrawer` is NOT an overlay** — `w-96 shrink-0 ... border-l`, a real
-flex child, which is why `&detail=Person` narrows the container to 896 and the
-boxes refit to 1196. It is correct on a fresh load and wrong when the panel is
-opened interactively: nothing observes the container's resize. There is no
-`ResizeObserver` anywhere in `useZoomPan.ts`. That is the whole of bug (b), it
-is small, and it is independent of (a) — do it first.
+flex child, which is why a load with `&detail=Person` fits into 896 rather than
+1280. The container genuinely narrows when it opens; what is missing is anyone
+noticing. There is no `ResizeObserver` on the scroll container anywhere in
+`useZoomPan.ts`, so only the first fit ever sees the drawer — open it later and
+the diagram stays exactly where it was, clipped. That is the whole of bug (b):
+add the observer and refit. Small, independent of (a) — do it first.
 
 ⚠️ Do not collapse these two into one fix. They share a symptom and have
 nothing else in common: (a) is "the canvas cannot see the panel", (b) is "the
