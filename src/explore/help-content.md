@@ -969,12 +969,17 @@ If a label changes there, change it here. Do not hand-type a count.
 `owners`/`attrs`/`owned`/`total` — so `owns-target`'s beats say "the other
 group" rather than a number. Do not hand-type one.
 
-⚠️ Be sparing with `Position:` on the steps whose canvas is a left-to-right
-chain with the Legend open on the right. The automatic rule puts the popover
-BELOW the anchored box, which is the only direction clear of both the chain and
-the panel; an override loses that. `Position: left` on a beat anchored to the
-rightmost box threw the popover across the canvas onto the box holding its own
-spotlit row (2026-09-22).
+⚠️ Be sparing with `Position:` here. The automatic rule puts the popover BELOW
+the anchored box and knows about the diagram's growth axis; an override throws
+that away, and on a left-to-right chain there is usually nowhere better for it
+to go. `Position: left` on a beat anchored to the RIGHTMOST box sent the
+popover across the canvas onto the box holding its own spotlit row.
+
+⚠️ These steps currently fight for room with the Legend, which draws OVER the
+canvas instead of beside it (TASKS `panel-refit`). Do not author around that by
+adding `Position:` overrides — when the canvas learns to fit beside the panel,
+every such override becomes wrong, and the tour would need unpicking rather
+than just re-reading.
 -->
 
 ### which-way
