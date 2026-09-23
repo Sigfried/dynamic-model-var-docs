@@ -45,7 +45,7 @@ spec.
   - [Tours and order](#tours-and-order) — `Tour:` names the tour; order comes from the file, not a number; several tours per file
   - [`TourMetadata:` — describing a tour, not a step](#tourmetadata--describing-a-tour-not-a-step) — a section-body block naming and describing a tour; `TourAbbr:`
   - [Linking into a tour](#linking-into-a-tour) — `?tour=<slug>` and `?step=<n>`; one-shot params; slugs are derived
-  - [Selecting a tour](#selecting-a-tour) — `startTour(name)`, `tourNames()`, and the once-unreachable second tour
+  - [Selecting a tour](#selecting-a-tour) — `startTour(name)` and `tourNames()`
   - [Finding a step you can see on screen](#finding-a-step-you-can-see-on-screen) — the dev-only content-id readout; duplicate ids
 - [Pointing at the screen](#pointing-at-the-screen)
   - [Anchors](#anchors) — `Anchor:` grammar: tagged landmarks vs. generated element kinds
@@ -175,16 +175,15 @@ and since order comes from the file there is nothing to renumber. A parked
 `Beats:` takes its beats with it, and a beat's own field can be parked the
 same way.
 
-Strikethrough rather than a prefix because it renders as what it means — a
-markdown editor read the earlier `_Tour:` as the start of italics. `_Tour:` is
-now reported as a misspelling like any other unknown name (below).
+Strikethrough rather than a prefix because it renders as what it means; a
+`_Tour:` prefix reads as the start of italics in a markdown editor, and is
+reported as a misspelling like any other unknown name (below).
 
-**A field name the format does not know is reported, not ignored.** `- Anchr:
-none` used to parse as nothing, silently, which made a typo look exactly like
-a parked field. Now every `- Name: value` line at entry level, beat level or in
-a section body whose name is not a field of that level lands in
-`HelpContent.problems`, the parser logs them, and `helpContent.test.ts` fails
-on any. A prose bullet inside a `Description:` block is indented, so it is not
+**A field name the format does not know is reported, not ignored**, so a typo
+(`- Anchr: none`) cannot look like a parked field. Every `- Name: value` line
+at entry level, beat level or in a section body whose name is not a field of
+that level lands in `HelpContent.problems`, the parser logs them, and
+`helpContent.test.ts` fails on any. A prose bullet inside a `Description:` block is indented, so it is not
 a field line and is never checked.
 
 ## Prose inside a field
@@ -531,14 +530,6 @@ the file and each tour sees only its own steps, in file order. One entry belongs
 to at most one tour; a topic two tours both want is written twice, or written
 once as a help-only entry that both link to.
 
-> **What this replaced.** `Tour:` was a 1-based number until 2026-08-28.
-> Inserting a step between 3 and 4 meant renumbering every step after it, and a
-> duplicate or a gap silently reordered the tour rather than failing. Siggie,
-> 2026-08-28: *"make it easy to add/move steps without having to renumber
-> everything."* Note the two forms are distinguishable on sight — `Tour: 3` is
-> not a tour name — so an unmigrated entry is visible rather than silently
-> wrong, unlike the `State:`/`Change:` rename.
-
 ### `TourMetadata:` — describing a tour, not a step
 
 A tour needs a name and a sentence saying what it is, for a chooser offering
@@ -631,14 +622,6 @@ name runs the FIRST tour in the file. `tourNames(content)` lists them in file
 order, which is what a host builds a tour chooser from — dmvd's is the `Tours`
 submenu in `HelpMenu.tsx`. An unknown name yields an empty tour, so a typo
 starts nothing rather than silently running whichever tour is first.
-
-> **This half was missing until 2026-09-05.** The parser had supported named
-> tours since 2026-08-28, but `HelpProvider` called `tourPositions(content)`
-> with no name and `startTour` took no argument — so only the first tour in the
-> file could ever run. A second `Tour:` name parsed cleanly, passed every test,
-> and was unreachable. If you are adding a tour, that is the failure to check
-> for: the content tests cannot see it, because nothing is wrong with the
-> content.
 
 ### Finding a step you can see on screen
 
@@ -753,8 +736,8 @@ Some kinds have an edge worth knowing when you author:
 - **`node-box:<E>` does NOT resolve for a merged child.** Merged siblings share
   one box, titled by their parent, and a child has no box of its own — only a
   header strip inside the parent's. Address it `child-header:<E>` instead. (There
-  is deliberately no fallback: one used to return the PARENT's box under the
-  child's name, which looked like it worked.)
+  is deliberately no fallback to the PARENT's box: under the child's name it
+  would look like it worked.)
 - **`relation-bar:<E>` needs its entity.** Every box on the canvas has a
   relation bar, so a bare `relation-bar` names all of them; the resolver takes
   the first visible match in document order, which is whichever box the layout

@@ -551,9 +551,9 @@ introduced and then use one word.
 - **Highlight:** none
 - **Width:** 700
 - **Description:**
-  The **BioData Catalyst Harmonized Model (BDCHM)** is a general-purpose
-  schema for describing and storing clinical trial data (this
-  [tour](./?tour=the-biodata-catalyst-harmonized-model){{target:replace}}
+  The **BioData Catalyst Harmonized Model** (BDCHM) is a general-purpose
+  schema for describing and storing clinical trial data (the
+  [BDCHM tour](./?tour=the-biodata-catalyst-harmonized-model){{target:replace}}
   walks through its contents). It is a complex model and this **BDCHM
   Explorer** app provides a way to navigate through it and understand its
   parts and how they relate to each other. This tour walks you through the
@@ -652,6 +652,9 @@ introduced and then use one word.
          from the `Person.cause_of_death`
          attribute to the CauseOfDeath box, meaning that
          *Person **owns** CauseOfDeath through this attribute*
+         :::s{center color=own-fwd}
+           {{relation:own-fwd:Person.cause_of_death:CauseOfDeath}}
+         :::
        - Ticked CauseOfDeath in the panel
        - Moved the row to the top of the Person attributes, and
        - Made the dot to the left of the attribute solid
@@ -673,31 +676,25 @@ introduced and then use one word.
 - Highlight: ring
 - **Description:**
   #### Connecting to non-attribute relations
-  The attribute list only shows attributes declared on this entity,
-  but it can also be related to other entities based on attributes
-  called on them. In order to make those apparent and reachable,
-  there's a row above the attributes showing counts of all RELATED
-  entities on the left and right.
+  The attribute list only shows attributes declared on this entity, but an entity can also be related to other entities through that entity's attributes. In order to make those apparent and reachable, there's a row above the attributes showing counts of all RELATED entities on the left and right.
 
-  **← N** is how many entities this one belongs to, which the layout draws to its left; **M →**
-  how many it owns, drawn to its right.
-  **Hover either count for the list, and click a row in that list to draw it.**
+  **← N** is how many entities this one belongs to, which the layout draws to its left; **:s[M →]{white-space:nowrap}** how many it owns, drawn to its right. **Hover either count for the list, and click a row in that list to draw it.**
 
   Person does not belong to any other entity but, in addition to CauseOfDeath,
   it owns Participant through `Participant.associated_person`. We will add
   that now.
 - **Beats:**
   1. the row that made the line
-     - **Only:** sel=Person~CauseOfDeath~Participant
+     - **Change:** sel=Participant
      - Anchor: node-box:Participant
-     - Position: bottom
-     - ~~Anchor: slot-row:Participant.associated_person~~
-     - **Spotlight:** relation-bar:Person, slot-row:Participant.associated_person
      - Position: right
+     - **Spotlight:** relation-bar:Person, slot-row:Participant.associated_person
      - **Action:** Clicked `Participant.associated_person` through **Person**'s RELATED menu
      - Description:
-       > blafjlakjdfgfg 
-
+       :::s{center color=own-bkwd}
+         {{relation:own-bkwd:Person:Participant.associated_person}}
+       :::
+       Participant :s[belongs to]{color=own-bkwd} Person, but since the attribute that relates them is declared on Participant, we had to find and show Participant through Person's forward-pointing RELATED menu.
 
 ### grow-participant
 
@@ -859,6 +856,7 @@ introduced and then use one word.
 </details><!-- end of Using the Explorer tour -->
 </div>
 
+<!--
 <div style="margin-left: 40px">
 <details open>
 <summary><b>What BDCHM is built with</b></summary>
@@ -922,8 +920,9 @@ introduced and then use one word.
   That is why the structure in this app is worth learning even if you never
   write a line of LinkML: it is the shape your harmonized data will have.
 
-</details><!-- end of What BDCHM is built with tour -->
+</details><!-- end of What BDCHM is built with tour -- >
 </div>
+-->
 
 <div style="margin-left: 40px">
 <details open>

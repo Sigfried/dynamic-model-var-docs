@@ -8,6 +8,24 @@ Newest first.
 
 
 ---
+## 2026-09-23 — Ownership tour done; cleanup pass
+
+Siggie declared the Ownership tour done; its TASKS row is archived to
+`docs/archive/tasks-2026-09-23.md`. Cleanup, beyond archiving:
+
+- FORMAT.md lost two history blocks (numeric `Tour:`; the once-unreachable
+  second tour — the chooser is built from `tourNames()` now, so that trap
+  cannot recur) and three "used to" sentences, restated as current state.
+- TASKS `panel-and-zoom` (b) claimed "no `ResizeObserver` in the codebase";
+  `panel-refit` added one that refits on any container resize while
+  auto-fitting. The row now says probably fixed, unverified for the CLOSE case.
+  Its two ⚠️ notes arguing with earlier versions of the row were cut.
+- The TASKS intro said *Using the Explorer* had never been read, contradicting
+  this log (Siggie read it 2026-09-18). The claim was removed rather than
+  replaced, since how far that read got isn't recorded.
+
+
+---
 ## 2026-09-22 (night) — the two exception steps, summary and Legend reframed
 
 **Siggie hated the "entities that are only ever referred to" framing** and
