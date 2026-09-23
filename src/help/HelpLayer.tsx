@@ -1037,7 +1037,7 @@ export default function HelpLayer() {
             )}
 
             {/*
-              TEMPORARY authoring aid (docs/TASKS.md item 3c) -- where this
+              Authoring aid -- where this
               popover is WRITTEN, so an author who sees something wrong on
               screen can find the block that produced it. Off unless the Help
               menu's `Show content ids` is on, and that item only exists when
@@ -1067,7 +1067,7 @@ export default function HelpLayer() {
 }
 
 /**
- * TEMPORARY authoring aid (docs/TASKS.md item 3c): the popover's address in
+ * Authoring aid: the popover's address in
  * help-content.md, click-to-copy.
  *
  * It SHOWS the address (`relationship-kinds \u25b82`) and COPIES the markdown

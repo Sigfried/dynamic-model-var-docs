@@ -216,7 +216,6 @@ describe('the Help menu', () => {
     expect(showEntry).toHaveBeenCalledWith('node-dismiss');
   });
 
-  /* TEMPORARY (docs/TASKS.md `address-readout`) — delete with the toggle. */
   test('the authoring toggle is offered, and flips the flag', () => {
     const toggleAddresses = vi.fn();
     openMenu({ tours: TOURS, toggleAddresses });

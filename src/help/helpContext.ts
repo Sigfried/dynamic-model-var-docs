@@ -130,8 +130,6 @@ export interface HelpApi {
    * package ships as an external dependency, so the consuming app's build
    * environment is not its to read — and "is this a dev build" is the wrong
    * question anyway, since the e2e suite drives a dev server.
-   *
-   * TEMPORARY, with the aids themselves (docs/TASKS.md `address-readout`).
    */
   authoringAids: boolean;
   /**

@@ -805,7 +805,7 @@ body.help-mode {
 }
 .help-dot-on { background: #0284c7; }
 
-/* TEMPORARY authoring aid (docs/TASKS.md item 3c): the popover's address in
+/* Authoring aid: the popover's address in
    help-content.md, click-to-copy. Deliberately the quietest thing in the
    popover -- it is for whoever is editing the content, not for a viewer, and
    the Help menu item that turns it on only exists in a dev build. Monospace

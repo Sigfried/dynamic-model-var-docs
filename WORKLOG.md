@@ -25,6 +25,10 @@ archived to `docs/archive/tasks-2026-09-23.md`; the TASKS section is now plain
 - The Ownership tour's structure comment named the cut `bar-sides` step, a
   step id that does not exist, and a "fight with the Legend" warning about
   `panel-refit`, which shipped 2026-09-22. Refreshed.
+- `address-readout` (delete the dev-only "Show content ids" tag/toggle once
+  the tours were written) was DROPPED, not done: Siggie keeps it as a
+  permanent authoring aid for future tours here and in other projects. It is
+  already gated on `DEV_EXTRAS` (dev and not e2e), so nothing ships.
 - `lint-baseline` row's "says 20, reports 30" was stale (both are 34 now);
   its two causes are still real (`.vite/deps` linted; `Section.tsx`
   conditional hook), so the row stays.

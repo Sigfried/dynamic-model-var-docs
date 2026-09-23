@@ -1136,7 +1136,7 @@ function addressOf(entryId: string, beatIndex: number): string {
  * EVERY build.
  *
  * Separate from `addressOf` because the readers differ: that one feeds the
- * visible tag, which is dev-only and due to be deleted (`address-readout`).
+ * visible tag, which is dev-only.
  * This one is ungated, so `e2e/placement.spec.ts` can navigate by it in a
  * production build, and ASCII, so there is no `\u25b8` to paste into a
  * selector.

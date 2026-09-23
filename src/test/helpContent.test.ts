@@ -70,7 +70,7 @@ describe('help content', () => {
   test('every entry id is unique', () => {
     /*
      * Pinned 2026-09-07, when the `###` slug became an ADDRESS a popover shows
-     * (docs/TASKS.md item 3c): an author reads an id off the screen and
+     *: an author reads an id off the screen and
      * searches for it, so two blocks answering to one id is now a wrong
      * answer, not just untidy.
      *
@@ -87,7 +87,7 @@ describe('help content', () => {
   });
 
   test('a position address names its entry, and its beat when it has one', () => {
-    // The address is what item 3c put on screen: the entry slug, plus the
+    // The address is what the authoring aid puts on screen: the entry slug, plus the
     // 1-based beat ordinal for a beat. A step's OPENING position (beatIndex
     // -1) addresses as the bare slug -- it is the step's own text.
     /*

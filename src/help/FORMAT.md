@@ -647,13 +647,12 @@ then count two bullets down.
 This is **dev-only, and on by default there**: toggle it with `Show content ids` at
 the bottom of the app's Help menu, or per-link with `?ids=1` / `?ids=0`. The
 menu item appears only when the host passes `authoringAids`, so a deployed
-build has no way to show it and an e2e run does not get it. Both the tag
-and the toggle are a temporary authoring aid (docs/TASKS.md item 3c) and are
-meant to be deleted once the tours are written.
+build has no way to show it and an e2e run does not get it. It is a permanent
+authoring aid (Siggie, 2026-09-23), for this app's tours and any other host's.
 
 **The machine-readable twin is `data-step-address`** on the popover
 (`relationship-kinds~2`), ungated and present in every build; the placement
-tests navigate by it. ⚠️ **It stays when the visible tag goes.**
+tests navigate by it.
 
 > ⚠️ **Two entries with the same `### ` id is a silent bug**, and now a wrong
 > address as well. Entries are stored in a Map keyed by id, so the second one

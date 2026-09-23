@@ -182,7 +182,7 @@ export default function HelpMenu({
           ))}
 
           {/*
-            * TEMPORARY authoring aid (docs/TASKS.md item 3c). Every other item
+            * Authoring aid. Every other item
             * in this menu is for a reader; this one is for whoever is editing
             * help-content.md, which is why it is gated on `authoringAids`
             * (the host passes `DEV_EXTRAS`) and sits below a separator rather

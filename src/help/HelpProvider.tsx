@@ -115,7 +115,7 @@ export function HelpProvider({
    * gets wrong.
    *
    * Defaults to false, so a host that says nothing ships no authoring
-   * furniture. TEMPORARY, with the aids (docs/TASKS.md `address-readout`).
+   * furniture.
    */
   authoringAids?: boolean;
   /** Inline widgets for `![alt](widget:<name>:<arg>)` images in content. */
@@ -264,7 +264,7 @@ export function HelpProvider({
   const [activeId, setActiveId] = useState<string | null>(null);
 
   /*
-   * TEMPORARY authoring aid (docs/TASKS.md item 3c). Available only when the
+   * Authoring aid. Available only when the
    * host passes `authoringAids`; see that prop.
    *
    * Persisted because editing help-content.md hot-reloads this provider, and a
