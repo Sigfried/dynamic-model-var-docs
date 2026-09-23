@@ -54,6 +54,18 @@ the Ownership tour's style.
   `data-help-id="biggest-fans"` (literal because the help-id test greps
   for it), with `Position: left span-bottom`. Measured: both positions land
   left of their panel, no overlap.
+- Then (Siggie): Biggest fans moved to the BOTTOM of the Example cases pane,
+  and the beat sits beside the "One rule at a time" heading instead
+  (`data-help-id="first-case-group"`, rendered for group 0 only; the
+  `biggest-fans` tag is gone). Case names lost their rule numbers
+  ("Rule 1 — …" → "Owns target — lists", etc.). The NOTES in that group are
+  still stale (70 edges, the rejected own-bkwd/association merge, two
+  associations that no longer exist, an Entity-ranged rule that is not a
+  rule) — Siggie dismissed a question about rewriting them, so undecided.
+- detail-panel: `Position: bottom` on an unanchored step is new engine
+  behaviour — it pins to the viewport's bottom edge (FORMAT.md). The beat
+  went from `Anchor: graph-canvas` to `Anchor: none` + `Spotlight:
+  graph-canvas`, which keeps the ring on the canvas.
 - Not touched: `rows-and-dots` beat 3 has a stray fragment ("on the canvas
   yet.") in Siggie's text.
 

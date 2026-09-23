@@ -60,7 +60,7 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
     heading: 'One rule at a time',
     cases: [
       {
-        name: 'Rule 1 — multivalued owns forward',
+        name: 'Owns target — lists',
         note: 'A multivalued slot means the owner has-a collection, so ownership '
           + 'runs forward: Questionnaire.items and ResearchStudy.consents. The two '
           + '`part_of` self-loops are the counterexample — multivalued but drawn '
@@ -68,7 +68,7 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
         sel: ['ResearchStudy', 'Consent', 'Questionnaire', 'QuestionnaireItem'],
       },
       {
-        name: 'Rule 2 — single-valued belongs backward',
+        name: 'Belongs to target, by entity',
         note: 'The largest group (70 edges). Participant fans OUT to 22 targets, '
           + 'nearly all reversed: each target declares `associated_participant` '
           + 'and is drawn as belonging to Participant. This is the group that '
@@ -77,7 +77,7 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
           'Visit'],
       },
       {
-        name: 'Exception 2a — no independent existence',
+        name: 'Owns target — facts',
         note: 'Single-valued, but forward anyway: Quantity, TimePoint and the like '
           + 'have no identity of their own, so the value belongs to whoever holds '
           + 'it rather than owning the holder.',
@@ -98,7 +98,7 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
         note: 'Both associations in the schema: Document.related_document → '
           + 'Specimen, and SpecimenContainer.container → SpecimenStorageActivity. '
           + 'Slate and dashed, arrowed at both ends. They are listed explicitly '
-          + 'because they are multivalued, so Rule 1 would otherwise call them '
+          + 'because they are multivalued, so the default rule would otherwise call them '
           + 'ownership.',
         sel: ['Document', 'Specimen', 'SpecimenContainer',
           'SpecimenStorageActivity'],

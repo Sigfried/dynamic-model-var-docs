@@ -786,11 +786,11 @@ introduced and then use one word.
   1. example cases
      - Change: panels=0&cases=1
      - Action: Closed the Legend and opened Example cases, also from the Help menu.
-     - Anchor: biggest-fans
+     - Anchor: first-case-group
      - Position: left span-bottom
      - Description:
        ##### Example cases
-       **Example cases** lists selections worth looking at, from simple to dense. Clicking one replaces what is on the canvas. **Biggest fans**, at the top, loads the entities with the most lines converging on them or leaving them.
+       **Example cases** lists selections worth looking at, from simple to dense. Clicking one replaces what is on the canvas. **Biggest fans**, at the bottom, loads the entities with the most lines converging on them or leaving them.
 
 
 ### where-next

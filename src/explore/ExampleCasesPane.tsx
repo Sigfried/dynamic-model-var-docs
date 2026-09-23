@@ -63,10 +63,46 @@ export default function ExampleCasesPane({
       onClose={onClose}
       offset={offset}
     >
-      {/* A literal tag so the help-id anchor test can find it by grep. The
-          tour's `legend-and-cases` step anchors here, not on the whole pane:
-          the pane's content is far taller than the screen. */}
-      <section className="mb-4" data-help-id="biggest-fans">
+      {EXAMPLE_CASES.map((group, i) => (
+        <section key={group.heading} className="mb-3 last:mb-1">
+          {/* The tour's `legend-and-cases` beat anchors on the first heading.
+              A literal tag, so the help-id anchor test can find it by grep. */}
+          {i === 0
+            ? <div data-help-id="first-case-group"><SectionHeading>{group.heading}</SectionHeading></div>
+            : <SectionHeading>{group.heading}</SectionHeading>}
+          <ul className="space-y-1.5">
+            {group.cases.map(c => {
+              const active = isActive(c, selectedIds);
+              return (
+                <li key={c.name}>
+                  <button
+                    onClick={() => onApply(c)}
+                    className={`block w-full text-left rounded px-2 py-1 border
+                      ${active
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                        : 'border-transparent hover:bg-gray-50 dark:hover:bg-slate-700'}`}
+                  >
+                    <span className={`text-xs font-medium ${active
+                      ? 'text-blue-700 dark:text-blue-300'
+                      : 'text-blue-600 dark:text-blue-400'}`}>
+                      {c.name}
+                    </span>
+                    <span className="ml-1.5 text-[10px] text-gray-400">
+                      {c.sel.length}
+                      {c.roots ? ' ⇱' : ''}
+                    </span>
+                    <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400 mt-0.5">
+                      {c.note}
+                    </p>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+
+      <section className="mb-3 last:mb-1">
         <SectionHeading>Biggest fans</SectionHeading>
         <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5">
           Counted in slot-edges, not classes: one class owning a target through
@@ -104,41 +140,6 @@ export default function ExampleCasesPane({
           ))}
         </div>
       </section>
-
-      {EXAMPLE_CASES.map(group => (
-        <section key={group.heading} className="mb-3 last:mb-1">
-          <SectionHeading>{group.heading}</SectionHeading>
-          <ul className="space-y-1.5">
-            {group.cases.map(c => {
-              const active = isActive(c, selectedIds);
-              return (
-                <li key={c.name}>
-                  <button
-                    onClick={() => onApply(c)}
-                    className={`block w-full text-left rounded px-2 py-1 border
-                      ${active
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-                        : 'border-transparent hover:bg-gray-50 dark:hover:bg-slate-700'}`}
-                  >
-                    <span className={`text-xs font-medium ${active
-                      ? 'text-blue-700 dark:text-blue-300'
-                      : 'text-blue-600 dark:text-blue-400'}`}>
-                      {c.name}
-                    </span>
-                    <span className="ml-1.5 text-[10px] text-gray-400">
-                      {c.sel.length}
-                      {c.roots ? ' ⇱' : ''}
-                    </span>
-                    <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400 mt-0.5">
-                      {c.note}
-                    </p>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
     </HelpPanel>
   );
 }
