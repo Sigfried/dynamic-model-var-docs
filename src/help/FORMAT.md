@@ -54,7 +54,7 @@ spec.
   - [Placement](#placement) — where the popover goes; `Position:`, `OffsetX:`, centring with no anchor, `Width:`
     - [The default width is automatic](#the-default-width-is-automatic) — sized from text area, 320–800, floored by the nav row
 - [Changing the app](#changing-the-app)
-  - [Change](#change) — `Change:` is a delta in share-link vocabulary; entering pushes, `back` pops; what `State:` was
+  - [Change](#change) — `Change:` is a delta in share-link vocabulary; entering pushes, `back` pops
     - [The params you can set](#the-params-you-can-set) — the full param table
     - [`cat=<id>` — a whole category, like the ⊞ button](#catid--a-whole-category-like-the--button)
     - [`panels=0` — clear the screen](#panels0--clear-the-screen) — the one param that is not a delta
@@ -422,8 +422,8 @@ own structure, and a level the reader cannot see is a distinction not worth
 authoring.
 
 ⚠️ **The step title is bigger than any subtitle, and `**bold**` is smaller than
-both.** Before 2026-09-08 the title and body `**bold**` were the same size and
-weight, so a bolded phrase opening a description read as a second title.
+both**, so a bolded phrase opening a description does not read as a second
+title.
 
 ### Alerts
 
@@ -1025,22 +1025,10 @@ legend the viewer opened before starting is theirs.
 Scalars are still not refcounted the way `sel` is; each frame simply carries
 the merged value, and the pop reads the previous frame's.
 
-**Beats: only the first pushes the step's change.** Under the old model every
-beat re-applied its step's full state, which was harmless because re-applying
-the same absolute state twice does nothing. Pushing the same delta once per beat
-is not: a four-beat step would stack four frames and `back` would crawl out of
-them one useless pop at a time. So a step's `Change:` belongs to its first beat,
-and a later beat pushes only a change it declares itself.
-
-> **What this replaced.** `State:` was a **full, absolute** query, applied with
-> `url.search = query`. So the tour had to snapshot the viewer's state on entry
-> and restore it on exit; a mid-tour edit was clobbered, which is what the
-> yellow *"your changes will be discarded"* warning was for; and **any field a
-> step did not name snapped back to its default** — Siggie had a non-default
-> setting and every step with a `State:` silently reset it, because no step
-> wrote that param. All three are gone. Note the two forms look identical in the
-> file: `State: sel=X` and `Change: sel=X` are the same text meaning opposite
-> things, so an old value cannot be migrated by leaving it alone.
+**Beats: only the first pushes the step's change.** Pushing the same delta once
+per beat would stack four frames on a four-beat step, and `back` would crawl
+out of them one useless pop at a time. So a step's `Change:` belongs to its
+first beat, and a later beat pushes only a change it declares itself.
 
 #### The params you can set
 
@@ -1105,7 +1093,7 @@ not matter, only that `panels` is a sweep and the named keys are exceptions.
 
 It is safe as a delta because it can only ever CLOSE things. A step that sweeps
 and a step that says nothing are both still deltas; neither snaps a setting back
-to a default, which is the trap that killed the old absolute `State:` field.
+to a default.
 
 ### `Only:` — a step that names the whole canvas
 
@@ -1123,12 +1111,11 @@ Clinical category", "here are two boxes and one edge". Under an additive
 drew Clinical on top of everything before it, and a two-box example was a
 two-box caption over a twelve-box diagram.
 
-Three things bound what it replaces, so it is not the absolute `State:` model
-coming back:
+Three things bound what it replaces:
 
 - **It replaces the SELECTION only.** `Only: sel=A&dir=DOWN` sets `dir` exactly
   as `Change:` would, and a scalar set by an earlier step stays set. Nothing a
-  step does not name snaps back to a default — that was the bug `State:` had.
+  step does not name snaps back to a default.
 - **It hides rather than deletes.** The steps below it are still on the stack;
   `back` restores what the replace displaced, including the viewer's own
   selection, so the two directions are still inverses.
@@ -1219,28 +1206,12 @@ their beat, an entry's sit at the margin, and a field at the margin ends any
 open block (a `Description:` included). A beat that omits `Anchor:` or
 `Action:` inherits the step's.
 
-> **This default has been both ways; here is why it settled here.** Beats first
-> REPLACED, which forced an author to repeat the description in beat one or
-> watch it vanish. So on 2026-08-28 they were made to ACCUMULATE, with the
-> description as beat one — *"by default, the beat text is additive on top of
-> that / in order to clear previous text add a 'clear' marker or field"*.
->
-> That fixed the repetition and introduced a worse problem: the newest text sat
-> at the BOTTOM of a growing block, so the reader had to find where to start.
-> Dimming the old text further, a coloured rule on the new block and an
-> entrance animation were all tried; none of them fixed it. Siggie, same day:
-> *"the blue line isn't quite doing it. let's change the default to
-> Clear: true."*
->
-> So beats replace again — but the two things that made the ORIGINAL replacing
-> model painful are both gone. The description now has its own opening
-> position, so it is read before any beat replaces it and never has to be
-> repeated; and `Keep:` is there for the steps that genuinely want to build a
-> list up. The default is what most beats want, and the other case is one
-> field away.
+**Replacing is the settled default** (Siggie, 2026-08-28), after
+accumulating was tried and left the newest text buried at the bottom of a
+growing block. The description has its own opening position, so it never has
+to be repeated in beat one.
 
-A step with no `Beats:` is exactly one position, so steps written before beats
-existed still parse and behave identically. `next` advances beat by beat, then
+A step with no `Beats:` is exactly one position. `next` advances beat by beat, then
 to the next step.
 
 **The counter always counts STEPS** — `2 / 6` for the whole of step 2, however
@@ -1279,10 +1250,6 @@ lines — continuation is by indent, so a beat can hold paragraphs and lists.
 **A beat with no `Description:` shows no text**, which is the point: a beat that
 only moves the anchor or pushes a `Change:` is a legitimate step in a sequence,
 and the label does not leak in to fill the gap.
-
-⚠️ Before 2026-09-08 the numbered line WAS the beat's text and a beat could only
-be one line — a `- ` bullet written under it was silently discarded. Beats
-written that way show nothing until their prose moves into `Description:`.
 
 ### `Width:` is sticky across beats
 

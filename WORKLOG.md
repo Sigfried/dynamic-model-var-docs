@@ -8,6 +8,29 @@ Newest first.
 
 
 ---
+## 2026-09-23 — Tours done; cleanup pass
+
+Siggie declared the tours done. `help-finish-authoring` and `read-tours` are
+archived to `docs/archive/tasks-2026-09-23.md`; the TASKS section is now plain
+"Now". Four tours are live — *What BDCHM is built with* stays commented out.
+
+- FORMAT.md: cut the `State:` "What this replaced" block and three sentences
+  defending `Only:`/`panels=0` against it, the beats "both ways" history (kept
+  a two-sentence decision), and two "Before 2026-09-08" notes. −33 lines.
+- docs/CLAUDE.md's Node gotcha claimed `node` is v24 and needs no PATH
+  export. False in the agent shell (v26.9.0; 41 tests fail). Rewritten to say
+  prepend the v24.2.0 nvm path every call — which every run this session did.
+- TOURS_AND_CONTENT.md gained three traps from this session (bare argumentless
+  anchor kinds, tall anchors, probe-before-placing) and lost two dated asides.
+- The Ownership tour's structure comment named the cut `bar-sides` step, a
+  step id that does not exist, and a "fight with the Legend" warning about
+  `panel-refit`, which shipped 2026-09-22. Refreshed.
+- `lint-baseline` row's "says 20, reports 30" was stale (both are 34 now);
+  its two causes are still real (`.vite/deps` linted; `Section.tsx`
+  conditional hook), so the row stays.
+
+
+---
 ## 2026-09-23 — Using the Explorer: back half rewritten
 
 Siggie had reworked the tour through `relation-bar-step` beat 1 and asked for

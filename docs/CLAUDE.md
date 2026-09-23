@@ -135,13 +135,11 @@ if (!element) {
 
 ## 🚧 GOTCHAS — read before running anything
 
-- **Node needs no PATH export.** `node` is v24 here and both `npx vitest run`
-  and `npm run build` are clean on it. An older note told every session to
-  `export PATH="$HOME/.nvm/versions/node/v22.20.0/bin:$PATH"` first, against a
-  system Node 16 that Vite 7 could not start on; that shell is gone. If a
-  `node:fs/promises` / `constants` error ever comes back, it means `node` has
-  resolved to something ancient again — check `node --version` before reaching
-  for a version pin.
+- **Prepend Node 24 in every Bash call:**
+  `export PATH="$HOME/.nvm/versions/node/v24.2.0/bin:$PATH"`. The agent shell's
+  `node` is v26, on which 41 tests fail (jsdom's `localStorage` getter returns
+  `undefined`); [`.nvmrc`](../.nvmrc) pins 24.2.0 but nothing binds it in a
+  non-interactive shell. Shell state does not persist between calls.
 - **Never run `npm run dev`** — Siggie keeps the app running themselves.
 - **Session start, if the work touches popover placement:** ask Siggie to run
   `make probe-browser` and leave it up. That is the whole setup — it is what

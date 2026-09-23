@@ -540,7 +540,7 @@ introduced and then use one word.
 ## Using the Explorer
 - **TourMetadata:**
 - **TourAbbr:** The Explorer
-- **Description:** What the Explorer is for, and how to use it: the panel, what a box shows, how to read a row, and how to grow a diagram one hop at a time
+- **Description:** What the Explorer is for, and how to use it: the panel, what a box shows, how to read a row, how to grow a diagram one hop at a time, and the Legend and example cases
 
 ### bdchm-entities
 
@@ -901,26 +901,20 @@ introduced and then use one word.
 - **Description:** How to read a line's direction, why boxes land where they do, and the rule the Explorer decides it by
 
 <!--
-The structure, which the steps below now follow:
-- which-way -- read a line's direction off the canvas, and learn that the two
-  arrow kinds are the only two there are. Carries the whole of what an arrow
-  means; `why-ownership` and `edge-types` were folded into it 2026-09-20.
+The structure:
+- which-way -- read a line's direction off the canvas; the two arrow kinds are
+  the only two there are.
 - the rule and its exceptions, in teaching order, each step ending at the
   Legend block that counts it (`Spotlight: legend-rule:<rule-id>`):
   - the-legend -- introduces the Legend and the scale of the problem
-  - owns-target -- the default rule itself, an attribute owns what it points
-    at, with its four counts. Its beats split the rule's attributes into
-    multivalued and single-valued ("Facts") and then say that the split
-    decides NOTHING: those were two separate rules once, and collapsing them
-    is why there are three rules and not more. Rationale for modelers, not
-    machinery -- no code reads cardinality.
-  - belongs-to-target-backward-by-entity -- exception, by entity: referred-to entities
-  - belongs-to-target-backward-by-attribute -- exception, by attribute: named back-pointers
-- then what the rules look like once they are all running at once:
-  - bar-sides -- one side of a box, reached by two different rules
-  - loops -- an attribute whose range is its own entity
-  - rules-recap
-- (association edges are a commented-out appendix at the end, or not)
+  - owns-target -- the default rule, with its four counts; beats split its
+    targets into lists and facts, which is rationale, not machinery -- no code
+    reads cardinality
+  - belongs-to-target-backward-by-entity -- exception, by entity
+  - belongs-to -- exception, by attribute
+- loops -- an attribute whose range is its own entity
+- rules-recap
+- (association edges are a commented-out appendix at the end)
 
 The induced pass (`child-following-parent`) is deliberately NOT a step here,
 and is not in the legend either: induced edges serve LAYOUT only, so there is
@@ -933,20 +927,14 @@ strings from `OWNERSHIP_RULES`, so tour, legend and classifier say one thing.
 If a label changes there, change it here. Do not hand-type a count.
 
 ⚠️ There is no live key for the multivalued/single-valued split — only
-`owners`/`attrs`/`owned`/`total` — so `owns-target`'s beats say "the other
-group" rather than a number. Do not hand-type one.
+`owners`/`attrs`/`owned`/`total` — so `owns-target`'s beats give no number for
+either group. Do not hand-type one.
 
 ⚠️ Be sparing with `Position:` here. The automatic rule puts the popover BELOW
 the anchored box and knows about the diagram's growth axis; an override throws
 that away, and on a left-to-right chain there is usually nowhere better for it
 to go. `Position: left` on a beat anchored to the RIGHTMOST box sent the
 popover across the canvas onto the box holding its own spotlit row.
-
-⚠️ These steps currently fight for room with the Legend, which draws OVER the
-canvas instead of beside it (TASKS `panel-refit`). Do not author around that by
-adding `Position:` overrides — when the canvas learns to fit beside the panel,
-every such override becomes wrong, and the tour would need unpicking rather
-than just re-reading.
 -->
 
 ### which-way

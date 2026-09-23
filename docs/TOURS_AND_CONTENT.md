@@ -1,13 +1,10 @@
 # Tour content: the traps, and what is deliberately out
 
-All five tours are written into
-[`src/explore/help-content.md`](../src/explore/help-content.md) and pass the
-content tests. What remains here is the material that is NOT in the content
-file: the recipe for building a category step, and two standing
-out-of-scope decisions.
-
-The authoring format is [`src/help/FORMAT.md`](../src/help/FORMAT.md); the
-order of work is [TASKS.md §Now](TASKS.md).
+The tours live in
+[`src/explore/help-content.md`](../src/explore/help-content.md); the authoring
+format is [`src/help/FORMAT.md`](../src/help/FORMAT.md). This file holds what
+the content file does not: the recipe for a category step, anchoring traps,
+and two standing out-of-scope decisions.
 
 ---
 
@@ -32,7 +29,7 @@ pin `Participant`. Members and pins are in
 `panels=0` closes the legend, cases and detail drawer as well; the two compose
 (`Only: cat=survey&panels=0`). A step whose `Only:` names no selection at all
 inherits the previous step's canvas, which is a silent way to anchor at
-nothing — 2026-09-16, `survey-questionnaire`.
+nothing.
 
 ⚠️ **A beat's `Change:`/`Only:` moves the canvas too.** Anchors are checked
 per position, so a beat that adds a class can anchor at it, and a beat that
@@ -52,8 +49,7 @@ subclasses in one framing beat instead.
 
 ⚠️ **A merged subclass has no `node-box`.** `node-box:<Subclass>` resolves to
 the box its rows were merged INTO, so anchor `child-header:<Subclass>` to ring
-the subclass itself. `node-box:SdohObservation` was drawing no ring at all
-until 2026-09-16.
+the subclass itself.
 
 ⚠️ **Do not copy a count out of a source comment or an older doc.** Several
 were stale in both directions. Probe, or say it without a number.
@@ -64,6 +60,20 @@ every `node-box:` and `slot-row:` needs the ELK layout, which does not run
 there. A test that walks a tour looking for a ringed popover can only stop on
 a panel-anchored position — [`tourStack.integration.test.tsx`](../src/test/tourStack.integration.test.tsx)
 carries the worked case.
+
+⚠️ **An anchor kind with no argument cannot be written bare.** `legend-panel`
+parses as `help-id:legend-panel` and fails the content test; anchor a
+`legend-section:<id>` instead.
+
+⚠️ **Anchor on something short.** A popover beside an element taller than the
+screen (the whole Example cases pane) is placed against the part the tour
+scrolled to, which can be off screen. Pick a heading or a section.
+
+⚠️ **Probe placement before changing it.** `make e2e-probe` runs against the
+probe browser Siggie starts with `make probe-browser`; a throwaway spec using
+`e2e/helpers/tour.ts` (`openStep`, `goToAddress`, `placement`) prints the
+popover and anchor rects in seconds. A popover at the canvas's top-left means
+the anchor resolved to nothing (`placement().anchor` is `null`).
 
 ---
 
