@@ -43,12 +43,11 @@ describe('HelpPanel width and offset', () => {
 
   /*
    * The legend's floor is set by its pivot tables, the cases pane's by prose.
-   * Measured 2026-09-22: the widest of the twelve pivots wants 487px of
-   * content, plus the panel's own `px-4` either side.
+   * Not pinned to the widest pivot (487px of content, measured 2026-09-22):
+   * Siggie set the floor below that by eye (99c5f0c).
    */
   test('the legend opens wider than the cases pane', () => {
     expect(PANEL_MIN_PX.legend).toBeGreaterThan(PANEL_MIN_PX.cases);
-    expect(PANEL_MIN_PX.legend).toBeGreaterThanOrEqual(487 + 32);
   });
 
   test('offset drives `right` inline, and drops the class that would fight it', () => {

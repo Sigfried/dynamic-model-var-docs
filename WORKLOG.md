@@ -8,6 +8,52 @@ Newest first.
 
 
 ---
+## 2026-09-22 (night) — the two exception steps, summary and Legend reframed
+
+**Siggie hated the "entities that are only ever referred to" framing** and
+asked me to emulate their `owns-target` logic and style. What I read that
+style as: rule name + one-clause definition, live counts with the dropdown
+names (`owners`/`attrs`/`owned`) doing the explaining, beats that characterize
+the TARGETS in plain words (lists, facts), and a last beat pointing at a
+Legend dropdown. No history, no rhetoric ("looked up, not held", "a judgement
+that can be argued with", "property of the arrival" all cut). Applied to
+by-entity, `belongs-to` (by attribute), `rules-recap`, and the Legend's
+`OWNERSHIP_RULES` texts and INTRO.
+
+Siggie's corrections along the way:
+- **"This is the reverse of a fact"** (Condition is a record about a
+  Participant, vs TimePeriod a fact about a Visit) — Siggie: "weird, doesn't
+  really make sense". Replaced by the plain "the Participant exists on its
+  own, and the Condition is one of many records that belong to it".
+- **`{{relation:own-bkwd:A.attr:B}}` pairs read backwards.** Siggie wants the
+  target first, matching the canvas: `{{relation:own-bkwd:B:A.attr}}`. All the
+  backward pairs in the file were swapped by hand. The widget itself
+  does NOT reorder by kind — an author writes target-first.
+- **A `performed_by`/Organization beat was cut** as adding nothing beyond the
+  Participant/Visit beat. The same reasoning kept QuestionnaireItem to one
+  sentence in `belongs-to`.
+
+`belongs-to` now uses ResearchStudyCollection/ResearchStudy/Participant rather
+than the Questionnaire trio, because `owns-target` beat 1 already showed
+`ResearchStudyCollection.entries` owning ResearchStudy — that is exactly why
+ResearchStudy can't go on the by-entity list.
+
+**Placement:** the rule-step openings were anchored `legend-rule:…`, which at
+1440×850 put the popover over 100% of Participant/TimePeriod (measured). Now
+anchored on the tallest box, placed below it, with the legend rule moved to
+`Spotlight:`; all ten rule-step screens measured 0% box coverage at 1600×1000
+and 1440×850.
+
+**Two traps hit:** a step with two `Only:` lines silently uses the FIRST
+(`extractField`), which is why `loops` kept the Legend open; and a beatless
+step's `data-step-address` is `name~1`, not `name`, so `goToAddress(page,
+'rules-recap')` clicks past the tour's end.
+
+`helpPanelWidth.test.tsx` no longer pins the Legend floor to 519px; Siggie
+said to relax it after setting 420 by eye.
+
+
+---
 ## 2026-09-22 (evening) — `owns-target` finished; corner `Position:` values flip
 
 Siggie finished `owns-target`. Beat 1's example moved from

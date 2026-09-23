@@ -98,7 +98,7 @@ entity to another,
 - **{{ownership-count:forward}} point forward**, from owner to owned — the default, and
 - **{{ownership-count:backward}} point backward**, from owned to owner — in two lists:
   - **{{ownership-count:belongs-to-target-backward-by-entity.total}}** whose target is one of
-    **{{ownership-count:belongs-to-target-backward-by-entity.owners}} entities** that are only ever belonged to
+    **{{ownership-count:belongs-to-target-backward-by-entity.owners}} entities**: Participant, Visit, Organization, ImagingStudy and Person
   - **{{ownership-count:belongs-to-target-backward-by-attribute.total}}** named individually, because their
     targets are owned by some *other* attribute
 

@@ -262,7 +262,7 @@ export const REFERRED_TO_ENTITIES = new Set<string>([
  * attribute:
  *
  *   - `QuestionnaireItem`  is owned by `Questionnaire.items`, and referred to
- *     by the three entries below.
+ *     by the two entries below.
  *   - `ResearchStudy`      is owned by `ResearchStudyCollection.entries`, and
  *     referred to by the two entries below.
  *
@@ -331,10 +331,11 @@ export const OWNERSHIP_RULES = [
     when: ({ range }) => REFERRED_TO_ENTITIES.has(range),
     verdict: 'own-bkwd',
     parentRule: 'owns-target-forward-by-default',
-    text: 'Some entities are only ever referred to, never contained — a Participant or a '
-      + 'Visit exists in its own right and is looked up, not held. Every attribute pointing '
-      + 'at one means belonging to it, so ownership runs backward. This is said about the '
-      + 'ENTITY, so it holds wherever that entity is pointed at.',
+    text: 'Any attribute pointing at one of these five entities (Participant, Visit, '
+      + 'Organization, ImagingStudy, Person) belongs to it, so ownership runs backward. '
+      + 'A Condition does not contain its Participant: the Participant exists on its own, '
+      + 'and the Condition is one of many records that belong to it. Decided by the target '
+      + 'ENTITY, so it also covers attributes added to the schema later.',
   },
   {
     id: 'belongs-to-target-backward-by-attribute',
@@ -342,10 +343,11 @@ export const OWNERSHIP_RULES = [
     when: ({ declaredOn, slotName }) => NAMED_BACK_POINTERS.has(`${declaredOn}.${slotName}`),
     verdict: 'own-bkwd',
     parentRule: 'owns-target-forward-by-default',
-    text: 'Named back-pointers are individual attributes that point back at an owner rather '
-      + 'than down at something owned. This is said about the ATTRIBUTE, not its target: '
-      + 'these targets are themselves owned, each by one other attribute, so the same entity '
-      + 'is both owned and referred to depending on which attribute you arrive by.',
+    text: 'A few individual attributes point back at an entity that some other attribute '
+      + 'owns: Participant.member_of_research_study points at a ResearchStudy, which '
+      + 'ResearchStudyCollection.entries owns. Listing the target entity would flip the '
+      + 'owning attribute too, so these are listed by ATTRIBUTE, each with the entity that '
+      + 'defines it.',
   },
   {
     /*

@@ -878,6 +878,21 @@ A bare keyword means `span-all` on the cross axis, so `bottom` centres the
 popover along the anchor's width. Write both tokens to pin it to one end
 (`block-end span-inline-start`).
 
+**A corner or `center` cell is only as big as the space it names**, and a
+popover that does not fit it falls back somewhere else:
+
+- `bottom left` is the space below the anchor AND entirely left of it. On an
+  anchor near the canvas's left edge there is none, so `flip-inline` mirrors it
+  and it renders exactly like `bottom right`.
+- `bottom center` confines the popover to the anchor's own width. A popover
+  wider than one entity box overflows it and drops to the last fallback.
+
+For a wide popover, use a `span-*` value — `span-right bottom` starts at the
+anchor's left edge and grows right, `span-left bottom` ends at its right edge —
+and nudge it with `OffsetX:`. Measured on a box anchored at the canvas's left,
+`span-right bottom` with `OffsetX: anchor.width * .5` lands halfway between
+where `bottom` and `bottom right` put it.
+
 A value CSS rejects is dropped by the browser and the popover falls back to
 automatic placement — so a typo costs the override rather than the tour, and
 `e2e/placement.spec.ts` checks every authored value with `CSS.supports` so it

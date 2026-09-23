@@ -1020,7 +1020,7 @@ than just re-reading.
        :s[belongs to]{color=own-bkwd} the target — it draws the target to the
        **left** and points the arrow back at it {{edge:own-bkwd}}.
        :::s{center color=entity}
-         {{relation:own-bkwd:Visit.associated_participant:Participant}}
+         {{relation:own-bkwd:Participant:Visit.associated_participant}}
        :::
 
   3. only-two-kinds
@@ -1050,7 +1050,9 @@ than just re-reading.
 - **Title:** Rules — Owns target
 - **Tour:** Ownership
 - **Only:** sel=Participant~Visit~TimePeriod&legend=1
-- **Anchor:** legend-rule:owns-target-forward-by-default
+- **Anchor:** node-box:Participant
+- **Position:** span-right bottom
+- **Spotlight:** legend-rule:owns-target-forward-by-default
 - **Highlight:** ring
 - **Description:**
   The default rule is **:s[Owns target]{color=own-fwd}** — an attribute owns what it points at. Of the {{ownership-count:declared}} attributes in the schema, {{ownership-count:owns-target-forward-by-default.total}} fall into this group, including, :s[{{relation:own-fwd:Visit.year_range:TimePeriod}}]{center color=entity}.
@@ -1083,190 +1085,111 @@ than just re-reading.
      - Spotlight: slot-row:Visit.year_range
      - Description:
        ##### Facts
-       Attrbute targets that are not meaningful on their own and are used to describe or qualify the source entity are also :s[owned by]{color=own-fwd} the source. TimePeriod is a fact about a Visit.
+       Attribute targets that are not meaningful on their own and are used to describe or qualify the source entity are also :s[owned by]{color=own-fwd} the source. TimePeriod is a fact about a Visit.
        :::s{center color=entity}
          {{relation:own-fwd:Visit.year_range:TimePeriod}}
        :::
   3. one rule, not two
      - Description:
        To explore these relationships, you can distinguish lists from facts by looking at the cardinality of :s[Owns target]{color=own-fwd} attributes in the legend's `{{ownership-count:owns-target-forward-by-default.owned}} owned` dropdown which is grouped by target.
+
 ### belongs-to-target-backward-by-entity
 
-- **Title:** Exception: entities that are only ever referred to
+- **Title:** Rules — Belongs to target, by entity
 - **Tour:** Ownership
-- **Only:** sel=Participant~Specimen&legend=0
-- **Action:** Drew Specimen and the Participant it came from.
+- **Only:** sel=Participant~Visit~TimePeriod&legend=1
 - **Anchor:** node-box:Participant
-- **Spotlight:** slot-row:Specimen.source_participant
-- Highlight: ring
-- Position: bottom
-- **Width:** 580
-- **Description:**
-  **:s[Belongs to target / backward arrow / by entity]{color=own-bkwd}** —
-  {{ownership-count:belongs-to-target-backward-by-entity.total}} attributes.
-
-  {{ownership-count:belongs-to-target-backward-by-entity.owners}} entities in
-  this model are **only ever referred to**, never contained: **Participant**,
-  **Visit**, **Organization**, **ImagingStudy** and **Person**. Each exists in
-  its own right and is looked up, not held, so *every* attribute pointing at
-  one means belonging to it.
-  :::s{center color=entity}
-    {{relation:own-bkwd:Specimen.source_participant:Participant}}
-  :::
-- Beats:
-  1. so it flips
-     - Description:
-       That is why this one flips. The attribute is declared on **Specimen**,
-       but the ownership runs the other way, so Participant is drawn on the
-       **left** and the arrow points back at it {{edge:own-bkwd}}.
-
-       Every `associated_participant`, `associated_visit` and `performed_by`
-       in the model works this way — which is why participants and visits end
-       up on the left edge of most pictures.
-  2. said about the entity
-     - Description:
-       This exception is stated about the **entity**, not the attribute: name
-       Participant once and every attribute pointing at it flips, including
-       ones nobody has written yet.
-
-       The schema can't tell us which entities these are — nothing in it
-       distinguishes them — so the list is recorded in the Explorer by hand,
-       and it is a judgement that can be argued with.
-  3. in the legend
-     - Change: legend=1
-     - Action: Opened the Legend panel.
-     - Anchor: none
-     - Spotlight: legend-rule:belongs-to-target-backward-by-entity
-     - Highlight: ring
-     - Description:
-       Here it is in the Legend. Opening the count names all five entities,
-       and every attribute that flipped because of one.
-
-### belongs-to-target-backward-by-attribute
-
-- **Title:** Exception: attributes that point back
-- **Tour:** Ownership
-- **Only:** sel=Questionnaire~QuestionnaireItem~QuestionnaireResponseItem&legend=0
-- **Action:** Drew a Questionnaire, its items, and a response item.
-- **Anchor:** node-box:QuestionnaireItem
-- **Spotlight:** slot-row:QuestionnaireResponseItem.has_questionnaire_item
-- Highlight: ring
-- **Width:** 580
-- **Description:**
-  **:s[Belongs to target / backward arrow / by attribute]{color=own-bkwd}** —
-  {{ownership-count:belongs-to-target-backward-by-attribute.total}} attributes,
-  named one at a time.
-
-  `has_questionnaire_item` points at a **QuestionnaireItem** to say which
-  question was answered. It isn't holding that item: the item belongs to the
-  **Questionnaire**, which is still drawn owning it from the left.
-  :::s{center color=entity}
-    {{relation:own-bkwd:QuestionnaireResponseItem.has_questionnaire_item:QuestionnaireItem}}
-  :::
-- Beats:
-  1. why not by entity
-     - Description:
-       So this exception can't be said about the entity the way the last one
-       was. QuestionnaireItem **is** owned — by `Questionnaire.items` — and
-       putting it on the previous step's list would strip it of that. The same
-       holds for **ResearchStudy**, owned by `ResearchStudyCollection.entries`.
-
-       Being referred to is a property of the **arrival**, not of the entity:
-       one attribute owns a QuestionnaireItem and three others only refer to
-       it. That is why the previous step's list can only hold entities *every*
-       arrival at which is a reference, and why these have to be named one
-       attribute at a time.
-     - Anchor: node-box:Questionnaire
-     - Spotlight: slot-row:Questionnaire.items
-  2. named as pairs
-     - Description:
-       They are named as `Entity.attribute` pairs rather than by attribute
-       name alone: two of them are called `part_of`, declared on different
-       entities, and a bare attribute name would flip any future third one
-       silently.
-  3. in the legend
-     - Change: legend=1
-     - Action: Opened the Legend panel.
-     - Anchor: none
-     - Spotlight: legend-rule:belongs-to-target-backward-by-attribute
-     - Highlight: ring
-     - Description:
-       And here it is in the Legend, where opening the count names every
-       attribute on the list — the whole of the rule, since this one is
-       nothing but its list.
-
-### bar-sides
-
-- **Title:** One side, two reasons
-- **Tour:** Ownership
-- **Only:** sel=Observation~ObservationSet~Participant~Visit~Organization&legend=0
-- **Action:** Drew Observation with the four entities that own it.
-- **Anchor:** node-box:Observation
+- **Position:** span-right bottom
+- **Spotlight:** legend-rule:belongs-to-target-backward-by-entity
 - **Highlight:** ring
-- **Width:** 560
 - **Description:**
-  Four entities own Observation, so all four are drawn to its **left** — that
-  is what the relation bar's **←** count means. But they are not all there for
-  the same reason.
-- Beats:
-  1. two rules, one side
-     - Description:
-       Participant, Visit and Organization are on the left because they are
-       **referred-to entities**: Observation points at each of them, so each
-       one flipped. ObservationSet is on the left because of the **default
-       rule** running normally — its `observations` list collects Observations,
-       so it owns them.
+  The first exception is **:s[Belongs to target]{color=own-bkwd}** — the attribute's source entity belongs to what it points at, so ownership runs backward. Of the {{ownership-count:declared}} attributes in the schema, {{ownership-count:belongs-to-target-backward-by-entity.total}} fall into this group, including :s[{{relation:own-bkwd:Participant:Visit.associated_participant}}]{center color=entity}.
 
-       Position alone doesn't tell you which — that is what the Legend is for.
-  2. hover the count
+  This group is decided **by entity**: any attribute that points at one of five target entities — **Participant**, **Visit**, **Organization**, **ImagingStudy** or **Person** — is classified :s[Belongs to target]{color=own-bkwd}. Since ownership runs backward, those five targets are the owners here. The {{ownership-count:belongs-to-target-backward-by-entity.total}} attributes
+  - point to {{ownership-count:belongs-to-target-backward-by-entity.owners}} distinct target entities (owners),
+  - have {{ownership-count:belongs-to-target-backward-by-entity.attrs}} distinct attribute names,
+  - and are defined on {{ownership-count:belongs-to-target-backward-by-entity.owned}} distinct source entities (owned).
+- Beats:
+  1. who-and-when
+     - Only: sel=Participant~Visit~Condition&legend=1
+     - Anchor: node-box:Condition
+     - Position: span-left bottom
+     - Spotlight: slot-row:Condition.associated_participant
      - Description:
-       Hover the **←** count to see them listed, each with the attribute that
-       declares it.
+       ##### Who and when
+       Most of these attributes say which participant a record is about and which visit it was collected at. A Condition doesn't contain its Participant. The Participant exists on its own, and the Condition is one of many records that belong to it.
+       :::s{center color=entity}
+         {{relation:own-bkwd:Participant:Condition.associated_participant}}
+       :::
+       Nearly every clinical record has an `associated_participant` and an `associated_visit`, which is why Participant and Visit end up on the left edge of most diagrams.
+  2. by-entity
+     - Description:
+       Because the rule is keyed by the target entity, it also applies to any attribute added to the schema later that points at one of these five. The schema itself doesn't mark these entities; the list is the Explorer's own choice. You can see all five, and the attributes that point at each, in the legend's `{{ownership-count:belongs-to-target-backward-by-entity.owners}} owners` dropdown.
+
+### belongs-to
+
+- **Title:** Rules — Belongs to target, by attribute
+- **Tour:** Ownership
+- **Only:** sel=ResearchStudyCollection~ResearchStudy~Participant&legend=1
+- **Anchor:** node-box:ResearchStudy
+- **Position:** bottom
+- **Spotlight:** legend-rule:belongs-to-target-backward-by-attribute
+- Position: left top
+- **Highlight:** ring
+- **Description:**
+  The second exception is also **:s[Belongs to target]{color=own-bkwd}**, but it is decided **by attribute**: the Explorer lists individual attributes, and only those are classified :s[Belongs to target]{color=own-bkwd}. Of the {{ownership-count:declared}} attributes in the schema, {{ownership-count:belongs-to-target-backward-by-attribute.total}} fall into this group, including :s[{{relation:own-bkwd:ResearchStudy:Participant.member_of_research_study}}]{center color=entity}.
+
+  The {{ownership-count:belongs-to-target-backward-by-attribute.total}} attributes
+  - point to {{ownership-count:belongs-to-target-backward-by-attribute.owners}} distinct target entities (owners),
+  - have {{ownership-count:belongs-to-target-backward-by-attribute.attrs}} distinct attribute names,
+  - and are defined on {{ownership-count:belongs-to-target-backward-by-attribute.owned}} distinct source entities (owned).
+- Beats:
+  1. owned-and-pointed-back-at
+     - Anchor: node-box:ResearchStudy
+     - Spotlight: slot-row:ResearchStudyCollection.entries
+     - Description:
+       ##### Owned, and pointed back at
+       ResearchStudy can't go on the previous step's list, because it is owned: a ResearchStudyCollection holds its ResearchStudy entries.
+       :::s{center color=entity}
+         {{relation:own-fwd:ResearchStudyCollection.entries:ResearchStudy}}
+       :::
+       Putting ResearchStudy on the list would flip that attribute too. So the exception names the attribute that points back at ResearchStudy, not ResearchStudy itself. A Participant belongs to the study it is a member of, and the collection still owns the study.
+  2. by-attribute
+     - Description:
+       The only other target is QuestionnaireItem, owned by `Questionnaire.items` and pointed back at by a response item's `has_questionnaire_item`, which says which question was answered.
+
+       Each attribute is listed together with the entity that defines it — `ResearchStudy.part_of`, not just `part_of` — because QuestionnaireItem has a `part_of` too, and a new `part_of` elsewhere in the schema shouldn't be classified this way by accident. You can see all {{ownership-count:belongs-to-target-backward-by-attribute.total}} in the legend's `{{ownership-count:belongs-to-target-backward-by-attribute.total}} total` dropdown.
 
 ### loops
 
 - **Title:** An entity that names itself
 - **Tour:** Ownership
-- **Only:** sel=ResearchStudy
 - **Action:** Drew ResearchStudy on its own.
+- **Only:** sel=ResearchStudy&panels=0
 - **Anchor:** node-box:ResearchStudy
 - Position: right
 - **Spotlight:** slot-row:ResearchStudy.part_of
 - **Description:**
-  `ResearchStudy.part_of` holds a ResearchStudy, so a study
-  can be a sub-study of another. An attribute pointing to
-  its own defining entity means that an instance of this entity
-  can *belong to* another instance of the same kind. We indicate
-  this with a loop mark {{loop}} on the attribute row.
+  Entities can also have attributes pointing to themselves. `ResearchStudy.part_of` holds a ResearchStudy, so a study can be a sub-study of another. An attribute pointing to its own defining entity means that an instance of this entity can *belong to* another instance of the same kind. We indicate this with a loop mark {{loop}} on the attribute row.
 
-  Studies, specimens, containers, questionnaire items, files and time points
-  all nest this way.
+  Studies, specimens, containers, questionnaire items, files and time points all nest this way.
 
 ### rules-recap
 
-- **Title:** That's the whole of it
+- **Title:** Summary
 - **Tour:** Ownership
-- Change: legend=1
-- **Anchor:** none
-- **Width:** 520
+- **Only:** legend=1
+- **Anchor:** legend-section:ownership-rules
+- **Position:** left
+- **Highlight:** ring
 - **Description:**
-  One rule and two exceptions decide every line on the canvas:
+  Every attribute that points from one entity to another is classified by one rule and two exceptions:
 
-  - An attribute :s[owns]{color=own-fwd} the entity it points at.
-  - Except when that entity is one of the
-    {{ownership-count:belongs-to-target-backward-by-entity.owners}} that are
-    **only ever referred to**, and then the attribute's own entity
-    :s[belongs to]{color=own-bkwd} it instead.
-  - Except when the attribute is one of the
-    {{ownership-count:belongs-to-target-backward-by-attribute.total}} named
-    **back-pointers**, which point at an owner rather than down at something
-    owned.
+  - **:s[Owns target]{color=own-fwd}** — by default, an attribute owns what it points at: a list of things that are part of the source entity, or a fact about it. ({{ownership-count:owns-target-forward-by-default.total}} attributes)
+  - **:s[Belongs to target]{color=own-bkwd}, by entity** — an attribute pointing at **Participant**, **Visit**, **Organization**, **ImagingStudy** or **Person** belongs to it instead. ({{ownership-count:belongs-to-target-backward-by-entity.total}} attributes)
+  - **:s[Belongs to target]{color=own-bkwd}, by attribute** — a few individual attributes point back at an entity that some other attribute owns. ({{ownership-count:belongs-to-target-backward-by-attribute.total}} attributes)
 
-  And separately, an edge into an entity with subclasses is repeated into each
-  of them.
-
-  The Legend counts all four against the live schema every time it opens, so
-  when a line looks wrong, that is where to have the argument.
+  The Legend counts each rule against the current schema, and its dropdowns list every attribute under each one.
 
 <!--
 APPENDIX, parked: association edges.
