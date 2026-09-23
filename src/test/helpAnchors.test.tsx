@@ -3,7 +3,7 @@
  * string the content file names.
  *
  * REPLACED `helpResolvers.test.ts`, which tested five lookup functions against a
- * hand-copied DOM (docs/HELP_PACKAGE_PLAN.md §1a). That shape had a hole its own
+ * hand-copied DOM (docs/archive/help-package-shipped-2026-09-08.md §1a). That shape had a hole its own
  * header admitted: the fixture was a COPY of the render sites, so renaming an
  * attribute in the app while leaving the copy alone kept every test green and
  * broke the tour. With flat tags there is nothing to copy — the render site emits

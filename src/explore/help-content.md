@@ -38,38 +38,6 @@ Participant can be anchored.
   are off, `HELP_MODE_ENABLED`). An entry missing from `HELP_ENTRIES` in
   HelpMenu.tsx is unreachable, not merely unlisted.
 -->
-
-<details>
-<summary><b>TODO</b></summary>
-
-> Check old draft text and make sure it all got included
-
-3. select MeasurementObservation and highlight observation_type. text:
-   - While the relationship between an entity and its enumerations and raw
-     data attributes is direct (e.g.,
-     `MeasurementObservation.observation_type` ==> `MeasurementObservationTypeEnum`
-     or `MeasurementObservation.age_at_observation` ==> `integer`), it can be
-     related to other entities in more complex ways
-     [can we animate this so that step 4 keeps this popover but shows the next bullet, etc?
-     not sure best way to represent this in my outline...well, we're going to need a reasonably
-     human-readable/writable format for the full tour specs anyway]
-     - inheritance, known in modeling parlance as IS_A relationships,
-       e.g., `MeasurementObservation.is_a` ==> `Observation`, or
-     - association / ownership / containment, known in modeling parlance as HAS_A relationships,
-       e.g., `Visit.associated_participant` ==> `Participant`.
-     A primary goal 
-   - Entities can be related to each other through
-4. goal is to show all the relationship types. if there are any entities
-   that use all four, select one of those, otherwise will have to select
-   one that has most and then select another that has the others. steps:
-   1. **Selecting an entity** Select an entity by clicking its checkbox;
-      the entity will appear in the main panel along with directly related
-      entities. There are five ways an entity can be related to another.
-   2. highlight row
-   3. click checkbox.
-
-</details><!-- end of todo -->
-
 <details open>
 <summary><b>Tours</b></summary>
 

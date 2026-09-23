@@ -1,5 +1,5 @@
 /**
- * Dragging an overlay by its header (docs/HELP_PACKAGE_PLAN.md §1b).
+ * Dragging an overlay by its header (docs/archive/help-package-shipped-2026-09-08.md §1b).
  *
  * ⚠️ **What jsdom can and cannot say here.** It has no layout, so every
  * `getBoundingClientRect()` is a zero rect (docs/TESTING.md) — and the hook reads

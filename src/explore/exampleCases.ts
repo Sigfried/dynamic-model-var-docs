@@ -24,15 +24,11 @@
  * screen. These are the cases worth comparing, named, so a mode can be flipped
  * against a fixed target.
  *
- * The cases are grounded in the actual schema, not invented: owner counts were
- * computed from `classifySlotEdge` over bdchm.processed.json (2026-08-21).
- * Ownership convergence sizes, by distinct owning class:
- *   Quantity 16, TimePoint 8, BodySite 6, Context 6, then a tail of 4s.
- * By slot-edge (what actually crowds a corridor, since one class can own the
- * same target through several slots): Quantity 19, TimePoint 16, BodySite 6.
- * TimePoint is the interesting one — half as many owners as Quantity but
- * nearly as many edges, because the four Specimen*Activity classes each own it
- * twice (date_started, date_ended).
+ * The cases are grounded in the actual schema, not invented. The counts in
+ * names and notes are slot-edges (what crowds a corridor, since one class can
+ * own the same target through several slots), checked 2026-09-23 against
+ * `getConvergenceRanking` / `getDivergenceRanking` — the rankings the pane's
+ * Biggest fans shows live. A schema sync can move them; re-check there.
  *
  * `sel` is the whole content of the canvas — there is no separate expanded
  * tier since adding a class selects it (2026-08-27). `roots` turns on
@@ -117,8 +113,8 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
       {
         name: 'One child, merged with its parent',
         note: 'MeasurementObservation alone. It still merges: the box is titled '
-          + 'Observation, its 13 inherited rows sit at the top in black, and '
-          + "MeasurementObservation's own 9 follow under its coloured header. "
+          + 'Observation, its inherited rows sit at the top in black, and '
+          + "MeasurementObservation's own follow under its coloured header. "
           + 'Merging does not wait for a second sibling — a class must not '
           + 'change shape because of what else you happen to select.',
         sel: ['MeasurementObservation'],
@@ -177,8 +173,8 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
           'MeasurementObservation', 'Procedure', 'SpecimenCreationActivity'],
       },
       {
-        name: 'TimePoint 16-edge',
-        note: 'Densest corridor in the schema: 8 owners but 16 slot-edges, since '
+        name: 'TimePoint 14-edge',
+        note: 'Densest corridor in the schema: 8 owners but 14 slot-edges, since '
           + 'each Specimen*Activity owns date_started and date_ended. Also where '
           + 'the second-from-top edge goes diagonal and pair edges cross.',
         sel: ['TimePoint', 'Consent', 'ResearchStudy', 'TimePeriod',
@@ -202,8 +198,8 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
     heading: 'Pathological convergences',
     cases: [
       {
-        name: 'Quantity 19-edge (worst case)',
-        note: 'The largest convergence in the schema: 16 owning classes, 19 '
+        name: 'Quantity 16-edge (worst case)',
+        note: 'The largest convergence in the schema: 13 owning classes, 16 '
           + 'slot-edges. The fan is squeezed hardest here, so ENTITY_FAN_GAP and '
           + 'the merge distance both show their limits.',
         sel: ['Quantity', 'Activity', 'Assay', 'DeviceExposure',
@@ -258,7 +254,7 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
       },
       {
         name: 'Participant + Visit + Organization',
-        note: 'All three FK hubs at once (22 + 19 + 11 edges, nearly all flipped). '
+        note: 'All three FK hubs at once (22 + 19 + 14 edges, nearly all flipped). '
           + 'The densest picture the schema can produce, and the stress test for '
           + 'anything that changes routing.',
         sel: ['Participant', 'Visit', 'Organization', 'Condition', 'Demography',

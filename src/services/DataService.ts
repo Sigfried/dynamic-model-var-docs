@@ -1249,7 +1249,7 @@ export class DataService {
    * The mirror of getConvergenceRanking, and not redundant with it: because
    * flipped edges reverse direction, an FK hub shows up here rather than there.
    * That is not a detail — Participant fans out to 22 targets and Visit to 19,
-   * both bigger than the largest inbound convergence (Quantity, 19 edges), and
+   * both bigger than the largest inbound convergence (Quantity, 16 edges), and
    * they are almost entirely FLIPPED edges, which keep their attribute-row
    * anchor and must not merge. The routing work was scoped off the convergence
    * ranking alone and so had not looked at them.

@@ -155,7 +155,7 @@ if (!element) {
   `'full'`). Grep for the old literal.
 - **`console.log` is swallowed in vitest here.** To surface a value, assert it
   against a sentinel string and read the diff.
-- **Lint baseline is 34 errors**, all pre-existing. Compare against the baseline
+- **Lint baseline is 33 errors**, all pre-existing. Compare against the baseline
   rather than expecting zero.
 - **jsdom does not do layout**, and does no CSS anchor positioning at all — see
   [TESTING.md](TESTING.md#placement-in-a-real-browser-playwright) before writing

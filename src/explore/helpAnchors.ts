@@ -3,7 +3,7 @@
  * point at it.
  *
  * REPLACED `helpResolvers.ts`, a table of one lookup function per kind
- * (docs/HELP_PACKAGE_PLAN.md §1a). Each element now carries its WHOLE anchor in
+ * (docs/archive/help-package-shipped-2026-09-08.md §1a). Each element now carries its WHOLE anchor in
  * `data-help-id` — `node-box:Participant`,
  * `slot-row:MeasurementObservation.observation_type` — written at the render
  * site, and the help package finds it with one `querySelector`.

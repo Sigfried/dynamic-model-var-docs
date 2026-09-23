@@ -683,7 +683,7 @@ app, rendered at exactly one call site (`ExploreApp.tsx`), so there is no second
 one to keep consistent with.
 
 ⚠️ **Scoped down 2026-09-08**, and the cheap half **shipped the same day** as
-HELP_PACKAGE_PLAN §1b — Siggie: *"don't do any heavy lifting for the overlays."*
+[help-package §1b](archive/help-package-shipped-2026-09-08.md#1b-dragging--shipped-2026-09-08) — Siggie: *"don't do any heavy lifting for the overlays."*
 
 | surface | draggable now? | why |
 |---|---|---|
@@ -696,7 +696,7 @@ So the **symptom above is still not fixed**: the legend still covers the drawer,
 because the drawer is still in flow. What shipped buys is that you can now drag
 the legend off it.
 
-✅ **Dragging is unblocked** — the positioning migration (HELP_PACKAGE_PLAN §1)
+✅ **Dragging is unblocked** — the positioning migration ([help-package §1](archive/help-package-shipped-2026-09-08.md#1-positioning--css-anchor-positioning--shipped-2026-09-08))
 shipped 2026-09-08, and it was the right way round. `popoverPosition` no longer
 returns a computed `left`/`top` at all, so there is nothing to stomp a dragged
 one: a popover the browser is not repositioning simply stays where it was put.
@@ -807,7 +807,7 @@ Siggie, 2026-09-08: *"let's just get rid of sibs=0. i never use it anyway and it
 really crowds the canvas."*
 
 The anchor-kind half of this item **shipped separately** as
-[HELP_PACKAGE_PLAN §1a](HELP_PACKAGE_PLAN.md#1a-flat-anchor-tags--shipped-2026-09-08):
+[help-package §1a](archive/help-package-shipped-2026-09-08.md#1a-flat-anchor-tags--shipped-2026-09-08):
 flat `data-help-id` tags, `child-header:` for a merged child, and `node-box:` on a
 merged child simply not resolving. That did not need `sibs=0` removed —
 `child-header:` and `node-box:` name different things in either mode, so the

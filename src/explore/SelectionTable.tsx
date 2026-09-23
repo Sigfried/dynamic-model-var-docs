@@ -182,7 +182,7 @@ function ClassRows({
     <>
       <label
         data-class-row={classId}
-        /* The tour's anchor, written whole (docs/HELP_PACKAGE_PLAN.md §1a). This
+        /* The tour's anchor, written whole (docs/archive/help-package-shipped-2026-09-08.md §1a). This
            is the LIST-mode row; the tree hands its rows to DagBrowser, whose
            row wrapper dmvd does not render and cannot tag, so `entity-row` in
            tree mode degrades to "anchor did not resolve" — the documented

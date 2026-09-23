@@ -1326,9 +1326,9 @@ exactly as a real bug would.
 
 ### Measuring placement
 
-Measure before changing a `Position:`. The Playwright suite connects to a
-browser someone has started with `make probe-browser`; `make e2e-probe` runs
-[`e2e/placement.spec.ts`](../../e2e/placement.spec.ts) against the dev server.
+Measure before changing a `Position:`. Setting up the probe browser and
+`make e2e-probe` is in
+[TESTING.md](../../docs/TESTING.md#two-suites-and-only-one-of-them-needs-you).
 A throwaway spec using `openStep`, `goToAddress` and `placement` from
 [`e2e/helpers/tour.ts`](../../e2e/helpers/tour.ts) prints the popover and
 anchor rects for any position in seconds. Navigate by `data-step-address`

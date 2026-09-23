@@ -8,6 +8,26 @@ Newest first.
 
 
 ---
+## 2026-09-23 — Second cleanup pass
+
+- HELP_PACKAGE_PLAN.md §1/§1a/§1b (all SHIPPED 2026-09-08) → archive
+  `help-package-shipped-2026-09-08.md`, 384 → 141 lines. Kept live: the
+  "current browsers only" decision (so no fallback gets re-added) and the
+  `popover="hint"` / `interestfor` open question. Help-mode fix list
+  renumbered (its item 1 was the positioning migration). Seven §1a/§1b refs
+  in code and BACKLOG repointed to the archive.
+- TASKS `panel-and-zoom`: the shipped (a) cut; old (b)/(c) are now (a)/(b).
+- FORMAT "Measuring placement" linked to TESTING.md for probe setup rather
+  than restating it.
+- Example-case counts re-probed against the live rankings: Quantity 16 edges /
+  13 owners (was 19/16), TimePoint 14 (was 16), Organization 14 out (was 11);
+  Participant 22 / Visit 19 unchanged. The "One child" row counts were
+  dropped rather than measured. DataService's "Quantity, 19 edges" too.
+- Lint baseline 34 → 33 (unused `afterEach` import in helpPlacement.test.ts).
+- Siggie deleted the old TODO block atop help-content.md themselves.
+
+
+---
 ## 2026-09-23 — LEGEND_ORIENTATION and TOURS_AND_CONTENT retired
 
 Siggie: done with both. Moved to `docs/archive/`, with what was still live

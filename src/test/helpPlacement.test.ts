@@ -11,7 +11,7 @@
  * capability is the package's, not dmvd's: the region path is still supported
  * and still has to keep working for the next host that wants it.
  */
-import { describe, it, expect, beforeAll, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { autoWidth, navMinWidth, popoverPosition } from '../help/HelpLayer';

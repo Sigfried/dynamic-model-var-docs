@@ -1,7 +1,7 @@
 /**
  * Drag an overlay by its header, for as long as it is open.
  *
- * The cheap half of the overlay work (docs/HELP_PACKAGE_PLAN.md §1b). Siggie,
+ * The cheap half of the overlay work (docs/archive/help-package-shipped-2026-09-08.md §1b). Siggie,
  * 2026-09-08: *"don't do any heavy lifting for the overlays."* Two surfaces use
  * it — the tour's step popover and dmvd's legend / example-cases frame — and
  * neither PERSISTS a dragged position: it lasts while the thing is open and the
