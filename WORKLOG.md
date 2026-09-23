@@ -42,6 +42,18 @@ the Ownership tour's style.
   with the box. It lands 12px short — the popover's own `margin: 12px` gap.
   `OffsetX:` cannot cancel it: it writes `margin-left`, and an end-aligned
   (`span-left`) popover is placed by its right margin.
+- New step `legend-and-cases` (Siggie asked for the Legend and example cases
+  in this tour), before `where-next`. Anchoring traps hit on the way:
+  `legend-panel` cannot be used bare — a name with no `:arg` parses as
+  `help-id:legend-panel`, which the tests reject — so the step anchors on
+  `legend-section:ownership-rules`. The cases beat first anchored on
+  `help-menu`, and the popover overlapped the cases pane (the button sits
+  above it). Anchoring on a wrapper around the whole pane put the popover at
+  y -904: the content is ~2900px tall and was scrolled to centre it. So
+  the pane's Biggest fans section now carries a literal
+  `data-help-id="biggest-fans"` (literal because the help-id test greps
+  for it), with `Position: left span-bottom`. Measured: both positions land
+  left of their panel, no overlap.
 - Not touched: `rows-and-dots` beat 3 has a stray fragment ("on the canvas
   yet.") in Siggie's text.
 

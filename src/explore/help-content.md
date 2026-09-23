@@ -770,6 +770,26 @@ introduced and then use one word.
        - Drag a box out of the way; the next change to the selection lays everything out again.
 
 
+### legend-and-cases
+
+- **Title:** The Legend and example cases
+- **Tour:** Using the Explorer
+- **Change:** legend=1
+- **Action:** Opened the Legend from the Help menu.
+- **Anchor:** legend-section:ownership-rules
+- **Description:**
+  The **Legend** says what the diagram's arrows, colors and toolbar buttons mean. Its *Ownership rules* section counts the attributes that point from one entity to another under the rule that sets their direction, and its dropdowns list them. The [Ownership tour](./?tour=ownership){{target:replace}} goes through it.
+- **Beats:**
+  1. example cases
+     - Change: panels=0&cases=1
+     - Action: Closed the Legend and opened Example cases, also from the Help menu.
+     - Anchor: biggest-fans
+     - Position: left span-bottom
+     - Description:
+       ##### Example cases
+       **Example cases** lists selections worth looking at, from simple to dense. Clicking one replaces what is on the canvas. **Biggest fans**, at the top, loads the entities with the most lines converging on them or leaving them.
+
+
 ### where-next
 
 - **Title:** Where to go from here

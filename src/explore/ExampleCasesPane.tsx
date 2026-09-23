@@ -63,7 +63,10 @@ export default function ExampleCasesPane({
       onClose={onClose}
       offset={offset}
     >
-      <section className="mb-4">
+      {/* A literal tag so the help-id anchor test can find it by grep. The
+          tour's `legend-and-cases` step anchors here, not on the whole pane:
+          the pane's content is far taller than the screen. */}
+      <section className="mb-4" data-help-id="biggest-fans">
         <SectionHeading>Biggest fans</SectionHeading>
         <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5">
           Counted in slot-edges, not classes: one class owning a target through
