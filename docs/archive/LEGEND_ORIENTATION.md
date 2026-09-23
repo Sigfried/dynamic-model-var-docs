@@ -1,7 +1,7 @@
 # Legend list orientation
 
 `legend-list-orientation`, **shipped 2026-09-15** ([archived
-row](archive/tasks-2026-09-15.md)). The design argument, the alternatives
+row](tasks-2026-09-15.md)). The design argument, the alternatives
 rejected and the rounds of review are in WORKLOG (2026-09-14, and 2026-09-15
 "the legend's pivots, then its columns").
 What is left here is the part still being read FROM.
@@ -12,7 +12,7 @@ Each rule's counts are pivots: clicking one regroups the same pairs with that
 field on top. Every section runs **owner → attribute → owned**, so the
 top-level row means the owner everywhere.
 
-⚠️ `SHAPES` in [ownershipPivots.ts](../src/explore/ownershipPivots.ts) is a
+⚠️ `SHAPES` in [ownershipPivots.ts](../../src/explore/ownershipPivots.ts) is a
 TRANSCRIPTION of the block below. Two transcription errors have been caught
 already, so check one against the other before trusting either;
 `ownershipLegendDisclosure.test.tsx` pins the rules that come out of it.

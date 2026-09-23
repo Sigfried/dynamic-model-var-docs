@@ -1042,6 +1042,19 @@ The sketch, in two independent pieces:
 
 ---
 
+### Deliberately out of the tours
+
+**Enums and entity details.** Researchers would want enum contents and
+per-entity detail, which the Explorer does not yet carry. Siggie: get a good,
+working tour first. An "entity details" step should drop in later without
+restructuring, so the diagram tours do not claim completeness.
+
+**Per-user attribute display preference.** `ROW_BUDGET` is `Infinity`, so every
+box shows every attribute and the `+ N more` / `− fewer` footer never renders.
+The budget machinery is intact for a preference like "default to showing the
+top 6 attributes". See [`OwnershipGraphView.tsx`](../src/explore/OwnershipGraphView.tsx)
+and [`rowBudget.test.ts`](../src/test/rowBudget.test.ts).
+
 ## Siggie's upcoming thoughts
 
 1. A help or legend listing **every type of ownership pair**, the rules and

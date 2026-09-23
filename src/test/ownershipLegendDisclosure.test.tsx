@@ -7,12 +7,12 @@ import { PIVOTS, shapeOf } from '../explore/ownershipPivots';
 
 /**
  * The legend's pivots (`legend-list-orientation`, shipped 2026-09-15;
- * docs/LEGEND_ORIENTATION.md is the spec `SHAPES` transcribes).
+ * `SHAPES` in ownershipPivots.ts is the spec).
  *
  * **Rewritten 2026-09-15 from the two-counts version**, deliberately and not as
  * a regression. The old file pinned `N entities` / `M attributes` as two depths
  * of one list grouped by `p.range`; that grouping is the thing
- * docs/LEGEND_ORIENTATION.md removed. Each rule now offers FOUR pivots over the
+ * this design removed. Each rule now offers FOUR pivots over the
  * same pairs, grouped owner → attribute → owned.
  *
  * What survives from the old design, because it was never about the grouping:

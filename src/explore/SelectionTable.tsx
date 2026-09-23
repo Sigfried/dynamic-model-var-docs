@@ -18,7 +18,7 @@
  * Each header also carries a CONTENT VIEW control (`⊞`) that replaces the
  * canvas with that category's members plus its pins — the "what does this part
  * of the model contain" answer the app had nowhere else. See
- * `docs/TOURS_AND_CONTENT.md` §1 and `EntityCategory.pins`.
+ * `EntityCategory.pins` and `config/categoryView.ts`.
  */
 
 import { useMemo, useState } from 'react';

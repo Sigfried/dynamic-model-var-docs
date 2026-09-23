@@ -198,7 +198,8 @@ export interface OwnershipPairGroup {
 /**
  * One rule's four counts, in the order the legend's pivot line shows them:
  * `owner → attribute → owned`, then the total. Always owner-first and
- * owned-last, so the line itself teaches the direction (docs/LEGEND_ORIENTATION.md).
+ * owned-last, so the line itself teaches the direction (see `SHAPES` in
+ * ownershipPivots.ts).
  */
 export interface OwnershipRuleCounts {
   /** Distinct entities that OWN, whichever end of the declaration that is. */

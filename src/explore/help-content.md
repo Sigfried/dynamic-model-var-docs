@@ -17,6 +17,28 @@ left panel nests entities under their owners. Ownership is owner/owned. No
 hybrids ("entity class"): state the LinkML equivalence once where the term is
 introduced and then use one word.
 
+<!--
+Authoring notes for THIS file (the general ones are in FORMAT.md).
+
+A category step (the BDCHM tour): `Only: cat=<id>` and an `Action:` saying it
+drew the category; then a beat per class — a `#####` subtitle with the class
+name, the class's `model-description` placeholder beneath it, anchored `node-box:<Class>` — and a
+closing beat on what the category is FOR. `cat=` draws members plus pins
+(src/config/entityCategories.ts), so a pinned outside class such as
+Participant can be anchored.
+
+- Order a category's beats by the DRAWN layout, left to right, not by
+  `classIds`: the canvas is layered by ownership. Get the order by probing the
+  containment graph, not by reading the YAML, which misses the top-level
+  `slots` (`associated_participant`, ...) that carry most of the structure.
+- Several observation and observation-set subclasses share their parent's
+  description verbatim; a `model-description` placeholder per subclass would print one
+  paragraph repeatedly. Name them in one framing beat instead.
+- The Help menu is the ONLY way into a help-only entry (help mode's `?` hints
+  are off, `HELP_MODE_ENABLED`). An entry missing from `HELP_ENTRIES` in
+  HelpMenu.tsx is unreachable, not merely unlisted.
+-->
+
 <details>
 <summary><b>TODO</b></summary>
 

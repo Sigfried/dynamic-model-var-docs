@@ -1,6 +1,6 @@
 # The treelike exploration, 2026-09-14
 
-The arrangements that decided [LEGEND_ORIENTATION.md](../../LEGEND_ORIENTATION.md).
+The arrangements that decided [LEGEND_ORIENTATION.md](../../archive/LEGEND_ORIENTATION.md).
 Siggie ran these in `treelike` (`sigfried.github.io/treelike/demo.html`,
 source `~/github-repos/personal/treelike`) against
 [`ownership-attributes.csv`](../../../ownership-attributes.csv) in the repo root.

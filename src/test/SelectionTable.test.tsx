@@ -125,7 +125,7 @@ describe('SelectionTable', () => {
   });
 
   /**
-   * The content-view control (docs/TOURS_AND_CONTENT.md §1): one per category
+   * The content-view control (FORMAT.md §`cat=<id>`): one per category
    * header, replacing the canvas with that category's members plus its pins.
    */
   describe('content view control', () => {

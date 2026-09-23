@@ -14,8 +14,8 @@
  * to a first-time reader — what a row is, what an edge anchor means, owns vs.
  * belongs-to, the three edge types on one class. The guided tour does that job
  * now, and doing it twice in two voices is how the two drift apart. Their prose
- * was not thrown away: it is in `docs/TOURS_AND_CONTENT.md`, inlined at the tour
- * steps that use it. Do not re-add them here.
+ * was not thrown away: it was inlined at the tour steps in
+ * `src/explore/help-content.md` that use it. Do not re-add them here.
  *
  * Why the later groups exist: the merge-mode buttons (⋙ ⋙⋙ ⌙ ≡) and the routing
  * constants can only be judged by looking at real convergences, and

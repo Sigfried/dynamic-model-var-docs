@@ -23,7 +23,8 @@ spec.
 
      The parts run from the file outward: what the file looks like, what can
      go inside a field, how entries become tours, what a step does to the
-     screen, what it does to the app, and how one step spans several screens.
+     screen, what it does to the app, how one step spans several screens,
+     and how to test it.
      Put a new section in the part it belongs to rather than at the end. -->
 
 - [The content file](#the-content-file)
@@ -64,6 +65,10 @@ spec.
   - [Beats](#beats) — sub-steps of one popover; each beat replaces the last unless `Keep:`
   - [A beat's numbered line is a label, not its text](#a-beats-numbered-line-is-a-label-not-its-text)
   - [`Width:` is sticky across beats](#width-is-sticky-across-beats)
+- [Testing a tour](#testing-a-tour)
+  - [What the content tests catch](#what-the-content-tests-catch) — structural checks, and what green does not mean
+  - [What only the browser shows](#what-only-the-browser-shows) — jsdom resolves panel anchors only
+  - [Measuring placement](#measuring-placement) — the probe browser and a throwaway spec
 
 ## The content file
 
@@ -737,6 +742,10 @@ Some kinds have an edge worth knowing when you author:
   header strip inside the parent's. Address it `child-header:<E>` instead. (There
   is deliberately no fallback to the PARENT's box: under the child's name it
   would look like it worked.)
+- **A kind that takes no argument cannot be written bare.** A name with no
+  `:` parses as `help-id:<name>`, so `Anchor: legend-panel` looks for a
+  hand-written `data-help-id="legend-panel"` and the content test fails. Anchor
+  something inside it instead — `legend-section:<id>`.
 - **`relation-bar:<E>` needs its entity.** Every box on the canvas has a
   relation bar, so a bare `relation-bar` names all of them; the resolver takes
   the first visible match in document order, which is whichever box the layout
@@ -896,6 +905,11 @@ pick a bad side; it cannot push the popover off-screen.
 
 A beat inherits its step's `Position:`, `OffsetX:` and `Width:` and can override
 each independently, the same way it inherits `Anchor:`.
+
+**Anchor something short.** A popover beside an element taller than the
+screen is placed against whatever part the tour scrolled into view, which can
+leave it off screen — anchoring on a whole scrolling panel put one at y −904.
+Anchor a heading or a section inside it.
 
 **With no anchor** (`Anchor: none`) the popover is centred on its real height —
 so a long step stays centred rather than sitting low. One taller than the
@@ -1121,6 +1135,9 @@ Three things bound what it replaces:
 - **It gives up its claim like any other frame.** A class the viewer unticks
   during a replaced step is theirs, and the pop does not hand it back.
 
+An `Only:` that names no `sel` replaces nothing, so the step keeps the previous
+step's canvas — a silent way to anchor at something that is not there.
+
 A following `Change:` adds to the replaced canvas rather than reviving what was
 displaced — which is how a step names a clean picture and its next beat grows
 it.
@@ -1276,3 +1293,47 @@ Stickiness governs AUTHORED widths only. A step where nobody writes `Width:`
 never enters this rule — every position simply gets the automatic width for
 whatever it is showing. But once any beat sets one, it sticks, and later beats
 stop being sized from their text until another `Width:` releases it.
+
+## Testing a tour
+
+### What the content tests catch
+
+`make test-help-content` (or `npx vitest run src/test/helpContent.test.ts`,
+under a second) checks the content file against this spec: typo'd anchor kinds
+and arguments (checked against the live schema and category config), untagged
+`help-id` anchors, a `Change:` or `Only:` without an `Action:`, unknown field
+names, empty beats, duplicate entry ids and unresolved `{{placeholders}}`.
+Every diagram anchor is also checked against the tags its own step's
+`Change:` would draw ([`helpAnchors.test.tsx`](../test/helpAnchors.test.tsx)).
+A beat's `Change:` or `Only:` moves the canvas, so anchors are checked per
+position, not per step.
+
+A green run means the content is structurally sound. It says nothing about
+whether the copy reads well or the popover lands where it should.
+
+### What only the browser shows
+
+jsdom does no layout and no CSS anchor positioning. In vitest only the
+selection-panel anchors (`entity-row:`, `entity-checkbox:`, `category-row:`)
+resolve; `node-box:`, `slot-row:` and the rest need the ELK layout.
+[`tourStack.integration.test.tsx`](../test/tourStack.integration.test.tsx)
+walks a tour to a panel-anchored position for that reason.
+
+Two gaps no unit test closes: a step with no `Change:` inherits whatever is on
+screen, so there is no canvas to check its anchor against; and an element that
+is simply not in the DOM at that moment (a collapsed row) resolves to nothing
+exactly as a real bug would.
+
+### Measuring placement
+
+Measure before changing a `Position:`. The Playwright suite connects to a
+browser someone has started with `make probe-browser`; `make e2e-probe` runs
+[`e2e/placement.spec.ts`](../../e2e/placement.spec.ts) against the dev server.
+A throwaway spec using `openStep`, `goToAddress` and `placement` from
+[`e2e/helpers/tour.ts`](../../e2e/helpers/tour.ts) prints the popover and
+anchor rects for any position in seconds. Navigate by `data-step-address`
+(see [Finding a step you can see on screen](#finding-a-step-you-can-see-on-screen)),
+not by counting clicks.
+
+A popover sitting at the top-left of the canvas means its anchor resolved to
+nothing — `placement().anchor` comes back `null`.

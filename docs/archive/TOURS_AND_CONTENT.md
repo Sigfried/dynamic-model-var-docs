@@ -1,8 +1,8 @@
 # Tour content: the traps, and what is deliberately out
 
 The tours live in
-[`src/explore/help-content.md`](../src/explore/help-content.md); the authoring
-format is [`src/help/FORMAT.md`](../src/help/FORMAT.md). This file holds what
+[`src/explore/help-content.md`](../../src/explore/help-content.md); the authoring
+format is [`src/help/FORMAT.md`](../../src/help/FORMAT.md). This file holds what
 the content file does not: the recipe for a category step, anchoring traps,
 and two standing out-of-scope decisions.
 
@@ -22,7 +22,7 @@ saying what the category is FOR rather than what is in it.
 `cat=<id>` draws members **plus pins**, so a pinned outside class is on the
 canvas and can be anchored — `clinical`, `observation`, `lab` and `other` all
 pin `Participant`. Members and pins are in
-[`entityCategories.ts`](../src/config/entityCategories.ts).
+[`entityCategories.ts`](../../src/config/entityCategories.ts).
 
 ⚠️ **`Only:` already clears the canvas.** It REPLACES the selection, so
 `Only: cat=survey` is a clean category view with nothing carried over. Adding
@@ -58,7 +58,7 @@ were stale in both directions. Probe, or say it without a number.
 and `category-row:` point into the selection panel, which renders in tests;
 every `node-box:` and `slot-row:` needs the ELK layout, which does not run
 there. A test that walks a tour looking for a ringed popover can only stop on
-a panel-anchored position — [`tourStack.integration.test.tsx`](../src/test/tourStack.integration.test.tsx)
+a panel-anchored position — [`tourStack.integration.test.tsx`](../../src/test/tourStack.integration.test.tsx)
 carries the worked case.
 
 ⚠️ **An anchor kind with no argument cannot be written bare.** `legend-panel`
@@ -89,4 +89,4 @@ completeness in the diagram tours.
 2026-09-04, so every box shows every attribute and the `+ N more` / `− fewer`
 footer never renders. The budget machinery is intact for the intended end state:
 a preference like "Default to show top [6] attributes" that puts the footer
-back. See [`OwnershipGraphView.tsx`](../src/explore/OwnershipGraphView.tsx) and [`rowBudget.test.ts`](../src/test/rowBudget.test.ts).
+back. See [`OwnershipGraphView.tsx`](../../src/explore/OwnershipGraphView.tsx) and [`rowBudget.test.ts`](../../src/test/rowBudget.test.ts).

@@ -1,6 +1,7 @@
 /**
  * What a category's content view draws — the ⊞ control on each category
- * header in the Explore selector. See `docs/TOURS_AND_CONTENT.md` §1.
+ * header in the Explore selector. Tours draw the same thing with `cat=<id>`
+ * (src/help/FORMAT.md).
  *
  * Its own module rather than a helper inside `SelectionTable.tsx` because a
  * component file may only export components (react-refresh/only-export-

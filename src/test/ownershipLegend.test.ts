@@ -121,7 +121,7 @@ describe('ownership legend', () => {
    *
    * ⚠️ These were written for the old two-counts legend, which grouped every
    * section on `p.range`. That panel is gone — it groups owner → attribute →
-   * owned now (docs/LEGEND_ORIENTATION.md) — and these tests survived the
+   * owned now (ownershipPivots.ts) — and these tests survived the
    * rewrite untouched, because `byTargetEntity` below is re-implemented
    * LOCALLY and what it pins is the shape of the DATA: attributes sum to
    * pairs, and the range-keyed exception is few entities over many attributes.

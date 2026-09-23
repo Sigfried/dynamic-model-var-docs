@@ -14,7 +14,7 @@
  * drift it exists to reveal. If a pair looks wrong here, the classification is
  * wrong, not the legend.
  *
- * **Four pivots per rule, over one set of pairs** (docs/LEGEND_ORIENTATION.md).
+ * **Four pivots per rule, over one set of pairs** (`SHAPES` in ownershipPivots.ts).
  * Every count and the tree it opens read off the same key function
  * (`ownershipPivots.ts`), so a number cannot disagree with its own list.
  *

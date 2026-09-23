@@ -97,7 +97,7 @@ in the URL and in localStorage.
 
 Design and reference docs: [OWNERSHIP_CLASSIFICATION.md](docs/OWNERSHIP_CLASSIFICATION.md)
 (the ownership rules, the colour system, how edges are drawn) ·
-[TOURS_AND_CONTENT.md](docs/TOURS_AND_CONTENT.md) (the tour plan) ·
+[FORMAT.md](src/help/FORMAT.md) (the tour authoring format) ·
 [HELP_PACKAGE_PLAN.md](docs/HELP_PACKAGE_PLAN.md) ·
 [FOCUS_VIEW.md](docs/FOCUS_VIEW.md)
 

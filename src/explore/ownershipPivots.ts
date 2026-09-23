@@ -6,12 +6,12 @@
  * component (`react-refresh/only-export-components`) and so the trees can be
  * asserted directly rather than through the DOM.
  *
- * The design, the exploration behind it, and the per-pivot header layouts:
- * docs/LEGEND_ORIENTATION.md. The rendering technique (nested CSS subgrid) is
- * documented in `temp/legend-tables-reference.html`, which Siggie generated as
- * the visual reference for all twelve pivots. ⚠️ `temp/` is gitignored, so that
- * file is NOT in the repo — the layouts it settled are transcribed into
- * `SHAPES` below and into docs/LEGEND_ORIENTATION.md §header layout.
+ * `SHAPES` below is the spec: the tree order each pivot opens into is drawn
+ * above it. The design argument and the alternatives rejected are in WORKLOG
+ * (2026-09-14, 2026-09-15); docs/archive/LEGEND_ORIENTATION.md is the design
+ * doc it was built from. The rendering technique (nested CSS subgrid) came
+ * from `temp/legend-tables-reference.html`, which is gitignored and NOT in
+ * the repo.
  */
 
 import type { OwnershipPair } from '../services/DataService';
@@ -112,8 +112,7 @@ export type Field = 'entity' | 'attr' | 'srcAttr' | 'source' | 'target';
  * The shape one pivot renders: what its header says, what each level shows,
  * and whether a leaf carries an arrow and a target column.
  *
- * Twelve pivots (3 rules x 4), but only three column SHAPES — see the table in
- * LEGEND_ORIENTATION. `levels` is the label field per nesting depth, so its
+ * Twelve pivots (3 rules x 4), but only three column SHAPES. `levels` is the label field per nesting depth, so its
  * length IS the tree depth; `leaf` is what the innermost row shows.
  */
 export interface PivotShape {
@@ -159,12 +158,32 @@ const ENTITY = 'Target entity', SOURCE = 'Source entity';
 const ATTR = 'Attribute name', SRC_ATTR = 'Source.attribute';
 
 /**
- * The twelve layouts, as `[pivot][direction]`.
+ * The twelve layouts, as `[pivot][direction]`. Every top-level row is the
+ * OWNER in all of them; what varies is how far the tree goes before reaching a
+ * leaf and whether the target needs its own column (it does not when the level
+ * above already named it).
  *
- * Read against `temp/legend-tables-reference.html` (gitignored; see the header)
- * and docs/LEGEND_ORIENTATION.md §header layout, which is the durable copy. Every top-level row is the OWNER in all of them; what varies
- * is how far the tree goes before reaching a leaf and whether the target needs
- * its own column (it does not when the level above already named it).
+ * The tree order each one opens into, with the arrow each line carries —
+ * `ownershipLegendDisclosure.test.tsx` pins it:
+ *
+ * ```
+ * owns (own-fwd, ——▶)                  belongs to (own-bkwd, ——◀)
+ *   source entities                      owner/target entities
+ *     src                                  tgt ——◀
+ *       attr ——▶ tgt                         attr
+ *   attribute names (collapsed)                src.attr
+ *     attr                               attribute names
+ *       src ——▶ tgt                        attr
+ *   owned                                    tgt ——◀
+ *     ——▶ tgt  (right-aligned)                 src.attr
+ *       src.attr                         owned
+ *   attributes (expanded)                  src
+ *     attr                                   attr ——◀ tgt
+ *       src ——▶ tgt                      attributes
+ *                                          attr
+ *                                            tgt ——◀
+ *                                              src.attr
+ * ```
  */
 const SHAPES: Record<Pivot, { fwd: PivotShape; bkwd: PivotShape }> = {
   /*

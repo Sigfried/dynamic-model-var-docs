@@ -7,7 +7,7 @@
  * only say things about one element at a time. Written against Siggie's
  * reference render, `temp/legend-tables-reference.html`, which shows all twelve
  * pivots from real data. ⚠️ `temp/` is gitignored, so that file is not in the
- * repo; this comment and docs/LEGEND_ORIENTATION.md carry what it settled.
+ * repo; this comment and `SHAPES` in ownershipPivots.ts carry what it settled.
  *
  * ## How the alignment works
  *

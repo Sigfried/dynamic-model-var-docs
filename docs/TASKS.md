@@ -46,34 +46,6 @@ the help engine and the diagram, in priority order.
  | `merged-child-relations` | **Hard to see what a merged child is connected to.** [sg] weird that it's so hard to see what SpecimenQuality/SpecimenQuantityObservation are connected to. even when pulling up the `related` menu, you have to scroll to the bottom and there are no color indicators to help. Two problems: a merged child's own relations are buried at the end of the parent's list, and the list carries no sibling color to tie a row back to the band it belongs to — the colors are right there in the box header. | [RelationBar.tsx](../src/explore/RelationBar.tsx), [OwnershipGraphView.tsx](../src/explore/OwnershipGraphView.tsx) |
 
 
-⚠️ **The menu is the ONLY way into a help-only entry.** The other route was help
-mode's `?` hints, and `HELP_MODE_ENABLED` is false — `HelpLayer` renders them
-only `if (helpMode && !inTour)`, so a `data-help-id` tag anchors and rings but
-opens nothing when clicked. Checked 2026-09-05: `toolbar-siblings` (now
-`merged-boxes`, unanchored since the toggle went 2026-09-10),
-`relation-bar` and `graph-canvas-reading` were listed and fine; `node-dismiss`
-was tagged in `OwnershipGraphView` and reachable from nowhere, and is listed
-now. Anything dropped from `HELP_ENTRIES` in `HelpMenu.tsx` is unreachable, not
-merely unlisted.
-
-**Editing tour content is safe** — `npx vitest run src/test/helpContent.test.ts`
-(~700ms) catches typo'd anchor kinds, un-`Action:`ed state changes, untagged
-`help-id` anchors, leftover numeric `Tour:` values and unparseable `State:`
-params. Each failure was verified by deliberately breaking the content. A green
-run means the content is structurally sound and says nothing about whether the
-copy reads well.
-
-⚠️ **What the anchor tests do and do not cover.** Kind and ARGUMENT are both
-checked against the live schema and the category config, so `entity-row:Participnt`
-fails the build rather than degrading to an unringed popover. Since 8a
-([`helpAnchors.test.tsx`](../src/test/helpAnchors.test.tsx)) every DIAGRAM anchor
-is also run against the tags its own step's `Change:` would emit — which is how
-three live `node-box:` anchors on merged children were caught. **The remaining gap
-needs the browser**, and is two things: a step with NO `Change:` inherits whatever
-selection is on screen, so there is no canvas to check it against; and whether an
-element is actually in the DOM at that moment (a collapsed row, a panel in tree
-mode) resolves to nothing for reasons no test can distinguish from a real bug.
-
 ---
 
 ## Next — correctness, in priority order

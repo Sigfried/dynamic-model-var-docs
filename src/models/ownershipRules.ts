@@ -223,6 +223,14 @@ export interface RuleSpec {
 export const ASSOCIATION_SLOTS = new Set<string>([]);
 
 /**
+ * TODO:
+ *      overriding everything about referred to -- 
+ *      REFERRED_TO_ENTITIES should change to BELONGS_TO_BY_TARGET
+ *      and everywhere in tours, legend, etc. that the rule is called
+ *      BELONGS_TO_BY_ENTITY, it should be changed to by target.
+ * 
+ *      and NAMED_BACK_POINTERS should change to BELONGS_TO_BY_ATTRIBUTE
+ * 
  * **Entities every arrival at which is a reference.** Pointing at one of these
  * never means owning it: they are the shared, independently-existing things of
  * this model, looked up rather than held.
@@ -231,8 +239,7 @@ export const ASSOCIATION_SLOTS = new Set<string>([]);
  * `QuestionnaireItem` is owned by `Questionnaire.items` AND referred to by
  * three other attributes, which is why it belongs in `NAMED_BACK_POINTERS`
  * below and not here. What this set can say is the stronger claim that EVERY
- * arrival is a reference. See docs/LEGEND_ORIENTATION.md §Consequences for
- * wording.
+ * arrival is a reference.
  *
  * Keyed by RANGE, so the claim is about the ENTITY and holds at every site.
  * That is the safe key — it cannot silently capture an unrelated slot the way

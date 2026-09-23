@@ -8,6 +8,34 @@ Newest first.
 
 
 ---
+## 2026-09-23 — LEGEND_ORIENTATION and TOURS_AND_CONTENT retired
+
+Siggie: done with both. Moved to `docs/archive/`, with what was still live
+placed where its reader works:
+
+- LEGEND_ORIENTATION's pivot tree order → the `SHAPES` comment in
+  `ownershipPivots.ts`. The code was a hand transcription of the doc (two
+  transcription errors caught earlier); one copy removes that risk. The
+  header-caption table and the owns:owned example were already in the code.
+  §Consequences for wording was NOT carried over: Siggie's TODO in
+  `ownershipRules.ts` supersedes it (rename `REFERRED_TO_ENTITIES` →
+  `BELONGS_TO_BY_TARGET`, `NAMED_BACK_POINTERS` → `BELONGS_TO_BY_ATTRIBUTE`,
+  and "by entity" → "by target" everywhere). Not done yet.
+- TOURS_AND_CONTENT: general traps → FORMAT.md (argless anchor kinds, tall
+  anchors, `Only:` with no `sel`) plus a new "Testing a tour" section, which
+  also absorbed TASKS' two reference paragraphs on what the content tests do
+  and do not cover. Siggie asked FORMAT vs help-content; split it — BDCHM-only
+  notes (category recipe, beat order by drawn layout, shared descriptions,
+  help-only entries need the menu) are a comment at the top of
+  help-content.md. The out-of-scope decisions → BACKLOG §Deliberately out of
+  the tours. Traps FORMAT already covered (merged-child `child-header`,
+  never hand-type a count) were dropped as duplicates.
+- Trap: `helpTextResolvers.test.ts` scans COMMENTS in help-content.md for
+  placeholders, so a literal `{{model-description:X}}` in an HTML comment
+  fails it.
+
+
+---
 ## 2026-09-23 — Tours done; cleanup pass
 
 Siggie declared the tours done. `help-finish-authoring` and `read-tours` are
