@@ -728,6 +728,7 @@ introduced and then use one word.
      - Change: sel=Observation
      - Action: Added Observation from Visit's → list.
      - Anchor: node-box:Observation
+     - Position: span-left bottom
      - Description:
        ##### Observation
        *{{model-description:Observation}}*

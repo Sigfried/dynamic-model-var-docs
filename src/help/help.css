@@ -27,15 +27,22 @@
    name: HelpLayer writes the name it picked into the attribute and one rule per
    index reads it back. Same shape as the hint dots below, and for the same
    reason — `anchor-name` needs a literal `<dashed-ident>` and cannot be fed
-   from an attribute. `SPOTLIGHT_MAX` in HelpLayer.tsx is this run's length. */
-[data-help-spotlight="--help-spotlight-0"] { anchor-name: --help-spotlight-0; }
-[data-help-spotlight="--help-spotlight-1"] { anchor-name: --help-spotlight-1; }
-[data-help-spotlight="--help-spotlight-2"] { anchor-name: --help-spotlight-2; }
-[data-help-spotlight="--help-spotlight-3"] { anchor-name: --help-spotlight-3; }
-[data-help-spotlight="--help-spotlight-4"] { anchor-name: --help-spotlight-4; }
-[data-help-spotlight="--help-spotlight-5"] { anchor-name: --help-spotlight-5; }
-[data-help-spotlight="--help-spotlight-6"] { anchor-name: --help-spotlight-6; }
-[data-help-spotlight="--help-spotlight-7"] { anchor-name: --help-spotlight-7; }
+   from an attribute. `SPOTLIGHT_MAX` in HelpLayer.tsx is this run's length.
+
+   The name goes through a custom property so an element that is BOTH the
+   anchor and a spotlight carries both names. A plain `anchor-name` here would
+   replace `--help-anchor`, and the popover, anchored to nothing, would sit at
+   the canvas's top left. */
+[data-help-spotlight="--help-spotlight-0"] { --help-spotlight-name: --help-spotlight-0; }
+[data-help-spotlight="--help-spotlight-1"] { --help-spotlight-name: --help-spotlight-1; }
+[data-help-spotlight="--help-spotlight-2"] { --help-spotlight-name: --help-spotlight-2; }
+[data-help-spotlight="--help-spotlight-3"] { --help-spotlight-name: --help-spotlight-3; }
+[data-help-spotlight="--help-spotlight-4"] { --help-spotlight-name: --help-spotlight-4; }
+[data-help-spotlight="--help-spotlight-5"] { --help-spotlight-name: --help-spotlight-5; }
+[data-help-spotlight="--help-spotlight-6"] { --help-spotlight-name: --help-spotlight-6; }
+[data-help-spotlight="--help-spotlight-7"] { --help-spotlight-name: --help-spotlight-7; }
+[data-help-spotlight] { anchor-name: var(--help-spotlight-name); }
+[data-help-anchor][data-help-spotlight] { anchor-name: --help-anchor, var(--help-spotlight-name); }
 
 body.help-mode {
   cursor: help;

@@ -29,9 +29,19 @@ the Ownership tour's style.
   human being to a number you would analyze" line (kept over from the old
   `grow-visit`) as Claudisms — framing flourishes, not facts. Both cut; the
   step is "Visits and observations".
-- `relation-bar-step` beats 2–3 first inherited the step's `Position: bottom`
-  and the popover landed over both Person and Participant (screenshot). They
-  now set `Position: right`, as beat 1 does; unverified in the browser.
+- `relation-bar-step` beat 2's popover sat at the canvas's top left, over
+  Person and Participant. My first guess (it inherited `Position: bottom`;
+  add `Position: right`) was wrong and shipped in e639cd5. A probe showed the
+  anchor resolved to NOTHING: the beat spotlights its own anchor box, and the
+  `[data-help-spotlight=…]` rules in help.css set `anchor-name` to the
+  spotlight name, replacing `--help-anchor` (same specificity, later rule).
+  Fixed in the engine: the spotlight name goes through a custom property, and
+  `[data-help-anchor][data-help-spotlight]` carries both names. Measured after:
+  beat 2 lands right of Participant.
+- Observation beat: `Position: span-left bottom` to line its right edge up
+  with the box. It lands 12px short — the popover's own `margin: 12px` gap.
+  `OffsetX:` cannot cancel it: it writes `margin-left`, and an end-aligned
+  (`span-left`) popover is placed by its right margin.
 - Not touched: `rows-and-dots` beat 3 has a stray fragment ("on the canvas
   yet.") in Siggie's text.
 
