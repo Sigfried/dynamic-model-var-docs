@@ -738,6 +738,7 @@ introduced and then use one word.
      - Change: sel=Quantity
      - Action: Added Quantity, the same as clicking the `value_quantity` row.
      - Anchor: node-box:Quantity
+     - Position: span-left bottom
      - Description:
        ##### Quantity
        *{{model-description:Quantity}}*
@@ -753,13 +754,15 @@ introduced and then use one word.
 - **Change:** detail=Observation
 - **Action:** Opened the details panel for Observation, the same as clicking its box header.
 - **Anchor:** none
+- **Position:** bottom
 - **Description:**
-  Clicking a box header opens the entity's details: its description, every attribute with its type, and the entities that refer to it. Entity names in the panel are links, so you can read about a related entity without drawing it. The **ⓘ** beside an entry in the relation bar opens the same panel.
+  Clicking a box header opens the entity's details: its description, every attribute with its type, and the entities that refer to it. Entity names in the panel are links, so you can read about a related entity without drawing it.<!-- this disappeared: The **ⓘ** beside an entry in the relation bar opens the same panel. -->
 - **Beats:**
   1. moving around
      - Change: panels=0
      - Action: Closed the details panel.
-     - Anchor: graph-canvas
+     - Anchor: none
+     - Spotlight: graph-canvas
      - Highlight: ring
      - Description:
        ##### Moving around
@@ -794,6 +797,7 @@ introduced and then use one word.
 
 - **Title:** Where to go from here
 - **Tour:** Using the Explorer
+- **Change:** panels=0
 - **Anchor:** none
 - **Description:**
   To grow a diagram, tick an entity in the panel, click an entity row in a box, or pick from a box's relation bar.

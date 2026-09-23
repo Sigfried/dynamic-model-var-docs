@@ -69,6 +69,14 @@ describe('unanchored popover placement', () => {
     expect(s.transform).toBe('translateY(-50%)');
   });
 
+  it('pins to the viewport bottom when an unanchored step says `Position: bottom`', () => {
+    const s = popoverPosition(false, 'bottom', undefined, 320);
+    expect(s.bottom).toBe(16);
+    expect(s.top).toBe('auto');
+    expect(s.transform).toBeUndefined();
+    expect(centreOf(s, 320)).toBe(VW / 2);
+  });
+
   it('ignores the region once there is a real anchor', () => {
     const withRegion = popoverPosition(true, undefined, undefined, 320, CANVAS);
     const without = popoverPosition(true, undefined, undefined, 320, null);

@@ -1311,8 +1311,18 @@ export function popoverPosition(
      * so their midline IS the viewport's. Horizontal is where the difference
      * actually lay.
      */
+    const left = Math.max(8, Math.min(cx - W / 2, vw - W - 8));
+    /*
+     * `Position: bottom` on an unanchored step pins it to the viewport's
+     * bottom edge instead, for a step that wants the diagram above it clear.
+     * Any other value keeps the centring: there is no anchor for it to name
+     * a side of.
+     */
+    if (side === 'bottom') {
+      return { left, top: 'auto', bottom: 16, maxHeight: `${vh - 32}px`, width: W };
+    }
     return {
-      left: Math.max(8, Math.min(cx - W / 2, vw - W - 8)),
+      left,
       top: '50%',
       transform: 'translateY(-50%)',
       maxHeight: `${vh - 16}px`,

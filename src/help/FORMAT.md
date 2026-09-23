@@ -902,6 +902,11 @@ each independently, the same way it inherits `Anchor:`.
 so a long step stays centred rather than sitting low. One taller than the
 screen scrolls its body and keeps the back/next row in view.
 
+`Position: bottom` on an unanchored step pins it to the bottom of the viewport
+instead, still centred horizontally — for a step about the diagram as a whole,
+which a centred popover would cover. Any other `Position:` value is ignored
+when there is no anchor.
+
 Horizontally it can centre on a **region the host names** rather than the whole
 window, via `<HelpProvider centerOn="…">` — so an unanchored step can be kept
 clear of a panel it is describing. Vertically it always stays on the viewport's
