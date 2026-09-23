@@ -8,6 +8,35 @@ Newest first.
 
 
 ---
+## 2026-09-23 — Using the Explorer: back half rewritten
+
+Siggie had reworked the tour through `relation-bar-step` beat 1 and asked for
+the next step to be folded into it and the rest rewritten more concisely, in
+the Ownership tour's style.
+
+- `grow-participant` is gone. Its layout point ("owners on the left", plus the
+  Person/Participant definition) and its "line leaves the row" point are now
+  beats 2–3 of `relation-bar-step`. Its "far end" beat was cut into one
+  sentence; its "two ways to grow" beat was cut outright because both ways
+  have just been demonstrated, and `where-next` restates them in one line.
+- `grow-visit` lost the hollow-dot beat (`rows-and-dots` already teaches the
+  dot) and the "five subclasses" / "four of six categories" claims — hand-typed
+  counts no placeholder backs. Relation widgets added, target-first for the
+  backward one.
+- `where-next` dropped *What BDCHM is built with*: that tour is commented out
+  (382ff92). Tour names are now `{{target:replace}}` links.
+- Siggie rejected the "From a person to a number" title and the "path from a
+  human being to a number you would analyze" line (kept over from the old
+  `grow-visit`) as Claudisms — framing flourishes, not facts. Both cut; the
+  step is "Visits and observations".
+- `relation-bar-step` beats 2–3 first inherited the step's `Position: bottom`
+  and the popover landed over both Person and Participant (screenshot). They
+  now set `Position: right`, as beat 1 does; unverified in the browser.
+- Not touched: `rows-and-dots` beat 3 has a stray fragment ("on the canvas
+  yet.") in Siggie's text.
+
+
+---
 ## 2026-09-23 — Ownership tour done; cleanup pass
 
 Siggie declared the Ownership tour done; its TASKS row is archived to

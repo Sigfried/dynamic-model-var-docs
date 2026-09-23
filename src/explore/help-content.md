@@ -695,95 +695,54 @@ introduced and then use one word.
          {{relation:own-bkwd:Person:Participant.associated_person}}
        :::
        Participant :s[belongs to]{color=own-bkwd} Person, but since the attribute that relates them is declared on Participant, we had to find and show Participant through Person's forward-pointing RELATED menu.
-
-### grow-participant
-
-- **Title:** Adding a related entity
-- **Tour:** Using the Explorer
-- **Only:** sel=Person~Participant
-- **Action:** Added Participant, the same as clicking it in Person's → list.
-- **Anchor:** node-box:Participant
-- **Description:**
-  Participant landed to the RIGHT of Person, and a line joins them. The
-  canvas is laid out by ownership, owners on the left, so where a box lands
-  already says something about it.
-
-  A **Person** is a human being; a **Participant** is that person's role in
-  one study, and the same person in three studies is three Participants.
-- **Beats:**
-  1. the row that made the line
+  2. owners on the left
+     - Anchor: node-box:Participant
+     - Position: right
+     - Spotlight: node-box:Person, node-box:Participant
      - Description:
-       ##### A line leaves the row that made it
-       The line comes from Participant's `associated_person` row. This is the
-       one idea the whole diagram rests on: **a line leaves the attribute row
-       that creates it**, not the box, so you can always see WHICH attribute
-       connects two entities. The arrowhead lands on the entity the row names.
-     - Anchor: slot-row:Participant.associated_person
-  2. the far end
+       ##### Owners on the left
+       The canvas is laid out by ownership: owners on the left, what they own to the right. A **Person** is a human being; a **Participant** is that person's role in one study, and the same person in three studies is three Participants. The [Ownership tour](./?tour=ownership){{target:replace}} explains how the Explorer decides which end owns which.
+  3. the row that made the line
+     - Anchor: node-box:Participant
+     - Position: right
+     - Spotlight: slot-row:Participant.associated_person, node-box:Person
      - Description:
-       ##### The far end
-       At the other end the line points at Person as a whole, not at one of
-       its rows: the attribute is Participant's, and Person is only what it
-       holds. Note the direction — Participant declares the attribute, and
-       Person is drawn to its LEFT. Which side a target lands on is decided by
-       ownership, which the *Ownership* tour is about.
-     - Anchor: node-box:Person
-  3. the second way
-     - Description:
-       ##### Two ways to grow a diagram
-       Participant's own rows name entities that are not on the canvas yet —
-       a ResearchStudy, an Organization, Consents. Clicking any of those rows
-       adds that entity. Rows and the relation bar are the two ways to grow a
-       diagram without going back to the panel; both also tick the checkbox
-       on the left.
-     - Anchor: slot-row:Participant.member_of_research_study
+       ##### A line leaves its attribute row
+       The line starts at Participant's `associated_person` row, not at the box, so you can always see which attribute connects two entities. It ends on the Person box as a whole.
 
 
 ### grow-visit
 
-- **Title:** Three more hops
+- **Title:** Visits and observations
 - **Tour:** Using the Explorer
 - **Only:** sel=Person~Participant~Visit
 - **Action:** Added Visit from Participant's → list.
 - **Anchor:** node-box:Visit
 - **Description:**
-  A Visit is an encounter with the healthcare system, and most of what is
-  recorded about a participant is recorded at one. It belongs to a
-  Participant the same way Participant belongs to a Person: through an
-  `associated_participant` attribute declared on Visit, drawn as one more
-  hop to the right.
+  A **Visit** is an encounter with the healthcare system, and most of what is recorded about a participant is recorded at one. Visit belongs to Participant the way Participant belongs to Person, through an attribute declared on Visit:
+  :::s{center color=entity}
+    {{relation:own-bkwd:Participant:Visit.associated_participant}}
+  :::
 - **Beats:**
   1. an observation
-     - Description:
-       ##### An observation
-       *{{model-description:Observation}}*
-
-       Two lines arrive here, because an Observation names both the
-       Participant it is about and the Visit it was made at. It has five
-       subclasses, which the *Inheritance* tour draws; on its own it is just
-       this box.
      - Change: sel=Observation
      - Action: Added Observation from Visit's → list.
      - Anchor: node-box:Observation
-  2. the value
      - Description:
-       ##### The value
-       `observation_type` says what was measured, and `value_quantity` is
-       where a numeric answer goes. Its dot is hollow: Quantity is not on the
-       canvas. Clicking the row would add it.
-     - Anchor: slot-row:Observation.value_quantity
-  3. from a person to a number
-     - Description:
-       ##### From a person to a number
-       *{{model-description:Quantity}}*
+       ##### Observation
+       *{{model-description:Observation}}*
 
-       Five boxes: Person → Participant → Visit → Observation → Quantity is
-       the path from a human being to a number you would analyze, and four of
-       the six categories hang off it. The `value_quantity` dot is filled now
-       that its line is drawn.
+       Its `associated_participant` and `associated_visit` rows name the Participant it is about and the Visit it was made at, so it has a line to each.
+  2. the value
      - Change: sel=Quantity
      - Action: Added Quantity, the same as clicking the `value_quantity` row.
      - Anchor: node-box:Quantity
+     - Description:
+       ##### Quantity
+       *{{model-description:Quantity}}*
+       :::s{center color=entity}
+         {{relation:own-fwd:Observation.value_quantity:Quantity}}
+       :::
 
 
 ### detail-panel
@@ -794,29 +753,20 @@ introduced and then use one word.
 - **Action:** Opened the details panel for Observation, the same as clicking its box header.
 - **Anchor:** none
 - **Description:**
-  Clicking a box — its header, or any row that is not itself clickable —
-  opens the entity's details: its description, every attribute with its
-  type, and the entities that refer to it. Entity names inside the panel are
-  links, so you can follow references without changing what is drawn. The
-  **ⓘ** beside a row in the relation bar opens the same panel for that
-  entity. Close it with its ✕.
+  Clicking a box header opens the entity's details: its description, every attribute with its type, and the entities that refer to it. Entity names in the panel are links, so you can read about a related entity without drawing it. The **ⓘ** beside an entry in the relation bar opens the same panel.
 - **Beats:**
   1. moving around
-     - Description:
-       ##### Moving around
-       Drag the background to pan. Zoom with Ctrl+wheel (⌘+wheel on a Mac, or
-       a pinch), or with the `+` `−` `1:1` `⛶` buttons at the top right; `⛶`
-       fits the whole diagram in the window, and `LR` / `TB` lay it out left
-       to right or top down. Hover a box and everything not connected to it
-       fades.
-
-       You can drag a box out of the way, too. Its lines follow but are not
-       re-routed around anything, and the next change to the selection lays
-       everything out afresh.
      - Change: panels=0
      - Action: Closed the details panel.
      - Anchor: graph-canvas
      - Highlight: ring
+     - Description:
+       ##### Moving around
+       - Drag the background to pan.
+       - Zoom with Ctrl+wheel (⌘+wheel on a Mac, or a pinch), or with the `+` `−` `1:1` `⛶` buttons at the top right; `⛶` fits the whole diagram.
+       - `LR` / `TB` lay the diagram out left to right or top down.
+       - Hover a box to fade everything not connected to it.
+       - Drag a box out of the way; the next change to the selection lays everything out again.
 
 
 ### where-next
@@ -825,33 +775,26 @@ introduced and then use one word.
 - **Tour:** Using the Explorer
 - **Anchor:** none
 - **Description:**
-  That is the whole mechanism: tick, click a row or a bar entry, read the
-  box. Three more things are worth knowing.
+  To grow a diagram, tick an entity in the panel, click an entity row in a box, or pick from a box's relation bar.
 - **Beats:**
   1. category views
-     - Description:
-       ##### A category at once
-       The ⊞ on a category header draws every entity in that category, plus
-       the two or three outside entities that make it legible. It replaces
-       whatever was on the canvas.
      - Anchor: category-row:admin
+     - Description:
+       ##### A whole category
+       The ⊞ on a category header draws every entity in that category, plus the few outside entities it depends on. It replaces whatever is on the canvas.
   2. copy link
+     - Anchor: copy-link
      - Description:
        ##### Sharing a view
-       **Copy link** copies a URL that reproduces exactly this canvas —
-       selection and settings — for anyone who opens it.
-     - Anchor: copy-link
+       **Copy link** copies a URL that reproduces this canvas for anyone who opens it.
   3. the other tours
-     - Description:
-       ##### The other tours
-       If you came straight here, *The BioData Catalyst Harmonized Model*
-       is the one to take next: it walks the six categories and what is in
-       them, which is the model rather than the app. *Ownership* explains why
-       boxes land where they do and what the two kinds of line mean;
-       *Inheritance* explains the boxes that hold several entities at once;
-       and *What BDCHM is built with* is the schema behind all of it, for
-       anyone who wants to author or harmonize against it.
      - Anchor: tour-chooser
+     - Description:
+       ##### Other tours
+       - [The BioData Catalyst Harmonized Model](./?tour=the-biodata-catalyst-harmonized-model){{target:replace}} walks the six categories and what is in them.
+       - [Ownership](./?tour=ownership){{target:replace}} explains which way each line points and where boxes land.
+       - [Inheritance](./?tour=inheritance){{target:replace}} explains boxes that hold several entities at once.
+
 
 </details><!-- end of Using the Explorer tour -->
 </div>
