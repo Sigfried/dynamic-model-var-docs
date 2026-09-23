@@ -85,7 +85,7 @@ Participant can be anchored.
 - **Description:** 
   What's in the model?
 
-  The BDCHM schema provides a flexible, general purpose structure
+  The BDCHM schema provides a flexible, general-purpose structure
   for storing clinical trials data. BDCHM Explorer categorizes the
   entities specified in the model into six areas to make it easier
   to browse and comprehend. This tour will walk you through each
