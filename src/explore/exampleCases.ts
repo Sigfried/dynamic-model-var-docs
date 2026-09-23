@@ -61,47 +61,43 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
     cases: [
       {
         name: 'Owns target — lists',
-        note: 'A multivalued slot means the owner has-a collection, so ownership '
-          + 'runs forward: Questionnaire.items and ResearchStudy.consents. The two '
-          + '`part_of` self-loops are the counterexample — multivalued but drawn '
-          + 'backward, because they walk UP a tree.',
+        note: 'An attribute holding a list owns what it lists: '
+          + 'Questionnaire.items and ResearchStudy.consents. The two `part_of` '
+          + 'self-loops are the exception on screen — each is a named '
+          + 'back-pointer, so it belongs to its target.',
         sel: ['ResearchStudy', 'Consent', 'Questionnaire', 'QuestionnaireItem'],
       },
       {
+        name: 'Owns target — facts',
+        note: 'Single-valued attributes whose target describes the holder — a '
+          + 'duration, a start and end date — are owned by it under the same '
+          + 'default rule.',
+        sel: ['SpecimenStorageActivity', 'Quantity', 'TimePoint', 'Activity'],
+      },
+      {
         name: 'Belongs to target, by entity',
-        note: 'The largest group (70 edges). Participant fans OUT to 22 targets, '
-          + 'nearly all reversed: each target declares `associated_participant` '
-          + 'and is drawn as belonging to Participant. This is the group that '
-          + 'would move if own-bkwd merges into association.',
+        note: 'Participant and Visit are on the referred-to list, so every '
+          + '`associated_participant` and `associated_visit` belongs to its '
+          + 'target: the records sit to the right of the two entities they '
+          + 'point at.',
         sel: ['Participant', 'Condition', 'Demography', 'Exposure', 'Procedure',
           'Visit'],
       },
       {
-        name: 'Owns target — facts',
-        note: 'Single-valued, but forward anyway: Quantity, TimePoint and the like '
-          + 'have no identity of their own, so the value belongs to whoever holds '
-          + 'it rather than owning the holder.',
-        sel: ['SpecimenStorageActivity', 'Quantity', 'TimePoint', 'Activity'],
+        name: 'Belongs to target, by attribute',
+        note: 'ResearchStudyCollection.entries owns ResearchStudy, so '
+          + 'ResearchStudy cannot go on the referred-to list. Instead the '
+          + 'attribute pointing back at it, '
+          + 'Participant.member_of_research_study, is named individually.',
+        sel: ['ResearchStudyCollection', 'ResearchStudy', 'Participant'],
       },
       {
-        name: 'Entity-ranged — always forward',
-        note: 'The twelve focus / associated_evidence slots range on Entity, the '
-          + 'universal root. A pointer AT the root is never a foreign key back to '
-          + 'an owner, so these run forward whatever their cardinality. Both '
-          + 'single- and multi-valued focus sites are here — all should point '
-          + 'AT Entity.',
+        name: 'Pointers at Entity',
+        note: 'The `focus` and `associated_evidence` attributes range on '
+          + 'Entity, the universal root, and follow the default rule. They '
+          + 'all converge on the one Entity box.',
         sel: ['Observation', 'ObservationSet', 'MeasurementObservation', 'Document',
           'Condition', 'SdohObservation', 'Entity'],
-      },
-      {
-        name: 'Association — no ownership claim',
-        note: 'Both associations in the schema: Document.related_document → '
-          + 'Specimen, and SpecimenContainer.container → SpecimenStorageActivity. '
-          + 'Slate and dashed, arrowed at both ends. They are listed explicitly '
-          + 'because they are multivalued, so the default rule would otherwise call them '
-          + 'ownership.',
-        sel: ['Document', 'Specimen', 'SpecimenContainer',
-          'SpecimenStorageActivity'],
       },
       {
         name: 'Self-loops',
@@ -307,16 +303,9 @@ export const EXAMPLE_CASES: ExampleCaseGroup[] = [
           'SpecimenTransportActivity', 'Participant'],
       },
       {
-        name: 'The known 3-node cycle',
-        note: 'Specimen -> SpecimenStorageActivity -> SpecimenContainer -> '
-          + 'Specimen: an association plus two ownership edges. Known '
-          + 'and deliberately unhandled; here so it stays visible.',
-        sel: ['Specimen', 'SpecimenStorageActivity', 'SpecimenContainer'],
-      },
-      {
         name: 'Backward ownership (own-bkwd)',
-        note: 'Slots drawn backward (performed_by, associated_person, '
-          + 'contained_in, related_imaging_study). These keep their '
+        note: 'Slots drawn backward (originating_site, associated_person, '
+          + 'related_imaging_study, source_participant). These keep their '
           + 'attribute-row anchor and must NOT merge — check the arrowheads.',
         sel: ['Organization', 'Person', 'Participant', 'ImagingFile',
           'ImagingStudy', 'SpecimenContainer', 'Specimen'],

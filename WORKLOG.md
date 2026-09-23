@@ -58,10 +58,16 @@ the Ownership tour's style.
   and the beat sits beside the "One rule at a time" heading instead
   (`data-help-id="first-case-group"`, rendered for group 0 only; the
   `biggest-fans` tag is gone). Case names lost their rule numbers
-  ("Rule 1 — …" → "Owns target — lists", etc.). The NOTES in that group are
-  still stale (70 edges, the rejected own-bkwd/association merge, two
-  associations that no longer exist, an Entity-ranged rule that is not a
-  rule) — Siggie dismissed a question about rewriting them, so undecided.
+  ("Rule 1 — …" → "Owns target — lists", etc.). Then the group was
+  rewritten against a classifier probe: notes follow the Legend's three
+  rules, a "Belongs to target, by attribute" case was added
+  (ResearchStudyCollection~ResearchStudy~Participant), "Association" was cut
+  (every slot in it is default-forward now; ASSOCIATION_SLOTS is empty) and
+  "Entity-ranged — always forward" became "Pointers at Entity" (default
+  rule, not a rule of its own). Two later cases were also wrong: "The known
+  3-node cycle" is no longer a cycle (all three edges forward, from Specimen
+  and SpecimenStorageActivity into SpecimenContainer) and was cut; "Backward
+  ownership" listed `contained_in`, which is forward.
 - detail-panel: `Position: bottom` on an unanchored step is new engine
   behaviour — it pins to the viewport's bottom edge (FORMAT.md). The beat
   went from `Anchor: graph-canvas` to `Anchor: none` + `Spotlight:
