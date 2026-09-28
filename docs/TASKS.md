@@ -100,6 +100,6 @@ unmeasured. The standing rule is measure before proposing one.
 
 Chip-strip redesign · panel resizing/detaching · the ownership legend rebuild ·
 CURIE links · the bare diagonal · dragging polish · example-cases restructuring
-· extracting `packages/tour-help/` · bringing help mode back.
+· moving dmvd onto the help/tour packages ([plan](HELP_PACKAGE_PLAN.md)) · bringing help mode back.
 
 All keep their full write-ups in [BACKLOG.md](BACKLOG.md) — nothing is lost.

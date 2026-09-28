@@ -8,6 +8,35 @@ Newest first.
 
 
 ---
+## 2026-09-28 — HELP_PACKAGE_PLAN rewritten for separate packages + vs-hub
+
+- An earlier planning session (help package for vs-hub) is lost: not in any
+  transcript on the old laptop, probably run on the new one. Rebuilt from
+  Siggie's restated direction instead.
+- Siggie's direction reverses the premise the in-app code was built on
+  (HelpProvider: "two modes over one registry"): help and tour become separate
+  packages, the prose dialect a third, published to npm, vs-hub first, dmvd
+  retrofitted later. Asked where anchoring + popover go (shared by both) →
+  Siggie picked a 4th package. vs-hub needs tours only.
+- The old doc's "extraction is a move, not a disentangling" no longer holds:
+  parseHelpContent/HelpLayer/HelpProvider each mix all four concerns. Also
+  "FORMAT.md knows nothing about BDCHM" was false — 41 dmvd mentions, as
+  examples; recorded as work, not as a correction.
+- Found a further shared piece: the content-file structure (one `###` entry can
+  be help topic + tour step). Proposed markdown pkg owns the generic document
+  parser; left as DECIDE.
+- Siggie asked how a monorepo works and what npm scoping buys before deciding;
+  both written into the plan as DECIDE boxes with a recommendation (monorepo,
+  `@sigfried` scope). Not decided.
+- Dropped: `SPEC_SECTION` seam (a code-comment detail, unused), the
+  `packages/tour-help/` name. Moved "no new popovers" (dmvd-only) to BACKLOG.
+  Help-mode defect counts (11 tags, 53 rows) dropped rather than re-measured —
+  tags are now partly dynamic, so a literal grep undercounts.
+- Code comments repointed: RelationBar §4→§7, helpContext → §6, HelpLayer §1b →
+  archive.
+
+
+---
 ## 2026-09-23 — Second cleanup pass
 
 - HELP_PACKAGE_PLAN.md §1/§1a/§1b (all SHIPPED 2026-09-08) → archive

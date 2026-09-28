@@ -285,6 +285,14 @@ Two cheap things neither yet done, which would make the current state legible:
 
 ## Diagram and layout
 
+### Entity-title and row popovers — not yet
+
+Settled 2026-09-02: no new popovers for now. Entity-title and row popovers
+belong to a larger pass on getting all the detail into one place. When they do
+land they should be **one primitive** (positioning, delay, dismissal, z-order
+above both the SVG and the node divs) with different content per trigger, or
+the two will drift apart.
+
 ### The fan from `ObservationSet.observations`
 
 **The source-row half shipped 2026-08-31 (`4bd5755`).** Each

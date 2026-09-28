@@ -247,7 +247,7 @@ export default function HelpLayer() {
   const entry = activeId ? content.entries.get(activeId) : undefined;
 
   /**
-   * The popover is draggable by its title (§1b of docs/HELP_PACKAGE_PLAN.md),
+   * The popover is draggable by its title (§1b of docs/archive/help-package-shipped-2026-09-08.md),
    * which §1 is what made possible: nothing recomputes its position any more, so
    * a dragged coordinate has nothing to stomp it.
    *

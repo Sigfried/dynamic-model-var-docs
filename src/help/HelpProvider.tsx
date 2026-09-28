@@ -1,7 +1,7 @@
 /**
  * Help + tour, as two modes over one registry.
  *
- * Per docs/HELP_PACKAGE_PLAN.md, hints and tour are not two features: they are
+ * Hints and tour are not two features here: they are
  * two navigation states over the same content, the same `data-help-id`
  * anchoring, and the same popover.
  *
