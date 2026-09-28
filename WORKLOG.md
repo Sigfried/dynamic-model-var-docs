@@ -34,6 +34,19 @@ Newest first.
   tags are now partly dynamic, so a literal grep undercounts.
 - Code comments repointed: RelationBar §4→§7, helpContext → §6, HelpLayer §1b →
   archive.
+- Same day, second pass: Siggie pasted monorepo instructions from another
+  session (pnpm + Nx, apps absorbed via `git subtree add` with history, split
+  back out later). Decided: `@sigfried` scope; npm scopes are flat, so the
+  family is a prefix — Siggie picked `in-app` over guide/docent/etc. (guide was
+  Claude's pick; in-app stays accurate for the markdown pkg used outside
+  tours). Repo `personal/in-app`; apps dmvd + vs-hub; live sites freeze while
+  absorbed. Absorbing dmvd killed Claude's "split inside dmvd first" proposal —
+  the split now happens in the monorepo against apps/dmvd. Filled the pasted
+  template's placeholders; added traps (pnpm symlinks vs sandbox, node 24,
+  vs-hub's app is in `frontend/`, its 45 MB data dir).
+- Siggie's FORMAT note: class/slot/enum in FORMAT and code, entity/attribute/
+  permissible value only in BDCHM tour content. Read "code" as dmvd's anchor
+  kinds (`entity-row`, …); not confirmed.
 
 
 ---

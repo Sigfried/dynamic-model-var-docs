@@ -8,10 +8,10 @@ yes/no. Everything else is either decided (§1) or a fact about the current code
 
 ## 1. Goal and what is decided
 
-Pull the help/tour system out of dmvd into **published npm packages**, and use
-them first in **vs-hub** (`../personal/vs-hub`, the TermHub revival). dmvd gets
-retrofitted onto the packages afterwards; until then it keeps its in-app copy
-under `src/help/` unchanged.
+Pull the help/tour system out of dmvd into **npm packages**, and use them first
+in **vs-hub** (`../personal/vs-hub`, the TermHub revival). The work happens in a
+new monorepo, `personal/in-app` (§4), into which dmvd and vs-hub are absorbed
+temporarily and split back out when stable.
 
 Decided (Siggie, 2026-09-28):
 
@@ -24,21 +24,25 @@ Decided (Siggie, 2026-09-28):
   both need (§2).
 - **vs-hub needs tours only.** So the first release is three packages:
   markdown, anchor/popover, tour. The help package comes later (§6).
-- **Consumed from npm**, not by path or git dependency.
+- **Published to npm under `@sigfried`**, named `@sigfried/in-app-*` (§4).
+  While the apps sit in the monorepo they use the packages as workspace
+  dependencies; they consume the published versions once split back out.
+- **The live sites freeze** while their apps are in the monorepo. vs-hub
+  (GitHub Actions) and dmvd (`npm run deploy`) are not redeployed until each is
+  split back out to its own repo.
 
 ---
 
 ## 2. The four packages
 
-Working names in this doc: **markdown**, **anchor**, **tour**, **help**. Real
-names are open (§4).
+Short names in this doc: **markdown**, **anchor**, **tour**, **help**.
 
-| package | what it does | depends on |
-|---|---|---|
-| **markdown** | Renders authored markdown with the extensions below, on any string, in any component. | react-markdown, remark-directive |
-| **anchor** | Finds the element a piece of content points at, and draws a popover beside it: placement, mount points, dragging, highlight/spotlight. | markdown |
-| **tour** | Tours: parsing steps and beats, the prev/next chrome, the tour map, driving app state through host callbacks. | markdown, anchor |
-| **help** | Help mode: hint dots, click-an-element-to-see-its-entry. | markdown, anchor |
+| package | npm name | what it does | depends on |
+|---|---|---|---|
+| **markdown** | `@sigfried/in-app-markdown` | Renders authored markdown with the extensions below, on any string, in any component. | react-markdown, remark-directive |
+| **anchor** | `@sigfried/in-app-anchor` | Finds the element a piece of content points at, and draws a popover beside it: placement, mount points, dragging, highlight/spotlight. | markdown |
+| **tour** | `@sigfried/in-app-tour` | Tours: parsing steps and beats, the prev/next chrome, the tour map, driving app state through host callbacks. | markdown, anchor |
+| **help** | `@sigfried/in-app-help` | Help mode: hint dots, click-an-element-to-see-its-entry. | markdown, anchor |
 
 ### What the markdown dialect is
 
@@ -67,8 +71,8 @@ renders through it.
 >
 > **PROPOSED:** the markdown package owns the *document* structure (sections,
 > entries, fields, `Description:` blocks) as a generic parser; tour and help
-> each declare the fields they read (`Change:`, `Anchor:`, beats, …). That is
-> also what makes "enhanced markdown" a fitting name for it. The alternative —
+> each declare the fields they read (`Change:`, `Anchor:`, beats, …). The
+> alternative —
 > each package parses its own file — is simpler per package but means an
 > element that is both explained and toured is written twice.
 
@@ -88,7 +92,7 @@ that, so most large files have to be cut apart:
 | [`HelpProvider.tsx`](../src/help/HelpProvider.tsx) | 694 | split: anchor resolution → anchor; tour state stack + `onApplyState`/`onReadState` → tour; help-mode toggle, `?` key → help |
 | [`helpContext.ts`](../src/help/helpContext.ts) | 182 | split per package; each gets its own context/hook |
 | [`help.css`](../src/help/help.css) | 1061 | split along the same lines |
-| [`FORMAT.md`](../src/help/FORMAT.md) | 1339 | split into one spec per package, **and its examples rewritten** — they are dmvd's (41 mentions of BDCHM/entities/ownership) |
+| [`FORMAT.md`](../src/help/FORMAT.md) | 1339 | split into one spec per package, **and its examples rewritten**: they are dmvd's (41 mentions of BDCHM, entities, ownership). BDCHM references go. *Entity / attribute / permissible value* are right for the BDCHM tour content, but FORMAT and code say **class / slot / enum** — a code change too (e.g. dmvd's anchor kinds `entity-row`, `entity-checkbox`). |
 | [`HelpMarkdown.tsx`](../src/help/HelpMarkdown.tsx), [`markdownParts.tsx`](../src/help/markdownParts.tsx), [`styleDirectives.ts`](../src/help/styleDirectives.ts), [`linkTarget.ts`](../src/help/linkTarget.ts) | ~410 | markdown, whole |
 | [`mountPoints.ts`](../src/help/mountPoints.ts), [`useDragged.ts`](../src/help/useDragged.ts) | ~200 | anchor, whole; `useDragged` is **exported** (dmvd's legend frame uses it) |
 | [`TourMap.tsx`](../src/help/TourMap.tsx) | 291 | tour, whole |
@@ -97,74 +101,94 @@ What already holds and makes this tractable: nothing under `src/help/` imports
 from dmvd, and dmvd's content, anchor tags, resolvers and style overrides all
 live in `src/explore/`.
 
-> **PROPOSED — do the split inside dmvd first**, as separate folders under
-> `src/` with the package boundaries enforced (no imports across them except
-> through each package's index), and get dmvd's tests green on that. Then
-> moving the folders into the package repo is a copy. Doing the split and the
-> move at once means debugging both in a repo with no app to test against.
->
-> This contradicts "vs-hub first, retrofit dmvd later" only in that dmvd's
-> *code* moves first; dmvd would not consume the *npm* packages until later.
+**Order of work.** Because dmvd is absorbed into the monorepo, the split
+happens there with dmvd's app and tests to check against:
+
+1. Create the monorepo; absorb dmvd and vs-hub (§4).
+2. Carve `apps/dmvd/src/help/` into `packages/in-app-{markdown,anchor,tour}`;
+   dmvd imports them by package name. dmvd's tests and build stay green at each
+   step.
+3. vs-hub adopts `in-app-tour`, and its first tour gets written.
+4. `in-app-help` later (§6).
 
 ---
 
-## 4. Open decisions: repo layout, npm scope, names
+## 4. The monorepo
 
-> **DECIDE — one monorepo, or one repo per package?**
->
-> **Monorepo:** one git repo, say `personal/app-guide`, with
-> `packages/markdown`, `packages/anchor`, `packages/tour`, `packages/help`. A
-> root `package.json` lists them as npm **workspaces**; `npm install` at the
-> root links them to each other locally, so `tour` imports the in-repo
-> `anchor`, not the published one. Each package still has its own
-> `package.json`, version and npm name, and is published separately. A change
-> that touches anchor and tour together is one commit and one test run. A tool
-> like [changesets](https://github.com/changesets/changesets) tracks which
-> packages changed and bumps versions (optional; manual `npm publish -w
-> packages/tour` works).
->
-> **Repo per package:** a change to `anchor` that `tour` needs means: commit
-> and publish anchor, bump the version in tour's repo, reinstall, then work on
-> tour. Four packages that depend on each other make that loop frequent,
-> especially early.
->
-> **PROPOSED: monorepo.** Per-repo only pays off when packages have separate
-> owners or release cadences, and these have neither.
+Decided (Siggie, 2026-09-28): repo `personal/in-app`, pnpm + Nx, npm scope
+`@sigfried`, package names `@sigfried/in-app-*`, apps dmvd and vs-hub absorbed
+for now. **§4.1–4.6 become the monorepo's `CLAUDE.md`** when it is created.
 
-> **DECIDE — publish under an npm scope (`@sigfried/…`)?**
->
-> What a scope gets you:
-> - **Short names.** Unscoped names are one global namespace, which is why
->   they end up long (`react-app-guided-tour-from-extended-markdown`). Under a
->   scope, `@sigfried/tour` is enough: nothing else can take it.
-> - **Grouping.** The four packages visibly belong together on npm and in a
->   `package.json`.
-> - It costs one line: scoped packages default to private, so each needs
->   `"publishConfig": { "access": "public" }`.
->
-> What it costs: the name is tied to a person. If the project ever gets other
-> maintainers, moving to an org scope means new package names. And the scope
-> must be your npm username (or an npm org you create) — not yet checked
-> whether `sigfried` is free.
->
-> There is no need to rescope existing things; this only matters for new
-> packages.
->
-> **PROPOSED: scope them.** Descriptive words go in each package's
-> `description` and keywords, which is what npm search reads.
+> **CHECK before creating it:** whether `sigfried` is free as an npm username
+> (a scope is a username or an npm org).
 
-> **DECIDE — names.** Candidates so far:
->
-> | package | unscoped (Siggie's) | scoped |
-> |---|---|---|
-> | tour | `react-app-guided-tour-from-extended-markdown` | `@sigfried/tour` |
-> | help | `react-app-context-help` | `@sigfried/context-help` |
-> | markdown | "like enhanced-markdown but more specific" | `@sigfried/app-markdown`? `@sigfried/live-markdown`? |
-> | anchor | — | `@sigfried/anchored-popover`? |
->
-> What distinguishes the markdown package from other markdown extensions is
-> that **the host app fills it in**: placeholders, widgets and colors are all
-> supplied by the app at render time.
+### 4.1 Context
+
+- pnpm + Nx monorepo for shared packages under the `@sigfried/` npm scope.
+- Existing apps (dmvd, vs-hub) are brought in temporarily **with full git
+  history**, so they can be refactored alongside the packages. When stable,
+  each is split back out to its original GitHub repo. Everything below serves
+  that round trip.
+
+### 4.2 Layout
+
+- `packages/*` — shared packages, eventually published to npm.
+- `apps/*` — absorbed apps, one directory per original repo.
+- `pnpm-workspace.yaml` lists the workspaces. One root `pnpm-lock.yaml`.
+  **vs-hub's app is in `frontend/`**, not at its repo root, so its workspace
+  entry is `apps/vs-hub/frontend`, not a bare `apps/*`.
+
+### 4.3 Bringing an app in
+
+- `git subtree add --prefix=apps/<name> <repo-url> main` **without**
+  `--squash`. Both apps' default branch is `main`.
+- Do not rewrite, rebase, or squash any commits under `apps/<name>` afterward.
+- Delete the app's own lockfile after absorbing (both have a
+  `package-lock.json`); the root lockfile replaces it.
+
+### 4.4 Nx
+
+- Package-based mode: tasks come from each package's `package.json` scripts.
+- Do not convert projects to integrated style, and do not let generators add
+  `tsconfig` `paths` aliases, root-level `project.json` conventions, or shared
+  config that an app would need to function.
+
+### 4.5 Rules that keep apps extractable
+
+- Apps import shared packages **only by package name**
+  (`@sigfried/in-app-tour`), declared in the app's `package.json` as
+  `"workspace:*"`. No relative imports that leave the app's directory, no
+  tsconfig path aliases into `packages/`.
+- Each app's tsconfig, ESLint, Prettier and Vite configs stay self-contained
+  inside `apps/<name>/`. They do not extend root-level configs.
+- Every dependency an app uses is declared in that app's own `package.json`,
+  even if it is already installed at the root.
+- Shared packages declare React (and other framework libraries) as
+  `peerDependencies`, not `dependencies`.
+
+### 4.6 Hard limits and reporting
+
+- Do NOT push to, open PRs against, or change settings on the original app
+  repos.
+- Do NOT run `git subtree push` or `git subtree split` to extract an app unless
+  Siggie explicitly asks for it in that session.
+- Do NOT publish packages to npm unless Siggie explicitly asks.
+- After any change, say what was actually run to verify it (install, build,
+  typecheck, tests, dev server) and what was not. Report failures, warnings and
+  skipped steps plainly; "builds, but I didn't run the app" is the kind of
+  report wanted.
+
+### 4.7 Known traps for the first session
+
+- **pnpm's `node_modules` is symlinks.** A symlinked `node_modules` has broken
+  vitest under the Claude Code sandbox before (dmvd worktrees): the sandbox's
+  allowed paths are matched against *real* paths. Expect to resolve real paths
+  (`pwd -P`) and adjust the allowlist.
+- **Node 24.** dmvd pins 24.2.0 in `.nvmrc`; on node 26, 41 of its tests fail
+  (jsdom `localStorage`). vs-hub's deploy workflow also uses 24. The monorepo
+  should pin 24 at the root.
+- **vs-hub brings its data.** Absorbing the whole repo includes `data/` (~45 MB
+  of committed Parquet).
 
 ---
 
