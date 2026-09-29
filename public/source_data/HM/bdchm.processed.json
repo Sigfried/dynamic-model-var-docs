@@ -653,6 +653,9 @@
           "id": "condition_concept"
         },
         {
+          "id": "age_at_condition_report"
+        },
+        {
           "id": "age_at_condition_start"
         },
         {
@@ -2968,6 +2971,18 @@
       "description": "The coded value for the presence of a disease or medical condition stated as a diagnosis, a sign or a symptom, coded to the Human Phenotype Ontology or MONDO.",
       "required": true,
       "alias": "condition_concept"
+    },
+    "age_at_condition_report": {
+      "id": "age_at_condition_report",
+      "name": "age_at_condition_report",
+      "range": "integer",
+      "description": "The Participant's age (expressed in days) when the condition was reported, not necessarily when it was first recorded.",
+      "required": false,
+      "unit": {
+        "exact_mappings": [],
+        "ucum_code": "d"
+      },
+      "alias": "age_at_condition_report"
     },
     "age_at_condition_start": {
       "id": "age_at_condition_start",
@@ -10436,6 +10451,33 @@
           "keywords": [],
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976915"
         },
+        "EVENT_REVIEW": {
+          "text": "EVENT_REVIEW",
+          "description": "A review of clinical event information that describes a suspected clinical occurrence without applying standardized case-definition criteria or independent physician review. It does not reflect a validated determination of whether the event meets a formal clinical definition.",
+          "instantiates": [],
+          "implements": [],
+          "mixins": [],
+          "extensions": {},
+          "annotations": {},
+          "alt_descriptions": {},
+          "todos": [],
+          "notes": [],
+          "comments": [],
+          "examples": [],
+          "in_subset": [],
+          "see_also": [],
+          "aliases": [],
+          "structured_aliases": {},
+          "mappings": [],
+          "exact_mappings": [],
+          "close_mappings": [],
+          "related_mappings": [],
+          "narrow_mappings": [],
+          "broad_mappings": [],
+          "contributors": [],
+          "categories": [],
+          "keywords": []
+        },
         "EXTERNAL_CDM_INSTANCE": {
           "text": "EXTERNAL_CDM_INSTANCE",
           "meaning": "OMOP:4976916",
@@ -10742,6 +10784,34 @@
           "categories": [],
           "keywords": [],
           "meaning_url": "https://athena.ohdsi.org/search-terms/terms/4976925"
+        },
+        "INFORMANT_INTERVIEW": {
+          "text": "INFORMANT_INTERVIEW",
+          "meaning": "OMOP:45881752",
+          "instantiates": [],
+          "implements": [],
+          "mixins": [],
+          "extensions": {},
+          "annotations": {},
+          "alt_descriptions": {},
+          "todos": [],
+          "notes": [],
+          "comments": [],
+          "examples": [],
+          "in_subset": [],
+          "see_also": [],
+          "aliases": [],
+          "structured_aliases": {},
+          "mappings": [],
+          "exact_mappings": [],
+          "close_mappings": [],
+          "related_mappings": [],
+          "narrow_mappings": [],
+          "broad_mappings": [],
+          "contributors": [],
+          "categories": [],
+          "keywords": [],
+          "meaning_url": "https://athena.ohdsi.org/search-terms/terms/45881752"
         },
         "INPATIENT_CLAIM": {
           "text": "INPATIENT_CLAIM",
