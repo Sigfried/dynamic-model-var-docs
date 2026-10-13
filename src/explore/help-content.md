@@ -544,7 +544,7 @@ Participant can be anchored.
   The **BioData Catalyst Harmonized Model** (BDCHM) is a general-purpose
   schema for describing and storing clinical trial data (the
   [BDCHM tour](./?tour=the-biodata-catalyst-harmonized-model){{target:replace}}
-  walks through its contents). It is a complex model and this **BDCHM
+  walks through its contents:s[*]{sup}). It is a complex model and this **BDCHM
   Explorer** app provides a way to navigate through it and understand its
   parts and how they relate to each other. This tour walks you through the
   app's features: how to put entities on the canvas, what a box shows, and how
@@ -558,6 +558,8 @@ Participant can be anchored.
   - to harmonize your own data to it;
   - to design new studies pre-harmonized to it; or
   - for ideas or inspiration in designing your own data models.
+
+  :s[*]{sup} :s[Other tours are available by clicking the 'Guided tours' button or by typing `?`]{size=0.7em}
 - **Beats:**
   1. the panel
      - Description:
@@ -606,10 +608,7 @@ Participant can be anchored.
 - Anchor: slot-row:Person.year_of_birth
 - Position: right
 - **Description:**
-  The dot at a row's left and the label at its right share a color, and the
-  color says what KIND of thing the attribute holds. There are three, and the
-  difference that matters is whether what it holds is another **entity** — one
-  of the things the panel lists, which can therefore get a box of its own.
+  The dot at a row's left and the label at its right share a color. The color says what KIND of thing the attribute holds: a primitive data type, a values list, or another entity.
 - **Beats:**
   1. a data type
      - Description:
@@ -621,13 +620,14 @@ Participant can be anchored.
      - Description:
        ##### Purple: a value set
        `vital_status` holds one code from a fixed list of permitted values, an
-       enumeration. The Explorer does not yet display enumeration values.
+       enumeration. The Explorer does not yet display enumeration values, but they
+       are available through the 'previous views' link at the top right.
      - Anchor: slot-row:Person.vital_status
   3. an entity
      - Description:
        ##### Blue: another entity
-       `cause_of_death` holds CauseOfDeath, another entity, which also
-       appears in the Entities panel. on the canvas yet. Clicking the row
+       `Person.cause_of_death` holds CauseOfDeath, another entity, which also
+       appears in the Entities panel. Not shown on the canvas yet. Clicking the row
        (or ticking its checkbox in the panel) will add it to the canvas.
      - Anchor: node-box:Person
      - Position: bottom
@@ -684,7 +684,8 @@ Participant can be anchored.
        :::s{center color=own-bkwd}
          {{relation:own-bkwd:Person:Participant.associated_person}}
        :::
-       Participant :s[belongs to]{color=own-bkwd} Person, but since the attribute that relates them is declared on Participant, we had to find and show Participant through Person's forward-pointing RELATED menu.
+       The attribute points backwards and shows that Participant :s[belongs to]{color=own-bkwd} Person.
+       In order to find it *through Person*, we had to click into Person's RELATED menu. 
   2. owners on the left
      - Anchor: node-box:Participant
      - Position: right
@@ -709,7 +710,7 @@ Participant can be anchored.
 - **Action:** Added Visit from Participant's → list.
 - **Anchor:** node-box:Visit
 - **Description:**
-  A **Visit** is an encounter with the healthcare system, and most of what is recorded about a participant is recorded at one. Visit belongs to Participant the way Participant belongs to Person, through an attribute declared on Visit:
+  Most recorded patient facts or events (conditions, exposures, observations, etc.) are attached to a **Visit**. Visit belongs to Participant the way Participant belongs to Person, through an attribute declared on Visit:
   :::s{center color=entity}
     {{relation:own-bkwd:Participant:Visit.associated_participant}}
   :::
@@ -721,9 +722,9 @@ Participant can be anchored.
      - Position: span-left bottom
      - Description:
        ##### Observation
-       *{{model-description:Observation}}*
+       Observation's `associated_participant` and `associated_visit` rows name the Participant it is about and the Visit it was made at, so it has a line to each.
 
-       Its `associated_participant` and `associated_visit` rows name the Participant it is about and the Visit it was made at, so it has a line to each.
+       It has an `observation_type` and a value. There are several value attributes for holding different kinds of value.
   2. the value
      - Change: sel=Quantity
      - Action: Added Quantity, the same as clicking the `value_quantity` row.
@@ -731,10 +732,10 @@ Participant can be anchored.
      - Position: span-left bottom
      - Description:
        ##### Quantity
-       *{{model-description:Quantity}}*
        :::s{center color=entity}
          {{relation:own-fwd:Observation.value_quantity:Quantity}}
        :::
+       Numeric observation values are held in a Quantity object.
 
 
 ### detail-panel
@@ -779,7 +780,6 @@ Participant can be anchored.
      - Anchor: first-case-group
      - Position: left span-bottom
      - Description:
-       ##### Example cases
        **Example cases** lists selections worth looking at, from simple to dense. Clicking one replaces what is on the canvas. **Biggest fans**, at the bottom, loads the entities with the most lines converging on them or leaving them.
 
 
