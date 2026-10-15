@@ -32,7 +32,7 @@ That matters for how to treat this file. A rule here is not a fact about BDCHM
 that a test could confirm against the source; it is a judgement that has to keep
 earning its place, and **the exception sets are editorial** — which is why a
 schema sync can silently invalidate one and why classification calls are
-Siggie's, not mechanical. Where a reading turns out wrong, the fix is to change
+human judgement calls, not mechanical ones. Where a reading turns out wrong, the fix is to change
 the rule or add an exception, not to look for what the schema "really" meant.
 
 The clearest instance is that the schema states these relationships **both ways

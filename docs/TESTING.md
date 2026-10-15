@@ -2,10 +2,11 @@
 
 > Testing philosophy, patterns, and how to write tests for this project.
 
-## Two suites, and only one of them needs you
+## Two suites, and only one of them needs a browser
 
 **Vitest** (`npm test`) is everything except popover placement. It runs in
-jsdom, needs nothing started, and Claude runs it freely.
+jsdom, needs nothing started, and runs anywhere — including inside a sandboxed
+AI coding agent.
 
 **Playwright** ([`e2e/placement.spec.ts`](../e2e/placement.spec.ts)) is popover
 placement only. jsdom implements no CSS anchor positioning, so a vitest
@@ -13,7 +14,7 @@ placement test can only read the stylesheet; this one measures real rects.
 
 | | `make e2e` | `make e2e-probe` |
 |---|---|---|
-| **Who runs it** | Siggie, CI | Claude, **or** Siggie |
+| **Who can run it** | a developer, CI | a developer **or** a sandboxed agent |
 | **You must first** | nothing | `make probe-browser`, left running |
 | **What it tests** | a fresh **production** build on 4173 | the **dev** server on 5173 |
 | **Sees uncommitted edits** | no — it rebuilds | yes |
@@ -37,13 +38,13 @@ something just changed. Each gates on **its own** port, so a headed browser
 never lets a headless run through. Running just one browser also works — it
 goes on 9222 either way.
 
-When the two disagree, `make e2e` wins. Claude cannot run `make e2e`: the
-sandbox denies a browser *launch*, which is what `playwright test` does, and
-allows a *connection*, which is what `e2e-probe` makes. **Headless is not a way
-around this** — measured 2026-09-19, a headless launch dies the same way
-(`mach_port_rendezvous ... Permission denied (1100)`).
+When the two disagree, `make e2e` wins. An agent in the macOS sandbox cannot
+run `make e2e`: the sandbox denies a browser *launch*, which is what
+`playwright test` does, and allows a *connection*, which is what `e2e-probe`
+makes. **Headless is not a way around this** — measured 2026-09-19, a headless
+launch dies the same way (`mach_port_rendezvous ... Permission denied (1100)`).
 
-### What Siggie actually does
+### Developer setup when an agent is iterating
 
 **Most sessions: nothing.** No setup and no browser unless the work touches
 popover placement. When it does, at the start of the session:
@@ -54,15 +55,15 @@ make e2e-install         # first time only: fetches the browser
 ```
 
 **Success looks like nothing happening**: the headless one shows no window at
-all, and the headed one opens a blank window that runs nothing. Claude can then
-run `make e2e-probe` as often as it likes without asking again, and will ask
-before using the headed one — it takes your screen.
+all, and the headed one opens a blank window that runs nothing. The agent can
+then run `make e2e-probe` as often as it likes, and should ask before using the
+headed one — it takes over the screen.
 
-`make probe-browser` alone is enough if you don't need to watch anything.
+`make probe-browser` alone is enough if nobody needs to watch anything.
 
-Then run `make e2e` yourself before trusting a result — a fix claimed to work,
-a commit, a deploy. **Not after every change**: let Claude iterate on the
-probe, and confirm once at the end.
+Then run `make e2e` outside the sandbox before trusting a result — a fix
+claimed to work, a commit, a deploy. **Not after every change**: let the agent
+iterate on the probe, and confirm once at the end.
 
 The probe matches production because `probe.fixture.ts` sets `window.__E2E__`
 before any app code runs, and dev-only affordances are gated on `DEV_EXTRAS`
@@ -92,7 +93,7 @@ in [`playwright.config.ts`](../playwright.config.ts) keeps headless on real
 Chrome rather than the stripped-down `chrome-headless-shell`. Reach for
 `make e2e-headed` to watch a placement happen, not for a verdict.
 
-**Every test is a property Siggie asked for in words** — an authored
+**Every test pins a requirement stated in words** — an authored
 `Position:` obeyed at any height, the popover not covering its own anchor, the
 nav row always reachable, a beat landing in the same place arrived at forwards
 and backwards. Do not "fix" a failure by weakening an assertion.

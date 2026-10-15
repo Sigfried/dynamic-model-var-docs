@@ -254,7 +254,7 @@ Two invariants this rests on, both easy to break:
 - **`transform_classes` and `transform_slots` must consume the same decision.** They previously derived slot ids independently; disagreement leaves a class referencing an id with no entry in `slots`.
 - **Global-slot metadata is keyed by NAME, not by the bare id** (which conflicting global slots no longer have). `global` and `slot_url` apply to every site; the canonical `range`/`required`/`multivalued` restore applies **only** to an unqualified entry, since writing it onto a qualified entry would overwrite the per-class definition that entry exists to record.
 
-⚠️ **This machinery is meant to go.** Siggie's direction (2026-08-25) is to move induced slot definitions onto the class definitions, built with `SchemaView.induced_class()` — which produces every per-class definition above natively, leaving no shared slot entry for declarations to collide in, so the conflict detection, the qualified ids and the tie rules all stop being necessary. **Not done**: `bdchm.processed.json` still carries a flat 337-entry `slots` index that classes reference by id. Two things to settle when it is: the Kitchen Sink needs a slot-oriented view from somewhere, and `domain_of` is not `inherited_from`.
+⚠️ **This machinery is meant to go.** The chosen direction (2026-08-25) is to move induced slot definitions onto the class definitions, built with `SchemaView.induced_class()` — which produces every per-class definition above natively, leaving no shared slot entry for declarations to collide in, so the conflict detection, the qualified ids and the tie rules all stop being necessary. **Not done**: `bdchm.processed.json` still carries a flat 337-entry `slots` index that classes reference by id. Two things to settle when it is: the Kitchen Sink needs a slot-oriented view from somewhere, and `domain_of` is not `inherited_from`.
 
 ---
 
@@ -372,8 +372,8 @@ trust `dist/*.d.ts` + `src/`).
 
 Whether a member→owner FK is *ownership* (flip) or a *reference* (leave) is a
 classification decision, not a drawing decision. First build step: enumerate
-every inter-entity slot with the heuristic's current verdict; Siggie
-adjudicates the list; decisions are encoded in the override sets
+every inter-entity slot with the heuristic's current verdict; a human
+reviewer adjudicates the list; decisions are encoded in the override sets
 ([`src/models/containmentGraph.ts`](../src/models/containmentGraph.ts)). The LinkML `containment_direction`
 annotation migration stays parked (TASKS.md), but this reviewed list becomes
 its seed.
