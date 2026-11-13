@@ -93,6 +93,10 @@ unmeasured. The standing rule is measure before proposing one.
   project, but when ready to work on it, the work might usefully be performed here.
   This is no longer 'waiting on siggie' but the task of adding it as a task in dag-browser
   is itself a task.
+- **`owl-ai-native`** (low priority): follow up with Patrick Burasa (met at the
+  B2AI All Hands, 2026-10) on his OWL / "ask Claude to visualize it"
+  suggestion. Find out what problem it is meant to solve before anything is built.
+  [BACKLOG §owl-ai-native](BACKLOG.md#owl-ai-native--patrick-burasas-owl--ask-claude-to-visualize-it-suggestion)
 
 ---
 

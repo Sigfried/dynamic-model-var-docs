@@ -283,6 +283,46 @@ Two cheap things neither yet done, which would make the current state legible:
 - **A note on `Assay`** explaining what attaches to it, so the false root is
   legible rather than mysterious.
 
+### `owl-ai-native` — Patrick Burasa's OWL / "ask Claude to visualize it" suggestion
+
+> Status: **external suggestion, low priority, nothing decided.** Raised by
+> [Patrick Burasa](https://www.linkedin.com/in/burasa/), whom Siggie met at the
+> B2AI Fall All Hands (Rockville, 2026-10-20/21). Nothing was written down at the
+> time; what follows is Siggie's one-line recollection plus a first analysis.
+
+**The suggestion:** turn BDCHM into an OWL ontology and rebuild the
+visualization on it, to make the Explorer "more AI native and generalizable":
+instead of static programming, ask Claude to "visualize this".
+
+**First analysis (2026-10-21):**
+
+- **OWL is cheap and needs no rebuild.** BDCHM is already LinkML, so
+  `gen-owl bdchm.yaml` produces OWL. It could be one more artifact of the
+  schema-sync Action, which would cover any interop need (Protégé, OLS, mapping
+  to OMOP or SNOMED).
+- **OWL is a worse substrate for this viz.** BDCHM is a closed-world data model
+  (slots, ranges, cardinality, `slot_usage`). OWL is an open-world logic for
+  classification. The translation flattens slots into property restrictions,
+  and a reasoner will not produce what the Explorer actually computes:
+  ownership classification, induced slots, Rule 3.
+- **"AI native" does not depend on the format.** LLMs read LinkML YAML at least
+  as well as Turtle. What helps an LLM is good schema documentation.
+- **Generalizability is already a task:** [`generalize-explorer`](TASKS.md#now).
+  What stands in the way is the BDCHM-specific curated config
+  ([entityCategories.ts](../src/config/entityCategories.ts), the override sets,
+  `DUAL_LISTED`), and [schema-defined ownership](#schema-defined-ownership)
+  attacks that directly. OWL does not.
+- **Generated-on-demand viz:** an LLM-drawn diagram of a 100+ class schema will
+  get relations wrong and nobody will notice. It is not reproducible, so tours
+  and shared links break, and every view costs a model call. **A hybrid keeps
+  the value:** expose the schema and the classifier as tools (an MCP server),
+  and let Claude turn a natural-language question into a selection (the
+  existing `?sel=A~B` URL params). The deterministic renderer then draws it.
+
+**Next step:** ask Patrick what problem it solves. Each answer has a cheap path:
+interop → emit OWL; a natural-language front end → Claude drives the Explorer;
+reuse on other schemas → `generalize-explorer`.
+
 ## Diagram and layout
 
 ### Entity-title and row popovers — not yet
