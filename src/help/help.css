@@ -264,6 +264,11 @@ body.help-mode {
   z-index: 100;
   pointer-events: auto;
 
+  /* A host canvas that pans on drag usually says so with `cursor: grab`,
+     which the popover would inherit: a hand over prose that should read as
+     selectable text. */
+  cursor: auto;
+
   /* Lets a child raise the width past the inline `width` the layer sets.
      `min-width` resolves OVER `width`, so `min-content` here means "at least
      as wide as the widest thing inside that refuses to wrap". Today that is

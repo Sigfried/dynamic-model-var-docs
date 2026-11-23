@@ -434,8 +434,9 @@ export function useZoomPan(opts: { min?: number; max?: number } = {}): ZoomPan {
 
     // A drag beginning on a node/button is that element's interaction, not a
     // pan — otherwise clicking a node to open the drawer would drag the canvas.
+    // The tour popover is mounted inside the canvas; a drag there selects text.
     const onBackground = (target: EventTarget | null) =>
-      target instanceof Element && !target.closest('[data-pan-ignore]');
+      target instanceof Element && !target.closest('[data-pan-ignore], .help-popover');
 
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0 || !onBackground(e.target)) return;
